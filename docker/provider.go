@@ -49,6 +49,7 @@ func Provider() terraform.ResourceProvider {
 			"docker_image":     resourceDockerImage(),
 			"docker_network":   resourceDockerNetwork(),
 			"docker_volume":    resourceDockerVolume(),
+			"docker_service":   resourceDockerService(),
 		},
 
 		DataSourcesMap: map[string]*schema.Resource{
