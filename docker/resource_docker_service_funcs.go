@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	"os"
+
 	"github.com/docker/docker/api/types/swarm"
 	dc "github.com/fsouza/go-dockerclient"
 	"github.com/hashicorp/terraform/helper/schema"
@@ -45,6 +47,10 @@ func resourceDockerServiceCreate(d *schema.ResourceData, meta interface{}) error
 		containerSpec.Env = stringSetToStringSlice(v.(*schema.Set))
 	}
 
+	if v, ok := d.GetOk("hosts"); ok {
+		containerSpec.Hosts = stringSetToStringSlice(v.(*schema.Set))
+	}
+
 	if v, ok := d.GetOk("constraints"); ok {
 		placement.Constraints = stringSetToStringSlice(v.(*schema.Set))
 	}
@@ -77,10 +83,31 @@ func resourceDockerServiceCreate(d *schema.ResourceData, meta interface{}) error
 		createOpts.ServiceSpec.Networks = networks
 	}
 
+	createOpts.ServiceSpec.TaskTemplate.ContainerSpec = containerSpec
+
+	if v, ok := d.GetOk("secrets"); ok {
+		secrets := []*swarm.SecretReference{}
+
+		for _, rawSecret := range v.(*schema.Set).List() {
+			rawSecret := rawSecret.(map[string]interface{})
+			secret := swarm.SecretReference{
+				SecretID:   rawSecret["secret_id"].(string),
+				SecretName: rawSecret["secret_name"].(string),
+				File: &swarm.SecretReferenceFileTarget{
+					Name: rawSecret["file_name"].(string),
+					GID:  "0",
+					UID:  "0",
+					Mode: os.FileMode(0444),
+				},
+			}
+			secrets = append(secrets, &secret)
+		}
+		createOpts.ServiceSpec.TaskTemplate.ContainerSpec.Secrets = secrets
+	}
+
 	createOpts.ServiceSpec.EndpointSpec = &endpointSpec
 
 	createOpts.ServiceSpec.TaskTemplate.Placement = &placement
-	createOpts.ServiceSpec.TaskTemplate.ContainerSpec = containerSpec
 
 	if v, ok := d.GetOk("auth"); ok {
 		createOpts.Auth = authToServiceAuth(v.(map[string]interface{}))
