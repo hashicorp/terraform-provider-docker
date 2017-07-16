@@ -390,6 +390,18 @@ func resourceDockerContainer() *schema.Resource {
 				ForceNew: true,
 			},
 
+			"pid_mode": &schema.Schema{
+				Type:     schema.TypeString,
+				Optional: true,
+				ForceNew: true,
+			},
+
+			"userns_mode": &schema.Schema{
+				Type:     schema.TypeString,
+				Optional: true,
+				ForceNew: true,
+			},
+
 			"networks": &schema.Schema{
 				Type:     schema.TypeSet,
 				Optional: true,
