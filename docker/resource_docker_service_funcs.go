@@ -11,20 +11,208 @@ import (
 	"github.com/hashicorp/terraform/helper/schema"
 )
 
+func resourceDockerServiceExists(d *schema.ResourceData, meta interface{}) (bool, error) {
+	client := meta.(*dc.Client)
+	if client == nil {
+		return false, nil
+	}
+
+	apiService, err := fetchDockerService(d.Id(), d.Get("name").(string), client)
+	if err != nil {
+		return false, err
+	}
+	if apiService == nil {
+		return false, nil
+	}
+
+	return true, nil
+}
+
 func resourceDockerServiceCreate(d *schema.ResourceData, meta interface{}) error {
 	var err error
 	client := meta.(*dc.Client)
 
-	createOpts := dc.CreateServiceOptions{
-		ServiceSpec: swarm.ServiceSpec{
-			Annotations: swarm.Annotations{
-				Name: d.Get("name").(string),
-			},
-			TaskTemplate: swarm.TaskSpec{},
-		},
+	serviceSpec, err := createServiceSpec(d)
+	if err != nil {
+		return err
 	}
 
+	createOpts := dc.CreateServiceOptions{
+		ServiceSpec: serviceSpec,
+	}
+
+	if v, ok := d.GetOk("auth"); ok {
+		createOpts.Auth = authToServiceAuth(v.(map[string]interface{}))
+	}
+
+	service, err := client.CreateService(createOpts)
+	if err != nil {
+		return err
+	}
+
+	filter := make(map[string][]string)
+	filter["service"] = []string{d.Get("name").(string)}
+
+	taskID := ""
+	errorCount := 0
+	loops := 900
+	sleepTime := 1000 * time.Millisecond
+	for i := loops; i > 0; i-- {
+		if taskID == "" {
+			tasks, err := client.ListTasks(dc.ListTasksOptions{
+				Filters: filter,
+			})
+			if err != nil {
+				return err
+			}
+			if len(tasks) == 1 {
+				taskID = tasks[0].ID
+			} else {
+				time.Sleep(sleepTime)
+				continue
+			}
+		}
+
+		task, err := client.InspectTask(taskID)
+		if err != nil {
+			return err
+		}
+
+		if task.DesiredState == task.Status.State {
+			break
+		}
+
+		if task.Status.State == swarm.TaskStateFailed {
+			errorCount++
+			taskID = ""
+			if errorCount >= 3 {
+				return fmt.Errorf("Failed to start container: %s", task.Status.Err)
+			}
+		}
+
+		time.Sleep(sleepTime)
+	}
+
+	d.SetId(service.ID)
+
+	return resourceDockerServiceRead(d, meta)
+}
+
+func resourceDockerServiceRead(d *schema.ResourceData, meta interface{}) error {
+	client := meta.(*dc.Client)
+
+	apiService, err := fetchDockerService(d.Id(), d.Get("name").(string), client)
+	if err != nil {
+		return err
+	}
+	if apiService == nil {
+		d.SetId("")
+		return nil
+	}
+
+	var service *swarm.Service
+	service, err = client.InspectService(apiService.ID)
+	if err != nil {
+		return fmt.Errorf("Error inspecting service %s: %s", apiService.ID, err)
+	}
+
+	d.Set("version", service.Version.Index)
+	d.Set("name", service.Spec.Name)
+
+	d.SetId(service.ID)
+
+	return nil
+}
+
+func resourceDockerServiceUpdate(d *schema.ResourceData, meta interface{}) error {
+	client := meta.(*dc.Client)
+
+	service, err := client.InspectService(d.Id())
+	if err != nil {
+		return err
+	}
+
+	serviceSpec, err := createServiceSpec(d)
+	if err != nil {
+		return err
+	}
+
+	updateOpts := dc.UpdateServiceOptions{
+		ServiceSpec: serviceSpec,
+		Version:     service.Version.Index,
+	}
+
+	if v, ok := d.GetOk("auth"); ok {
+		updateOpts.Auth = authToServiceAuth(v.(map[string]interface{}))
+	}
+
+	err = client.UpdateService(d.Id(), updateOpts)
+	if err != nil {
+		return err
+	}
+
+	loops := 30
+	sleepTime := 500 * time.Millisecond
+	for i := loops; i > 0; i-- {
+		service, err := client.InspectService(d.Id())
+		if err != nil {
+			return err
+		}
+
+		if service.UpdateStatus.State == swarm.UpdateStateCompleted {
+			break
+		}
+
+		if service.UpdateStatus.State == swarm.UpdateStateRollbackCompleted {
+			return fmt.Errorf("Failed update service rolled back: %s", service.UpdateStatus.Message)
+		}
+
+		time.Sleep(sleepTime)
+	}
+
+	return resourceDockerServiceRead(d, meta)
+}
+
+func resourceDockerServiceDelete(d *schema.ResourceData, meta interface{}) error {
+	client := meta.(*dc.Client)
+
+	removeOpts := dc.RemoveServiceOptions{
+		ID: d.Id(),
+	}
+
+	if err := client.RemoveService(removeOpts); err != nil {
+		return fmt.Errorf("Error deleting service %s: %s", d.Id(), err)
+	}
+
+	d.SetId("")
+	return nil
+}
+
+func fetchDockerService(ID string, name string, client *dc.Client) (*swarm.Service, error) {
+	apiServices, err := client.ListServices(dc.ListServicesOptions{})
+
+	if err != nil {
+		return nil, fmt.Errorf("Error fetching service information from Docker: %s\n", err)
+	}
+
+	for _, apiService := range apiServices {
+		if apiService.ID == ID || apiService.Spec.Name == name {
+			return &apiService, nil
+		}
+	}
+
+	return nil, nil
+}
+
+func createServiceSpec(d *schema.ResourceData) (swarm.ServiceSpec, error) {
 	placement := swarm.Placement{}
+
+	serviceSpec := swarm.ServiceSpec{
+		Annotations: swarm.Annotations{
+			Name: d.Get("name").(string),
+		},
+		TaskTemplate: swarm.TaskSpec{},
+	}
 
 	containerSpec := swarm.ContainerSpec{
 		Image: d.Get("image").(string),
@@ -38,7 +226,7 @@ func resourceDockerServiceCreate(d *schema.ResourceData, meta interface{}) error
 		containerSpec.Command = stringListToStringSlice(v.([]interface{}))
 		for _, v := range containerSpec.Command {
 			if v == "" {
-				return fmt.Errorf("values for command may not be empty")
+				return swarm.ServiceSpec{}, fmt.Errorf("values for command may not be empty")
 			}
 		}
 	}
@@ -79,11 +267,11 @@ func resourceDockerServiceCreate(d *schema.ResourceData, meta interface{}) error
 			}
 			networks = append(networks, network)
 		}
-		createOpts.ServiceSpec.TaskTemplate.Networks = networks
-		createOpts.ServiceSpec.Networks = networks
+		serviceSpec.TaskTemplate.Networks = networks
+		serviceSpec.Networks = networks
 	}
 
-	createOpts.ServiceSpec.TaskTemplate.ContainerSpec = containerSpec
+	serviceSpec.TaskTemplate.ContainerSpec = containerSpec
 
 	if v, ok := d.GetOk("secrets"); ok {
 		secrets := []*swarm.SecretReference{}
@@ -102,86 +290,14 @@ func resourceDockerServiceCreate(d *schema.ResourceData, meta interface{}) error
 			}
 			secrets = append(secrets, &secret)
 		}
-		createOpts.ServiceSpec.TaskTemplate.ContainerSpec.Secrets = secrets
+		serviceSpec.TaskTemplate.ContainerSpec.Secrets = secrets
 	}
 
-	createOpts.ServiceSpec.EndpointSpec = &endpointSpec
+	serviceSpec.EndpointSpec = &endpointSpec
 
-	createOpts.ServiceSpec.TaskTemplate.Placement = &placement
+	serviceSpec.TaskTemplate.Placement = &placement
 
-	if v, ok := d.GetOk("auth"); ok {
-		createOpts.Auth = authToServiceAuth(v.(map[string]interface{}))
-	}
-
-	service, err := client.CreateService(createOpts)
-
-	if err != nil {
-		return err
-	}
-
-	creationTime = time.Now()
-	d.SetId(service.ID)
-
-	return resourceDockerServiceRead(d, meta)
-}
-
-func resourceDockerServiceRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*dc.Client)
-
-	apiService, err := fetchDockerService(d.Id(), client)
-	if err != nil {
-		return err
-	}
-	if apiService == nil {
-		// This service doesn't exist anymore
-		d.SetId("")
-		return nil
-	}
-
-	var service *swarm.Service
-	service, err = client.InspectService(apiService.ID)
-	if err != nil {
-		return fmt.Errorf("Error inspecting service %s: %s", apiService.ID, err)
-	}
-
-	d.Set("version", service.Version)
-
-	return nil
-}
-
-func resourceDockerServiceUpdate(d *schema.ResourceData, meta interface{}) error {
-	return nil
-}
-
-func resourceDockerServiceDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*dc.Client)
-
-	removeOpts := dc.RemoveServiceOptions{
-		ID: d.Id(),
-	}
-
-	if err := client.RemoveService(removeOpts); err != nil {
-		return fmt.Errorf("Error deleting service %s: %s", d.Id(), err)
-	}
-
-	d.SetId("")
-	return nil
-}
-
-func fetchDockerService(ID string, client *dc.Client) (*swarm.Service, error) {
-	apiServices, err := client.ListServices(dc.ListServicesOptions{})
-
-	if err != nil {
-		return nil, fmt.Errorf("Error fetching service information from Docker: %s\n", err)
-	}
-
-	for _, apiService := range apiServices {
-		if apiService.ID == ID {
-			return &apiService, nil
-		}
-	}
-
-	return nil, nil
+	return serviceSpec, nil
 }
 
 func portSetToServicePorts(ports *schema.Set) []swarm.PortConfig {

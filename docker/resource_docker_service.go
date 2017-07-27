@@ -14,6 +14,7 @@ func resourceDockerService() *schema.Resource {
 		Read:   resourceDockerServiceRead,
 		Update: resourceDockerServiceUpdate,
 		Delete: resourceDockerServiceDelete,
+		Exists: resourceDockerServiceExists,
 
 		Schema: map[string]*schema.Schema{
 			"name": &schema.Schema{
@@ -22,58 +23,48 @@ func resourceDockerService() *schema.Resource {
 				ForceNew: true,
 			},
 
-			// ForceNew is not true for image because we need to
-			// sane this against Docker image IDs, as each image
-			// can have multiple names/tags attached do it.
 			"image": &schema.Schema{
 				Type:     schema.TypeString,
 				Required: true,
-				ForceNew: false,
+				ForceNew: true,
 			},
 
 			"hostname": &schema.Schema{
 				Type:     schema.TypeString,
 				Optional: true,
-				ForceNew: true,
 			},
 
 			"command": &schema.Schema{
 				Type:     schema.TypeList,
 				Optional: true,
-				ForceNew: true,
 				Elem:     &schema.Schema{Type: schema.TypeString},
 			},
 
 			"ports": &schema.Schema{
 				Type:     schema.TypeSet,
 				Optional: true,
-				ForceNew: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"internal": &schema.Schema{
 							Type:     schema.TypeInt,
 							Required: true,
-							ForceNew: true,
 						},
 
 						"external": &schema.Schema{
 							Type:     schema.TypeInt,
 							Optional: true,
-							ForceNew: true,
 						},
 
 						"mode": &schema.Schema{
 							Type:     schema.TypeString,
 							Default:  "ingress",
 							Optional: true,
-							ForceNew: true,
 						},
 
 						"protocol": &schema.Schema{
 							Type:     schema.TypeString,
 							Default:  "tcp",
 							Optional: true,
-							ForceNew: true,
 						},
 					},
 				},
@@ -83,7 +74,6 @@ func resourceDockerService() *schema.Resource {
 			"env": &schema.Schema{
 				Type:     schema.TypeSet,
 				Optional: true,
-				ForceNew: true,
 				Elem:     &schema.Schema{Type: schema.TypeString},
 				Set:      schema.HashString,
 			},
@@ -91,7 +81,6 @@ func resourceDockerService() *schema.Resource {
 			"hosts": &schema.Schema{
 				Type:     schema.TypeSet,
 				Optional: true,
-				ForceNew: true,
 				Elem:     &schema.Schema{Type: schema.TypeString},
 				Set:      schema.HashString,
 			},
@@ -99,7 +88,6 @@ func resourceDockerService() *schema.Resource {
 			"constraints": &schema.Schema{
 				Type:     schema.TypeSet,
 				Optional: true,
-				ForceNew: true,
 				Elem:     &schema.Schema{Type: schema.TypeString},
 				Set:      schema.HashString,
 			},
@@ -107,13 +95,11 @@ func resourceDockerService() *schema.Resource {
 			"network_mode": &schema.Schema{
 				Type:     schema.TypeString,
 				Optional: true,
-				ForceNew: true,
 			},
 
 			"networks": &schema.Schema{
 				Type:     schema.TypeSet,
 				Optional: true,
-				ForceNew: true,
 				Elem:     &schema.Schema{Type: schema.TypeString},
 				Set:      schema.HashString,
 			},
@@ -121,29 +107,32 @@ func resourceDockerService() *schema.Resource {
 			"secrets": &schema.Schema{
 				Type:     schema.TypeSet,
 				Optional: true,
-				ForceNew: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"secret_id": &schema.Schema{
 							Type:     schema.TypeString,
 							Required: true,
-							ForceNew: true,
 						},
 
 						"secret_name": &schema.Schema{
 							Type:     schema.TypeString,
 							Required: true,
-							ForceNew: true,
 						},
 
 						"file_name": &schema.Schema{
 							Type:     schema.TypeString,
 							Optional: true,
-							ForceNew: true,
 						},
 					},
 				},
 				Set: resourceDockerSecretsHash,
+			},
+
+			"update_triggers": &schema.Schema{
+				Type:     schema.TypeSet,
+				Optional: true,
+				Elem:     &schema.Schema{Type: schema.TypeString},
+				Set:      schema.HashString,
 			},
 
 			"auth": &schema.Schema{

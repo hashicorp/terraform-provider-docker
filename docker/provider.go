@@ -77,7 +77,7 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 
 	err = client.Ping()
 	if err != nil {
-		return nil, nil
+		return nil, fmt.Errorf("Error pinging Docker client: %s", err)
 	}
 
 	return client, nil
