@@ -151,25 +151,6 @@ func resourceDockerServiceUpdate(d *schema.ResourceData, meta interface{}) error
 		return err
 	}
 
-	loops := 30
-	sleepTime := 500 * time.Millisecond
-	for i := loops; i > 0; i-- {
-		service, err := client.InspectService(d.Id())
-		if err != nil {
-			return err
-		}
-
-		if service.UpdateStatus.State == swarm.UpdateStateCompleted {
-			break
-		}
-
-		if service.UpdateStatus.State == swarm.UpdateStateRollbackCompleted {
-			return fmt.Errorf("Failed update service rolled back: %s", service.UpdateStatus.Message)
-		}
-
-		time.Sleep(sleepTime)
-	}
-
 	return resourceDockerServiceRead(d, meta)
 }
 
