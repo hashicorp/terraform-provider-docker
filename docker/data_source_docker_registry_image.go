@@ -25,6 +25,18 @@ func dataSourceDockerRegistryImage() *schema.Resource {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
+
+			"username": &schema.Schema{
+				Type:     schema.TypeString,
+				Optional: true,
+				Default:  "",
+			},
+
+			"password": &schema.Schema{
+				Type:     schema.TypeString,
+				Optional: true,
+				Default:  "",
+			},
 		},
 	}
 }
@@ -37,7 +49,7 @@ func dataSourceDockerRegistryImageRead(d *schema.ResourceData, meta interface{})
 		pullOpts.Registry = "registry.hub.docker.com"
 	} else {
 		// Otherwise, filter the registry name out of the repo name
-		pullOpts.Repository = strings.Replace(pullOpts.Repository, pullOpts.Registry+"/", "", 1)
+		pullOpts.Repository = strings.Replace(pullOpts.Repository, pullOpts.Registry, "", 1)
 	}
 
 	// Docker prefixes 'library' to official images in the path; 'consul' becomes 'library/consul'
@@ -45,11 +57,13 @@ func dataSourceDockerRegistryImageRead(d *schema.ResourceData, meta interface{})
 		pullOpts.Repository = "library/" + pullOpts.Repository
 	}
 
+	pullOpts.Repository = strings.TrimPrefix(pullOpts.Repository, "/")
+
 	if pullOpts.Tag == "" {
 		pullOpts.Tag = "latest"
 	}
 
-	digest, err := getImageDigest(pullOpts.Registry, pullOpts.Repository, pullOpts.Tag, "", "")
+	digest, err := getImageDigest(pullOpts.Registry, pullOpts.Repository, pullOpts.Tag, d.Get("username").(string), d.Get("password").(string))
 
 	if err != nil {
 		return fmt.Errorf("Got error when attempting to fetch image version from registry: %s", err)
@@ -61,7 +75,7 @@ func dataSourceDockerRegistryImageRead(d *schema.ResourceData, meta interface{})
 	return nil
 }
 
-func getImageDigest(registry, image, tag, username, password string) (string, error) {
+func getImageDigest(registry string, image string, tag string, username string, password string) (string, error) {
 	client := http.DefaultClient
 
 	req, err := http.NewRequest("GET", "https://"+registry+"/v2/"+image+"/manifests/"+tag, nil)

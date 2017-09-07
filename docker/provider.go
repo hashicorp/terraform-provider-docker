@@ -49,6 +49,8 @@ func Provider() terraform.ResourceProvider {
 			"docker_image":     resourceDockerImage(),
 			"docker_network":   resourceDockerNetwork(),
 			"docker_volume":    resourceDockerVolume(),
+			"docker_service":   resourceDockerService(),
+			"docker_secret":    resourceDockerSecret(),
 		},
 
 		DataSourcesMap: map[string]*schema.Resource{
@@ -75,7 +77,7 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 
 	err = client.Ping()
 	if err != nil {
-		return nil, fmt.Errorf("Error pinging Docker server: %s", err)
+		return nil, fmt.Errorf("Error pinging Docker client: %s", err)
 	}
 
 	return client, nil
