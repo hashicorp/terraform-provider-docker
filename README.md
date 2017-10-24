@@ -60,4 +60,28 @@ In order to run the full suite of Acceptance tests, run `make testacc`.
 
 ```sh
 $ make testacc
+# run a single acceptance test: e.g. 'TestAccDockerRegistryImage_private' in 'data_source_docker_registry_image_test.go'
+go test -v -timeout 30s github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerRegistryImage_private$
 ```
+
+In order to extend the provider and test it with `terraform`, check the latest version at https://releases.hashicorp.com/terraform-provider-$PROVIDER_NAME/ and raise it accordingly to semversion due to your changes in the code
+```sh
+$ export TF_PROVIDER_NEW_VERSION=0.1.2
+$ go build -o terraform-provider-${PROVIDER_NAME}_v${TF_PROVIDER_NEW_VERSION}
+# create ~/.terraform.d/plugins/'GOOS'_'GOARCH' with
+# GOOS: darwin, freebsd, linux, and so on.
+# GOARCH: 386, amd64, arm, s390x, and so on
+# example for OSX:
+$ mkdir -p ~/.terraform.d/plugins/darwin_amd64
+$ mv -f terraform-provider-${PROVIDER_NAME}_v${TF_PROVIDER_NEW_VERSION} ~/.terraform.d/plugins/darwin_amd64
+```
+
+Add the explicit version of to your locally developed `terraform-provider-${PROVIDER_NAME}`:
+```hcl
+provider "docker" {
+  version = "~> 0.1.2"
+  ...
+}
+```
+
+Don't forget to run `terraform init` each time you rebuild and moved your binary to the `plugins` folder.
