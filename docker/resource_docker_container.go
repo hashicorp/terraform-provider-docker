@@ -475,6 +475,36 @@ func resourceDockerHostsHash(v interface{}) int {
 	return hashcode.String(buf.String())
 }
 
+func resourceDockerConfigsHash(v interface{}) int {
+	var buf bytes.Buffer
+	m := v.(map[string]interface{})
+
+	if v, ok := m["config_id"]; ok {
+		buf.WriteString(fmt.Sprintf("%v-", v.(string)))
+	}
+
+	if v, ok := m["file_name"]; ok {
+		buf.WriteString(fmt.Sprintf("%v-", v.(string)))
+	}
+
+	return hashcode.String(buf.String())
+}
+
+func resourceDockerSecretsHash(v interface{}) int {
+	var buf bytes.Buffer
+	m := v.(map[string]interface{})
+
+	if v, ok := m["secret_id"]; ok {
+		buf.WriteString(fmt.Sprintf("%v-", v.(string)))
+	}
+
+	if v, ok := m["file_name"]; ok {
+		buf.WriteString(fmt.Sprintf("%v-", v.(string)))
+	}
+
+	return hashcode.String(buf.String())
+}
+
 func resourceDockerVolumesHash(v interface{}) int {
 	var buf bytes.Buffer
 	m := v.(map[string]interface{})
