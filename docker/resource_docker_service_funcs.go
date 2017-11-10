@@ -2,6 +2,7 @@ package docker
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"os"
@@ -43,7 +44,9 @@ func resourceDockerServiceCreate(d *schema.ResourceData, meta interface{}) error
 	}
 
 	if v, ok := d.GetOk("auth"); ok {
-		createOpts.Auth = authToServiceAuth(v.(map[string]interface{}), meta)
+		createOpts.Auth = authToServiceAuth(v.(map[string]interface{}))
+	} else {
+		createOpts.Auth = fromRegistryAuth(d.Get("image").(string), meta)
 	}
 
 	service, err := client.CreateService(createOpts)
@@ -144,7 +147,9 @@ func resourceDockerServiceUpdate(d *schema.ResourceData, meta interface{}) error
 	}
 
 	if v, ok := d.GetOk("auth"); ok {
-		updateOpts.Auth = authToServiceAuth(v.(map[string]interface{}), meta)
+		updateOpts.Auth = authToServiceAuth(v.(map[string]interface{}))
+	} else {
+		updateOpts.Auth = fromRegistryAuth(d.Get("image").(string), meta)
 	}
 
 	err = client.UpdateService(d.Id(), updateOpts)
@@ -387,7 +392,7 @@ func portSetToServicePorts(ports *schema.Set) []swarm.PortConfig {
 	return retPortConfigs
 }
 
-func authToServiceAuth(auth map[string]interface{}, meta interface{}) dc.AuthConfiguration {
+func authToServiceAuth(auth map[string]interface{}) dc.AuthConfiguration {
 	if auth["username"] != nil && len(auth["username"].(string)) > 0 && auth["password"] != nil && len(auth["password"].(string)) > 0 {
 		return dc.AuthConfiguration{
 			Username:      auth["username"].(string),
@@ -396,8 +401,15 @@ func authToServiceAuth(auth map[string]interface{}, meta interface{}) dc.AuthCon
 		}
 	}
 
-	providerAuthConfigs := meta.(*ProviderConfig).AuthConfigs
-	if fromRegistryAuth, ok := providerAuthConfigs.Configs[normalizeRegistryAddress(auth["server_address"].(string))]; ok {
+	return dc.AuthConfiguration{}
+}
+
+func fromRegistryAuth(image string, meta interface{}) dc.AuthConfiguration {
+	image = strings.Replace(image, "http://", "", 1)
+	image = strings.Replace(image, "https://", "", 1)
+	lastBin := strings.Index(image, "/")
+	serverAddress := image[0:lastBin]
+	if fromRegistryAuth, ok := meta.(*ProviderConfig).AuthConfigs.Configs[normalizeRegistryAddress(serverAddress)]; ok {
 		return fromRegistryAuth
 	}
 
