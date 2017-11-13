@@ -49,6 +49,14 @@ func resourceDockerServiceCreate(d *schema.ResourceData, meta interface{}) error
 		createOpts.Auth = fromRegistryAuth(d.Get("image").(string), meta)
 	}
 
+	if v, ok := d.GetOk("update_config"); ok {
+		createOpts.UpdateConfig, _ = createUpdateOrRollbackConfig(v.([]interface{}))
+	}
+
+	if v, ok := d.GetOk("rollback_config"); ok {
+		createOpts.RollbackConfig, _ = createUpdateOrRollbackConfig(v.([]interface{}))
+	}
+
 	service, err := client.CreateService(createOpts)
 	if err != nil {
 		return err
@@ -192,7 +200,6 @@ func fetchDockerService(ID string, name string, client *dc.Client) (*swarm.Servi
 }
 
 func createServiceSpec(d *schema.ResourceData) (swarm.ServiceSpec, error) {
-	placement := swarm.Placement{}
 
 	serviceSpec := swarm.ServiceSpec{
 		Annotations: swarm.Annotations{
@@ -201,15 +208,16 @@ func createServiceSpec(d *schema.ResourceData) (swarm.ServiceSpec, error) {
 		TaskTemplate: swarm.TaskSpec{},
 	}
 
-	containerSpec := swarm.ContainerSpec{
-		Image: d.Get("image").(string),
-	}
-
 	if v, ok := d.GetOk("replicas"); ok {
 		replicas := uint64(v.(int))
 		serviceSpec.Mode = swarm.ServiceMode{}
 		serviceSpec.Mode.Replicated = &swarm.ReplicatedService{}
 		serviceSpec.Mode.Replicated.Replicas = &replicas
+	}
+
+	// == start Container Spec
+	containerSpec := swarm.ContainerSpec{
+		Image: d.Get("image").(string),
 	}
 
 	if v, ok := d.GetOk("hostname"); ok {
@@ -233,10 +241,6 @@ func createServiceSpec(d *schema.ResourceData) (swarm.ServiceSpec, error) {
 		containerSpec.Hosts = stringSetToStringSlice(v.(*schema.Set))
 	}
 
-	if v, ok := d.GetOk("constraints"); ok {
-		placement.Constraints = stringSetToStringSlice(v.(*schema.Set))
-	}
-
 	endpointSpec := swarm.EndpointSpec{}
 
 	if v, ok := d.GetOk("network_mode"); ok {
@@ -244,13 +248,6 @@ func createServiceSpec(d *schema.ResourceData) (swarm.ServiceSpec, error) {
 	}
 
 	portBindings := []swarm.PortConfig{}
-
-	if v, ok := d.GetOk("ports"); ok {
-		portBindings = portSetToServicePorts(v.(*schema.Set))
-	}
-	if len(portBindings) != 0 {
-		endpointSpec.Ports = portBindings
-	}
 
 	if v, ok := d.GetOk("networks"); ok {
 		networks := []swarm.NetworkAttachmentConfig{}
@@ -358,12 +355,56 @@ func createServiceSpec(d *schema.ResourceData) (swarm.ServiceSpec, error) {
 		}
 		serviceSpec.TaskTemplate.ContainerSpec.Secrets = secrets
 	}
+	// == end Container Spec
+
+	// == start Endpoint Spec
+	if v, ok := d.GetOk("ports"); ok {
+		portBindings = portSetToServicePorts(v.(*schema.Set))
+	}
+	if len(portBindings) != 0 {
+		endpointSpec.Ports = portBindings
+	}
 
 	serviceSpec.EndpointSpec = &endpointSpec
+	// == end Endpoint Spec
+
+	// == start TaskTemplate Spec
+	placement := swarm.Placement{}
+	if v, ok := d.GetOk("constraints"); ok {
+		placement.Constraints = stringSetToStringSlice(v.(*schema.Set))
+	}
 
 	serviceSpec.TaskTemplate.Placement = &placement
+	// == end TaskTemplate Spec
 
 	return serviceSpec, nil
+}
+
+func createUpdateOrRollbackConfig(config []interface{}) (*swarm.UpdateConfig, error) {
+	updateConfig := swarm.UpdateConfig{}
+	if len(config) > 0 {
+		sc := config[0].(map[string]interface{})
+		if v, ok := sc["parallelism"]; ok {
+			updateConfig.Parallelism = uint64(v.(int))
+		}
+		if v, ok := sc["delay"]; ok {
+			updateConfig.Delay, _ = time.ParseDuration(v.(string))
+		}
+		if v, ok := sc["failure_action"]; ok {
+			updateConfig.FailureAction = v.(string)
+		}
+		if v, ok := sc["monitor"]; ok {
+			updateConfig.Monitor, _ = time.ParseDuration(v.(string))
+		}
+		if v, ok := sc["max_failure_ratio"]; ok {
+			updateConfig.MaxFailureRatio = float32(v.(float64))
+		}
+		if v, ok := sc["order"]; ok {
+			updateConfig.Order = v.(string)
+		}
+	}
+
+	return &updateConfig, nil
 }
 
 func portSetToServicePorts(ports *schema.Set) []swarm.PortConfig {

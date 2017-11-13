@@ -8,6 +8,8 @@ import (
 	"github.com/hashicorp/terraform/helper/schema"
 )
 
+// resourceDockerService create a docker service
+// https://github.com/moby/moby/blob/master/api/types/swarm/service.go
 func resourceDockerService() *schema.Resource {
 	return &schema.Resource{
 		Create: resourceDockerServiceCreate,
@@ -17,152 +19,6 @@ func resourceDockerService() *schema.Resource {
 		Exists: resourceDockerServiceExists,
 
 		Schema: map[string]*schema.Schema{
-			"name": &schema.Schema{
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
-			},
-
-			"image": &schema.Schema{
-				Type:     schema.TypeString,
-				Required: true,
-			},
-
-			"replicas": &schema.Schema{
-				Type:     schema.TypeInt,
-				Optional: true,
-			},
-
-			"hostname": &schema.Schema{
-				Type:     schema.TypeString,
-				Optional: true,
-			},
-
-			"command": &schema.Schema{
-				Type:     schema.TypeList,
-				Optional: true,
-				Elem:     &schema.Schema{Type: schema.TypeString},
-			},
-
-			"ports": &schema.Schema{
-				Type:     schema.TypeSet,
-				Optional: true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"internal": &schema.Schema{
-							Type:     schema.TypeInt,
-							Required: true,
-						},
-
-						"external": &schema.Schema{
-							Type:     schema.TypeInt,
-							Optional: true,
-						},
-
-						"mode": &schema.Schema{
-							Type:     schema.TypeString,
-							Default:  "ingress",
-							Optional: true,
-						},
-
-						"protocol": &schema.Schema{
-							Type:     schema.TypeString,
-							Default:  "tcp",
-							Optional: true,
-						},
-					},
-				},
-				Set: resourceDockerPortsHash,
-			},
-
-			"env": &schema.Schema{
-				Type:     schema.TypeSet,
-				Optional: true,
-				Elem:     &schema.Schema{Type: schema.TypeString},
-				Set:      schema.HashString,
-			},
-
-			"hosts": &schema.Schema{
-				Type:     schema.TypeSet,
-				Optional: true,
-				Elem:     &schema.Schema{Type: schema.TypeString},
-				Set:      schema.HashString,
-			},
-
-			"constraints": &schema.Schema{
-				Type:     schema.TypeSet,
-				Optional: true,
-				Elem:     &schema.Schema{Type: schema.TypeString},
-				Set:      schema.HashString,
-			},
-
-			"network_mode": &schema.Schema{
-				Type:     schema.TypeString,
-				Optional: true,
-			},
-
-			"networks": &schema.Schema{
-				Type:     schema.TypeSet,
-				Optional: true,
-				Elem:     &schema.Schema{Type: schema.TypeString},
-				Set:      schema.HashString,
-			},
-
-			"configs": &schema.Schema{
-				Type:     schema.TypeSet,
-				Optional: true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"config_id": &schema.Schema{
-							Type:     schema.TypeString,
-							Required: true,
-						},
-
-						"config_name": &schema.Schema{
-							Type:     schema.TypeString,
-							Required: true,
-						},
-
-						"file_name": &schema.Schema{
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-					},
-				},
-				Set: resourceDockerConfigsHash,
-			},
-
-			"secrets": &schema.Schema{
-				Type:     schema.TypeSet,
-				Optional: true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"secret_id": &schema.Schema{
-							Type:     schema.TypeString,
-							Required: true,
-						},
-
-						"secret_name": &schema.Schema{
-							Type:     schema.TypeString,
-							Required: true,
-						},
-
-						"file_name": &schema.Schema{
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-					},
-				},
-				Set: resourceDockerSecretsHash,
-			},
-
-			"update_triggers": &schema.Schema{
-				Type:     schema.TypeSet,
-				Optional: true,
-				Elem:     &schema.Schema{Type: schema.TypeString},
-				Set:      schema.HashString,
-			},
-
 			"auth": &schema.Schema{
 				Type:     schema.TypeMap,
 				Optional: true,
@@ -187,6 +43,59 @@ func resourceDockerService() *schema.Resource {
 					},
 				},
 				Set: resourceDockerAuthHash,
+			},
+
+			"name": &schema.Schema{
+				Type:     schema.TypeString,
+				Required: true,
+				ForceNew: true,
+			},
+			// == start Container Spec
+			"image": &schema.Schema{
+				Type:     schema.TypeString,
+				Required: true,
+			},
+
+			"replicas": &schema.Schema{
+				Type:     schema.TypeInt,
+				Optional: true,
+			},
+
+			"hostname": &schema.Schema{
+				Type:     schema.TypeString,
+				Optional: true,
+			},
+
+			"command": &schema.Schema{
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem:     &schema.Schema{Type: schema.TypeString},
+			},
+
+			"env": &schema.Schema{
+				Type:     schema.TypeSet,
+				Optional: true,
+				Elem:     &schema.Schema{Type: schema.TypeString},
+				Set:      schema.HashString,
+			},
+
+			"hosts": &schema.Schema{
+				Type:     schema.TypeSet,
+				Optional: true,
+				Elem:     &schema.Schema{Type: schema.TypeString},
+				Set:      schema.HashString,
+			},
+
+			"network_mode": &schema.Schema{
+				Type:     schema.TypeString,
+				Optional: true,
+			},
+
+			"networks": &schema.Schema{
+				Type:     schema.TypeSet,
+				Optional: true,
+				Elem:     &schema.Schema{Type: schema.TypeString},
+				Set:      schema.HashString,
 			},
 
 			"mounts": &schema.Schema{
@@ -248,6 +157,185 @@ func resourceDockerService() *schema.Resource {
 					},
 				},
 				Set: resourceDockerMountsHash,
+			},
+
+			"configs": &schema.Schema{
+				Type:     schema.TypeSet,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"config_id": &schema.Schema{
+							Type:     schema.TypeString,
+							Required: true,
+						},
+
+						"config_name": &schema.Schema{
+							Type:     schema.TypeString,
+							Required: true,
+						},
+
+						"file_name": &schema.Schema{
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+					},
+				},
+				Set: resourceDockerConfigsHash,
+			},
+
+			"secrets": &schema.Schema{
+				Type:     schema.TypeSet,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"secret_id": &schema.Schema{
+							Type:     schema.TypeString,
+							Required: true,
+						},
+
+						"secret_name": &schema.Schema{
+							Type:     schema.TypeString,
+							Required: true,
+						},
+
+						"file_name": &schema.Schema{
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+					},
+				},
+				Set: resourceDockerSecretsHash,
+			},
+			// == end Container Spec
+
+			"ports": &schema.Schema{
+				Type:     schema.TypeSet,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"internal": &schema.Schema{
+							Type:     schema.TypeInt,
+							Required: true,
+						},
+
+						"external": &schema.Schema{
+							Type:     schema.TypeInt,
+							Optional: true,
+						},
+
+						"mode": &schema.Schema{
+							Type:     schema.TypeString,
+							Default:  "ingress",
+							Optional: true,
+						},
+
+						"protocol": &schema.Schema{
+							Type:     schema.TypeString,
+							Default:  "tcp",
+							Optional: true,
+						},
+					},
+				},
+				Set: resourceDockerPortsHash,
+			},
+
+			"update_config": &schema.Schema{
+				Type:     schema.TypeList,
+				MaxItems: 1,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"parallelism": &schema.Schema{
+							Type:         schema.TypeInt,
+							Description:  "Maximum number of tasks to be updated in one iteration simultaneously (0 to update all at once)",
+							Optional:     true,
+							ValidateFunc: validateIntegerGeqThan0(),
+						},
+						"delay": &schema.Schema{
+							Type:         schema.TypeString,
+							Description:  "Delay between updates (ns|us|ms|s|m|h)",
+							Optional:     true,
+							ValidateFunc: validateDurationGeq0(),
+						},
+						"failure_action": &schema.Schema{
+							Type:         schema.TypeString,
+							Description:  "Action on update failure: pause | continue | rollback",
+							Optional:     true,
+							ValidateFunc: validateStringMatchesPattern("(pause|continue|rollback)"),
+						},
+						"monitor": &schema.Schema{
+							Type:         schema.TypeString,
+							Description:  "Duration after each task update to monitor for failure (ns|us|ms|s|m|h)",
+							Optional:     true,
+							ValidateFunc: validateDurationGeq0(),
+						},
+						"max_failure_ratio": &schema.Schema{
+							Type:         schema.TypeFloat,
+							Description:  "Failure rate to tolerate during an update",
+							Optional:     true,
+							ValidateFunc: validateFloatRatio(),
+						},
+						"order": &schema.Schema{
+							Type:         schema.TypeString,
+							Description:  "Update order either 'stop-first' or 'start-first'",
+							Optional:     true,
+							ValidateFunc: validateStringMatchesPattern("(stop-first|start-first)"),
+						},
+					},
+				},
+			},
+
+			"rollback_config": &schema.Schema{
+				Type:     schema.TypeList,
+				Optional: true,
+				MaxItems: 1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"parallelism": &schema.Schema{
+							Type:         schema.TypeInt,
+							Description:  "Maximum number of tasks to be rollbacked in one iteration",
+							Optional:     true,
+							ValidateFunc: validateIntegerGeqThan0(),
+						},
+						"delay": &schema.Schema{
+							Type:         schema.TypeString,
+							Description:  "Delay between task rollbacks (ns|us|ms|s|m|h)",
+							Optional:     true,
+							ValidateFunc: validateDurationGeq0(),
+						},
+						"failure_action": &schema.Schema{
+							Type:         schema.TypeString,
+							Description:  "Action on rollback failure: pause | continue | rollback",
+							Optional:     true,
+							ValidateFunc: validateStringMatchesPattern("(pause|continue|rollback)"),
+						},
+						"monitor": &schema.Schema{
+							Type:         schema.TypeString,
+							Description:  "Duration after each task rollback to monitor for failure (ns|us|ms|s|m|h)",
+							Optional:     true,
+							ValidateFunc: validateDurationGeq0(),
+						},
+						"max_failure_ratio": &schema.Schema{
+							Type:         schema.TypeFloat,
+							Description:  "Failure rate to tolerate during a rollback",
+							Optional:     true,
+							ValidateFunc: validateFloatRatio(),
+						},
+						"order": &schema.Schema{
+							Type:         schema.TypeString,
+							Description:  "Rollback order: either 'stop-first' or 'start-first'",
+							Optional:     true,
+							ValidateFunc: validateStringMatchesPattern("(stop-first|start-first)"),
+						},
+					},
+				},
+			},
+
+			"constraints": &schema.Schema{
+				Type:     schema.TypeSet,
+				Optional: true,
+				Elem:     &schema.Schema{Type: schema.TypeString},
+				Set:      schema.HashString,
 			},
 		},
 	}
