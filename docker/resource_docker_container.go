@@ -118,18 +118,11 @@ func resourceDockerContainer() *schema.Resource {
 			},
 
 			"restart": &schema.Schema{
-				Type:     schema.TypeString,
-				Optional: true,
-				ForceNew: true,
-				Default:  "no",
-				ValidateFunc: func(v interface{}, k string) (ws []string, es []error) {
-					value := v.(string)
-					if !regexp.MustCompile(`^(no|on-failure|always|unless-stopped)$`).MatchString(value) {
-						es = append(es, fmt.Errorf(
-							"%q must be one of \"no\", \"on-failure\", \"always\" or \"unless-stopped\"", k))
-					}
-					return
-				},
+				Type:         schema.TypeString,
+				Optional:     true,
+				ForceNew:     true,
+				Default:      "no",
+				ValidateFunc: validateStringMatchesPattern(`^(no|on-failure|always|unless-stopped)$`),
 			},
 
 			"max_retry_count": &schema.Schema{
@@ -317,57 +310,32 @@ func resourceDockerContainer() *schema.Resource {
 			},
 
 			"memory": &schema.Schema{
-				Type:     schema.TypeInt,
-				Optional: true,
-				ForceNew: true,
-				ValidateFunc: func(v interface{}, k string) (ws []string, es []error) {
-					value := v.(int)
-					if value < 0 {
-						es = append(es, fmt.Errorf("%q must be greater than or equal to 0", k))
-					}
-					return
-				},
+				Type:         schema.TypeInt,
+				Optional:     true,
+				ForceNew:     true,
+				ValidateFunc: validateIntegerGeqThan(0),
 			},
 
 			"memory_swap": &schema.Schema{
-				Type:     schema.TypeInt,
-				Optional: true,
-				ForceNew: true,
-				ValidateFunc: func(v interface{}, k string) (ws []string, es []error) {
-					value := v.(int)
-					if value < -1 {
-						es = append(es, fmt.Errorf("%q must be greater than or equal to -1", k))
-					}
-					return
-				},
+				Type:         schema.TypeInt,
+				Optional:     true,
+				ForceNew:     true,
+				ValidateFunc: validateIntegerGeqThan(-1),
 			},
 
 			"cpu_shares": &schema.Schema{
-				Type:     schema.TypeInt,
-				Optional: true,
-				ForceNew: true,
-				ValidateFunc: func(v interface{}, k string) (ws []string, es []error) {
-					value := v.(int)
-					if value < 0 {
-						es = append(es, fmt.Errorf("%q must be greater than or equal to 0", k))
-					}
-					return
-				},
+				Type:         schema.TypeInt,
+				Optional:     true,
+				ForceNew:     true,
+				ValidateFunc: validateIntegerGeqThan(0),
 			},
 
 			"log_driver": &schema.Schema{
-				Type:     schema.TypeString,
-				Optional: true,
-				ForceNew: true,
-				Default:  "json-file",
-				ValidateFunc: func(v interface{}, k string) (ws []string, es []error) {
-					value := v.(string)
-					if !regexp.MustCompile(`^(json-file|syslog|journald|gelf|fluentd)$`).MatchString(value) {
-						es = append(es, fmt.Errorf(
-							"%q must be one of \"json-file\", \"syslog\", \"journald\", \"gelf\", or \"fluentd\"", k))
-					}
-					return
-				},
+				Type:         schema.TypeString,
+				Optional:     true,
+				ForceNew:     true,
+				Default:      "json-file",
+				ValidateFunc: validateStringMatchesPattern(`^(json-file|syslog|journald|gelf|fluentd)$`),
 			},
 
 			"log_opts": &schema.Schema{

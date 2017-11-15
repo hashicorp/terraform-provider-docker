@@ -24,12 +24,12 @@ func TestValidateIntegerInRange(t *testing.T) {
 
 func TestValidateIntegerGeqThan0(t *testing.T) {
 	v := 1
-	if _, error := validateIntegerGeqThan0()(v, "name"); error != nil {
+	if _, error := validateIntegerGeqThan(0)(v, "name"); error != nil {
 		t.Fatalf("%q should be an integer greater than 0", v)
 	}
 
 	v = -4
-	if _, error := validateIntegerGeqThan0()(v, "name"); error == nil {
+	if _, error := validateIntegerGeqThan(0)(v, "name"); error == nil {
 		t.Fatalf("%q should be an invalid integer smaller than 0", v)
 	}
 }
@@ -63,7 +63,7 @@ func TestValidateDurationGeq0(t *testing.T) {
 }
 
 func TestValidateStringMatchesPattern(t *testing.T) {
-	pattern := `(pause|continue-mate|break)`
+	pattern := `^(pause|continue-mate|break)$`
 	v := "pause"
 	if _, error := validateStringMatchesPattern(pattern)(v, "name"); error != nil {
 		t.Fatalf("%q should match the pattern", v)

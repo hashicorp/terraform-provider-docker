@@ -23,12 +23,12 @@ func validateIntegerInRange(min, max int) schema.SchemaValidateFunc {
 	}
 }
 
-func validateIntegerGeqThan0() schema.SchemaValidateFunc {
+func validateIntegerGeqThan(threshold int) schema.SchemaValidateFunc {
 	return func(v interface{}, k string) (ws []string, errors []error) {
 		value := v.(int)
-		if value < 0 {
+		if value < threshold {
 			errors = append(errors, fmt.Errorf(
-				"%q cannot be lower than 0", k))
+				"%q cannot be lower than %q", k, threshold))
 		}
 		return
 	}

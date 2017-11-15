@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform/terraform"
 )
 
+// Provider creates the Docker provider
 func Provider() terraform.ResourceProvider {
 	return &schema.Provider{
 		Schema: map[string]*schema.Schema{
@@ -50,8 +51,9 @@ func Provider() terraform.ResourceProvider {
 			},
 
 			"registry_auth": &schema.Schema{
-				Type:     schema.TypeSet,
-				Optional: true,
+				Type:        schema.TypeSet,
+				Optional:    true,
+				Description: "Authentication configuration for a private registry",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"address": &schema.Schema{
@@ -71,6 +73,7 @@ func Provider() terraform.ResourceProvider {
 						"password": &schema.Schema{
 							Type:          schema.TypeString,
 							Optional:      true,
+							Sensitive:     true,
 							ConflictsWith: []string{"registry_auth.config_file"},
 							DefaultFunc:   schema.EnvDefaultFunc("DOCKER_REGISTRY_PASS", ""),
 							Description:   "Password for the registry",
@@ -165,7 +168,7 @@ func providerRegistryAuthHash(v interface{}) int {
 	return hashcode.String(buf.String())
 }
 
-// Take the given registry_auth schemas and return a map of registry auth configurations
+// providerSetToRegistryAuth takes the given registry_auth schemas and return a map of registry auth configurations
 func providerSetToRegistryAuth(authSet *schema.Set) (*dc.AuthConfigurations, error) {
 	authConfigs := dc.AuthConfigurations{
 		Configs: make(map[string]dc.AuthConfiguration),
