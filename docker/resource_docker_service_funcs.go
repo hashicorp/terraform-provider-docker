@@ -275,6 +275,10 @@ func createServiceSpec(d *schema.ResourceData) (swarm.ServiceSpec, error) {
 				ReadOnly: rawMount["read_only"].(bool),
 			}
 
+			if w, ok := d.GetOk("volume_labels"); ok {
+				mountInstance.VolumeOptions.Labels = mapTypeMapValsToString(w.(map[string]interface{}))
+			}
+
 			if mountType == mount.TypeBind {
 				if w, ok := d.GetOk("bind_propagation"); ok {
 					mountInstance.BindOptions = &mount.BindOptions{
@@ -375,6 +379,18 @@ func createServiceSpec(d *schema.ResourceData) (swarm.ServiceSpec, error) {
 	}
 
 	serviceSpec.TaskTemplate.Placement = &placement
+
+	serviceSpec.TaskTemplate.LogDriver = &swarm.Driver{}
+	if v, ok := d.GetOk("logging"); ok {
+		for _, rawLogging := range v.([]interface{}) {
+			rawLogging := rawLogging.(map[string]interface{})
+			serviceSpec.TaskTemplate.LogDriver.Name = rawLogging["driver_name"].(string)
+
+			if rawOptions, ok := rawLogging["options"]; ok {
+				serviceSpec.TaskTemplate.LogDriver.Options = mapTypeMapValsToString(rawOptions.(map[string]interface{}))
+			}
+		}
+	}
 	// == end TaskTemplate Spec
 
 	return serviceSpec, nil
