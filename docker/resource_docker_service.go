@@ -354,6 +354,45 @@ func resourceDockerService() *schema.Resource {
 					},
 				},
 			},
+
+			"healthcheck": &schema.Schema{
+				Type:     schema.TypeList,
+				MaxItems: 1,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"test": &schema.Schema{
+							Type:     schema.TypeList,
+							Optional: true,
+							Elem:     &schema.Schema{Type: schema.TypeString},
+						},
+						"interval": &schema.Schema{
+							Type:         schema.TypeString,
+							Optional:     true,
+							Default:      "0s",
+							ValidateFunc: validateDurationGeq0(),
+						},
+						"timeout": &schema.Schema{
+							Type:         schema.TypeString,
+							Optional:     true,
+							Default:      "0s",
+							ValidateFunc: validateDurationGeq0(),
+						},
+						"start_period": &schema.Schema{
+							Type:         schema.TypeString,
+							Optional:     true,
+							Default:      "0s",
+							ValidateFunc: validateDurationGeq0(),
+						},
+						"retries": &schema.Schema{
+							Type:         schema.TypeInt,
+							Optional:     true,
+							Default:      0,
+							ValidateFunc: validateIntegerGeqThan(0),
+						},
+					},
+				},
+			},
 		},
 	}
 }

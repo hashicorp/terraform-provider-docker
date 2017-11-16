@@ -7,6 +7,7 @@ import (
 
 	"os"
 
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/swarm"
 	dc "github.com/fsouza/go-dockerclient"
@@ -380,14 +381,38 @@ func createServiceSpec(d *schema.ResourceData) (swarm.ServiceSpec, error) {
 
 	serviceSpec.TaskTemplate.Placement = &placement
 
-	serviceSpec.TaskTemplate.LogDriver = &swarm.Driver{}
 	if v, ok := d.GetOk("logging"); ok {
+		serviceSpec.TaskTemplate.LogDriver = &swarm.Driver{}
 		for _, rawLogging := range v.([]interface{}) {
 			rawLogging := rawLogging.(map[string]interface{})
 			serviceSpec.TaskTemplate.LogDriver.Name = rawLogging["driver_name"].(string)
 
 			if rawOptions, ok := rawLogging["options"]; ok {
 				serviceSpec.TaskTemplate.LogDriver.Options = mapTypeMapValsToString(rawOptions.(map[string]interface{}))
+			}
+		}
+	}
+
+	if v, ok := d.GetOk("healthcheck"); ok {
+		containerSpec.Healthcheck = &container.HealthConfig{}
+		if len(v.([]interface{})) > 0 {
+			for _, rawHealthCheck := range v.([]interface{}) {
+				rawHealthCheck := rawHealthCheck.(map[string]interface{})
+				if testCommand, ok := rawHealthCheck["test"]; ok {
+					containerSpec.Healthcheck.Test = stringListToStringSlice(testCommand.([]interface{}))
+				}
+				if rawInterval, ok := rawHealthCheck["interval"]; ok {
+					containerSpec.Healthcheck.Interval, _ = time.ParseDuration(rawInterval.(string))
+				}
+				if rawTimeout, ok := rawHealthCheck["timeout"]; ok {
+					containerSpec.Healthcheck.Timeout, _ = time.ParseDuration(rawTimeout.(string))
+				}
+				if rawStartPeriod, ok := rawHealthCheck["start_period"]; ok {
+					containerSpec.Healthcheck.StartPeriod, _ = time.ParseDuration(rawStartPeriod.(string))
+				}
+				if rawRetries, ok := rawHealthCheck["retries"]; ok {
+					containerSpec.Healthcheck.Retries, _ = rawRetries.(int)
+				}
 			}
 		}
 	}
