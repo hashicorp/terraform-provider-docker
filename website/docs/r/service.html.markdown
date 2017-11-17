@@ -50,6 +50,8 @@ The following arguments are supported:
 * `update_config` - (Optional, block) See [UpdateConfig](#update-rollback-config) below for details.
 * `rollback_config` - (Optional, block) See [RolbackConfig](#update-rollback-config) below for details.
 * `constraints` - (Optional, set of strings) A set of constraints, e.g. `node=manager`.
+* `logging` - (Optional, block) See [Logging](#logging) below for details.
+* `healthcheck` - (Optional, block) See [Healthcheck](#healthcheck) below for details.
 
 <a id="auth"></a>
 ### Auth
@@ -126,6 +128,32 @@ the following:
 * `monitor` - (Optional, int) Duration after each task update to monitor for failure (ns|us|ms|s|m|h)
 * `max_failure_ratio` - (Optional, int) The failure rate to tolerate during an update.
 * `order` - (Optional, int) Update order either 'stop-first' or 'start-first'.
+
+<a id="logging"></a>
+### Logging
+
+`logging` is a block within the configuration that can be repeated only **once** to specify the extra logging configuration for the containers of the service. The `logging` block supports the following:
+
+* `driver_name` - (Required, string) Either `none`, `json-file`, `syslog`, `journald`, `gelf`, `fluentd`, `awslogs`, `splunk`, `etwlogs` or `gcplogs`.
+* `options` - (Optional, map of strings and strings) E.g.
+```hcl
+options {
+  awslogs-region = "us-west-2"
+  awslogs-group  = "dev/foo-service"
+}
+```
+
+<a id="healthcheck"></a>
+### Healthcheck
+
+`logging` is a block within the configuration that can be repeated only **once** to specify the extra logging configuration for the containers of the service. The `logging` block supports the following:
+
+* `test` - (Required, list of strings) Command to run to check health. For example, to run `curl -f http://localhost/health` set the
+    command to be `["CMD", "curl", "-f", "http://localhost/health"]`.
+* `interval` - (Optional, string) Time between running the check (ms|s|m|h). Default 10s.
+* `timeout` - (Optional, string) Maximum time to allow one check to run (ms|s|m|h). Default 3s.
+* `start_period` - (Optional, string) Start period for the container to initialize before counting retries towards unstable (ms|s|m|h). Default 2s.
+* `retries` - (Optional, int) Consecutive failures needed to report unhealthy. Default 1.
 
 
 ## Attributes Reference
