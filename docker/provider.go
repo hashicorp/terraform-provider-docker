@@ -1,14 +1,12 @@
 package docker
 
 import (
-	"bytes"
 	"fmt"
 	"os"
 	"os/user"
 	"strings"
 
 	dc "github.com/fsouza/go-dockerclient"
-	"github.com/hashicorp/terraform/helper/hashcode"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
 )
@@ -85,7 +83,6 @@ func Provider() terraform.ResourceProvider {
 						},
 					},
 				},
-				Set: providerRegistryAuthHash,
 			},
 		},
 
@@ -139,27 +136,6 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	}
 
 	return &providerConfig, nil
-}
-
-func providerRegistryAuthHash(v interface{}) int {
-	var buf bytes.Buffer
-	m := v.(map[string]interface{})
-
-	buf.WriteString(fmt.Sprintf("%v-", m["address"].(string)))
-
-	if v, ok := m["username"]; ok {
-		buf.WriteString(fmt.Sprintf("%v-", v.(string)))
-	}
-
-	if v, ok := m["password"]; ok {
-		buf.WriteString(fmt.Sprintf("%v-", v.(string)))
-	}
-
-	if v, ok := m["config_file"]; ok {
-		buf.WriteString(fmt.Sprintf("%v-", v.(string)))
-	}
-
-	return hashcode.String(buf.String())
 }
 
 // Take the given registry_auth schemas and return a map of registry auth configurations
