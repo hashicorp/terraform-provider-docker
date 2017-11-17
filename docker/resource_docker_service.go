@@ -363,31 +363,31 @@ func resourceDockerService() *schema.Resource {
 					Schema: map[string]*schema.Schema{
 						"test": &schema.Schema{
 							Type:     schema.TypeList,
-							Optional: true,
+							Required: true,
 							Elem:     &schema.Schema{Type: schema.TypeString},
 						},
 						"interval": &schema.Schema{
 							Type:         schema.TypeString,
 							Optional:     true,
-							Default:      "0s",
+							Default:      "10s",
 							ValidateFunc: validateDurationGeq0(),
 						},
 						"timeout": &schema.Schema{
 							Type:         schema.TypeString,
 							Optional:     true,
-							Default:      "0s",
+							Default:      "3s",
 							ValidateFunc: validateDurationGeq0(),
 						},
 						"start_period": &schema.Schema{
 							Type:         schema.TypeString,
 							Optional:     true,
-							Default:      "0s",
+							Default:      "2s",
 							ValidateFunc: validateDurationGeq0(),
 						},
 						"retries": &schema.Schema{
 							Type:         schema.TypeInt,
 							Optional:     true,
-							Default:      0,
+							Default:      1,
 							ValidateFunc: validateIntegerGeqThan(0),
 						},
 					},
