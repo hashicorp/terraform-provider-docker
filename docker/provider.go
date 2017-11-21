@@ -1,14 +1,12 @@
 package docker
 
 import (
-	"bytes"
 	"fmt"
 	"os"
 	"os/user"
 	"strings"
 
 	dc "github.com/fsouza/go-dockerclient"
-	"github.com/hashicorp/terraform/helper/hashcode"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
 )
@@ -51,9 +49,8 @@ func Provider() terraform.ResourceProvider {
 			},
 
 			"registry_auth": &schema.Schema{
-				Type:        schema.TypeSet,
-				Optional:    true,
-				Description: "Authentication configuration for a private registry",
+				Type:     schema.TypeSet,
+				Optional: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"address": &schema.Schema{
@@ -88,7 +85,6 @@ func Provider() terraform.ResourceProvider {
 						},
 					},
 				},
-				Set: providerRegistryAuthHash,
 			},
 		},
 
@@ -147,28 +143,7 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	return &providerConfig, nil
 }
 
-func providerRegistryAuthHash(v interface{}) int {
-	var buf bytes.Buffer
-	m := v.(map[string]interface{})
-
-	buf.WriteString(fmt.Sprintf("%v-", m["address"].(string)))
-
-	if v, ok := m["username"]; ok {
-		buf.WriteString(fmt.Sprintf("%v-", v.(string)))
-	}
-
-	if v, ok := m["password"]; ok {
-		buf.WriteString(fmt.Sprintf("%v-", v.(string)))
-	}
-
-	if v, ok := m["config_file"]; ok {
-		buf.WriteString(fmt.Sprintf("%v-", v.(string)))
-	}
-
-	return hashcode.String(buf.String())
-}
-
-// providerSetToRegistryAuth takes the given registry_auth schemas and return a map of registry auth configurations
+// Take the given registry_auth schemas and return a map of registry auth configurations
 func providerSetToRegistryAuth(authSet *schema.Set) (*dc.AuthConfigurations, error) {
 	authConfigs := dc.AuthConfigurations{
 		Configs: make(map[string]dc.AuthConfiguration),
