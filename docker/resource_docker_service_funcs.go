@@ -47,7 +47,7 @@ func resourceDockerServiceCreate(d *schema.ResourceData, meta interface{}) error
 	if v, ok := d.GetOk("auth"); ok {
 		createOpts.Auth = authToServiceAuth(v.(map[string]interface{}))
 	} else {
-		createOpts.Auth = fromRegistryAuth(d.Get("image").(string), meta)
+		createOpts.Auth = fromRegistryAuth(d.Get("image").(string), meta.(*ProviderConfig).AuthConfigs.Configs)
 	}
 
 	if v, ok := d.GetOk("update_config"); ok {
@@ -158,7 +158,7 @@ func resourceDockerServiceUpdate(d *schema.ResourceData, meta interface{}) error
 	if v, ok := d.GetOk("auth"); ok {
 		updateOpts.Auth = authToServiceAuth(v.(map[string]interface{}))
 	} else {
-		updateOpts.Auth = fromRegistryAuth(d.Get("image").(string), meta)
+		updateOpts.Auth = fromRegistryAuth(d.Get("image").(string), meta.(*ProviderConfig).AuthConfigs.Configs)
 	}
 
 	err = client.UpdateService(d.Id(), updateOpts)
@@ -486,13 +486,17 @@ func authToServiceAuth(auth map[string]interface{}) dc.AuthConfiguration {
 	return dc.AuthConfiguration{}
 }
 
-func fromRegistryAuth(image string, meta interface{}) dc.AuthConfiguration {
-	image = strings.Replace(image, "http://", "", 1)
-	image = strings.Replace(image, "https://", "", 1)
+func fromRegistryAuth(image string, configs map[string]dc.AuthConfiguration) dc.AuthConfiguration {
+	// Remove normalized prefixes to simlify substring
+	image = strings.Replace(strings.Replace(image, "http://", "", 1), "https://", "", 1)
+	// Get the registry with optional port
 	lastBin := strings.Index(image, "/")
-	serverAddress := image[0:lastBin]
-	if fromRegistryAuth, ok := meta.(*ProviderConfig).AuthConfigs.Configs[normalizeRegistryAddress(serverAddress)]; ok {
-		return fromRegistryAuth
+	// No auth given and image name has no slash like 'alpine:3.1'
+	if lastBin != -1 {
+		serverAddress := image[0:lastBin]
+		if fromRegistryAuth, ok := configs[normalizeRegistryAddress(serverAddress)]; ok {
+			return fromRegistryAuth
+		}
 	}
 
 	return dc.AuthConfiguration{}
