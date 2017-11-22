@@ -4,11 +4,11 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform/helper/resource"
-	"github.com/hashicorp/terraform/terraform"
 )
 
 func TestAccDockerConfig_basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
+		// swarm will be initialized in 'testAccPreCheck' if necessary
 		PreCheck:  func() { testAccPreCheck(t) },
 		Providers: testAccProviders,
 		Steps: []resource.TestStep{
@@ -20,10 +20,9 @@ func TestAccDockerConfig_basic(t *testing.T) {
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
-					func(s *terraform.State) error {
-						return nil
-						// return fmt.Errorf("err")
-					}),
+					resource.TestCheckResourceAttr("docker_config.foo", "name", "foo"),
+					resource.TestCheckResourceAttr("docker_config.foo", "data", "ewodwerwefdvweew4534gICJzZXJ2ZXZZ67IiOiB7CiA="),
+				),
 			},
 		},
 	})

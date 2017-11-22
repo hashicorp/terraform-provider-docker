@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform/helper/resource"
-	"github.com/hashicorp/terraform/terraform"
 )
 
 func TestAccDockerSecret_basic(t *testing.T) {
@@ -20,10 +19,9 @@ func TestAccDockerSecret_basic(t *testing.T) {
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
-					func(s *terraform.State) error {
-						return nil
-						// return fmt.Errorf("err")
-					}),
+					resource.TestCheckResourceAttr("docker_secret.foo", "name", "foo"),
+					resource.TestCheckResourceAttr("docker_secret.foo", "data", "ewodwerwefdvweew4534gICJzZXJ2ZXZZ67IiOiB7CiA="),
+				),
 			},
 		},
 	})
