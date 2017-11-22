@@ -58,10 +58,13 @@ func dataSourceDockerRegistryImageRead(d *schema.ResourceData, meta interface{})
 		password = auth.Password
 	}
 
-	digest, err := getImageDigest(pullOpts.Registry, pullOpts.Repository, pullOpts.Tag, username, password)
+	digest, err := getImageDigest(pullOpts.Registry, pullOpts.Repository, pullOpts.Tag, username, password, false)
 
 	if err != nil {
-		return fmt.Errorf("Got error when attempting to fetch image version from registry: %s", err)
+		digest, err = getImageDigest(pullOpts.Registry, pullOpts.Repository, pullOpts.Tag, username, password, true)
+		if err != nil {
+			return fmt.Errorf("Got error when attempting to fetch image version from registry: %s", err)
+		}
 	}
 
 	d.SetId(digest)
@@ -70,11 +73,10 @@ func dataSourceDockerRegistryImageRead(d *schema.ResourceData, meta interface{})
 	return nil
 }
 
-func getImageDigest(registry, image, tag, username, password string) (string, error) {
+func getImageDigest(registry, image, tag, username, password string, fallback bool) (string, error) {
 	client := http.DefaultClient
 
 	req, err := http.NewRequest("GET", "https://"+registry+"/v2/"+image+"/manifests/"+tag, nil)
-
 	if err != nil {
 		return "", fmt.Errorf("Error creating registry request: %s", err)
 	}
@@ -85,6 +87,10 @@ func getImageDigest(registry, image, tag, username, password string) (string, er
 
 	// Set this header so that we get the v2 manifest back from the registry.
 	req.Header.Set("Accept", "application/vnd.docker.distribution.manifest.v2+json")
+	if fallback {
+		// Fallback to this header if the registry does not support the v2 manifest like gcr.io
+		req.Header.Set("Accept", "application/vnd.docker.distribution.manifest.v1+prettyjws")
+	}
 
 	resp, err := client.Do(req)
 
@@ -151,7 +157,7 @@ func getImageDigest(registry, image, tag, username, password string) (string, er
 			return "", fmt.Errorf("Bad credentials: " + resp.Status)
 		}
 
-	// Some unexpected status was given, return an error
+		// Some unexpected status was given, return an error
 	default:
 		return "", fmt.Errorf("Got bad response from registry: " + resp.Status)
 	}
