@@ -10,7 +10,8 @@ import (
 
 func resourceDockerConfigCreate(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*ProviderConfig).DockerClient
-	data, err := base64.StdEncoding.DecodeString(d.Get("data").(string))
+	// is validated on resource creation
+	data, _ := base64.StdEncoding.DecodeString(d.Get("data").(string))
 
 	createConfigOpts := dc.CreateConfigOptions{
 		ConfigSpec: swarm.ConfigSpec{

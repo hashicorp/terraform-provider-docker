@@ -77,3 +77,15 @@ func TestValidateStringMatchesPattern(t *testing.T) {
 		t.Fatalf("%q should match the pattern", v)
 	}
 }
+
+func TestValidateStringShouldBeBase64Encoded(t *testing.T) {
+	v := `YmtzbGRrc2xka3NkMjM4MQ==`
+	if _, error := validateStringIsBase64Encoded()(v, "name"); error != nil {
+		t.Fatalf("%q should be base64 decodeable", v)
+	}
+
+	v = `%&df#3NkMjM4MQ==`
+	if _, error := validateStringIsBase64Encoded()(v, "name"); error == nil {
+		t.Fatalf("%q should NOT be base64 decodeable", v)
+	}
+}

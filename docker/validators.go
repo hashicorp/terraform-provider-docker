@@ -1,6 +1,7 @@
 package docker
 
 import (
+	"encoding/base64"
 	"fmt"
 	"regexp"
 	"time"
@@ -75,6 +76,18 @@ func validateStringMatchesPattern(pattern string) schema.SchemaValidateFunc {
 			errors = append(errors, fmt.Errorf(
 				"%q doesn't match the pattern (%q): %q",
 				k, pattern, value))
+		}
+
+		return
+	}
+}
+
+func validateStringIsBase64Encoded() schema.SchemaValidateFunc {
+	return func(v interface{}, k string) (ws []string, errors []error) {
+		value := v.(string)
+		if _, err := base64.StdEncoding.DecodeString(value); err != nil {
+			errors = append(errors, fmt.Errorf(
+				"%q is not base64 decodeable", k))
 		}
 
 		return

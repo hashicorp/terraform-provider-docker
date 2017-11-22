@@ -18,10 +18,11 @@ func resourceDockerConfig() *schema.Resource {
 			},
 
 			"data": &schema.Schema{
-				Type:      schema.TypeString,
-				Required:  true,
-				Sensitive: true,
-				ForceNew:  true,
+				Type:         schema.TypeString,
+				Required:     true,
+				Sensitive:    true,
+				ForceNew:     true,
+				ValidateFunc: validateStringIsBase64Encoded(),
 			},
 		},
 	}
