@@ -1,0 +1,5 @@
+- implement and test updates on service (https://docs.docker.com/engine/reference/commandline/service_update/)
+- setup travis for acc tests
+  - docker container for private registry
+  - create, tag and upload image there
+  - set envs for DOCKER_*
