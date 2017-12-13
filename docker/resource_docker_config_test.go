@@ -16,12 +16,12 @@ func TestAccDockerConfig_basic(t *testing.T) {
 				Config: `
 				resource "docker_config" "foo" {
 					name = "foo"
-					data = "ewodwerwefdvweew4534gICJzZXJ2ZXZZ67IiOiB7CiA="
+					data = "Ymxhc2RzYmxhYmxhMTI0ZHNkd2VzZA=="
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("docker_config.foo", "name", "foo"),
-					resource.TestCheckResourceAttr("docker_config.foo", "data", "ewodwerwefdvweew4534gICJzZXJ2ZXZZ67IiOiB7CiA="),
+					resource.TestCheckResourceAttr("docker_config.foo", "data", "Ymxhc2RzYmxhYmxhMTI0ZHNkd2VzZA=="),
 				),
 			},
 		},
