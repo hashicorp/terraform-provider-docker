@@ -94,6 +94,94 @@ func TestAccDockerService_basic(t *testing.T) {
 		},
 	})
 }
+func TestAccDockerService_full(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:  func() { testAccPreCheck(t) },
+		Providers: testAccProviders,
+		Steps: []resource.TestStep{
+			resource.TestStep{
+				Config: `
+				resource "docker_service" "foo" {
+					name     = "service-foo"
+					image    = "stovogel/friendlyhello:part2"
+					replicas = 2
+					
+					update_config {
+						parallelism       = 2
+						delay             = "10s"
+						failure_action    = "pause"
+						monitor           = "5s"
+						max_failure_ratio = 0.1
+						order             = "start-first"
+					}
+					
+					rollback_config {
+						parallelism       = 2
+						delay             = "5ms"
+						failure_action    = "pause"
+						monitor           = "10h"
+						max_failure_ratio = "0.9"
+						order             = "stop-first"
+					}
+
+					ports {
+						internal = "10000"
+						external = "5555"
+					}
+				}
+				`,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
+					resource.TestCheckResourceAttr("docker_service.foo", "image", "stovogel/friendlyhello:part2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "10s"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "pause"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.monitor", "5s"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.order", "start-first"),
+					resource.TestCheckResourceAttr("docker_service.foo", "rollback_config.0.parallelism", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "rollback_config.0.delay", "5ms"),
+					resource.TestCheckResourceAttr("docker_service.foo", "rollback_config.0.failure_action", "pause"),
+					resource.TestCheckResourceAttr("docker_service.foo", "rollback_config.0.monitor", "10h"),
+					resource.TestCheckResourceAttr("docker_service.foo", "rollback_config.0.max_failure_ratio", "0.9"),
+					resource.TestCheckResourceAttr("docker_service.foo", "rollback_config.0.order", "stop-first"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.#", "1"),
+					// TODO
+					// resource.TestCheckResourceAttr("docker_service.foo", "ports.0.internal", "10000"),
+					// resource.TestCheckResourceAttr("docker_service.foo", "ports.0.external", "5555"),
+					// resource.TestCheckResourceAttr("docker_service.foo", "logging.0.driver_name", "none"),
+					// resource.TestCheckResourceAttr("docker_service.foo", "logging.0.options.0.op1", "11"),
+					// resource.TestCheckResourceAttr("docker_service.foo", "logging.0.options.0.op2", "22"),
+					// resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.0", "CMD"),
+					// resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.1", "curl"),
+					// resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.2", "-f"),
+					// resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.3", "http://localhost:10000/health"),
+					// resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.interval", "15s"),
+					// resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.timeout", "10s"),
+					// resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.retries", "4"),
+				),
+			},
+		},
+	})
+}
+
+// logging {
+// 	driver_name = "none"
+
+// 	options {
+// 		op1 = "11"
+// 		op2  = "22"
+// 	}
+// }
+
+// healthcheck {
+// 	test     = ["CMD", "curl", "-f", "http://localhost:10000/health"]
+// 	interval = "15s"
+// 	timeout  = "10s"
+// 	retries  = 4
+// }
 
 func TestAccDockerService_private(t *testing.T) {
 	registry := os.Getenv("DOCKER_REGISTRY_ADDRESS")
