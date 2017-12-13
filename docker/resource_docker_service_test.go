@@ -101,6 +101,16 @@ func TestAccDockerService_full(t *testing.T) {
 		Steps: []resource.TestStep{
 			resource.TestStep{
 				Config: `
+				resource "docker_config" "service_config" {
+					name = "myconfig"
+					data = "eyJhIjoiYiJ9"
+				}
+				
+				resource "docker_secret" "service_secret" {
+					name = "mysecret"
+					data = "eyJhIjoiYiJ9"
+				}
+
 				resource "docker_service" "foo" {
 					name     = "service-foo"
 					image    = "stovogel/friendlyhello:part2"
@@ -123,6 +133,22 @@ func TestAccDockerService_full(t *testing.T) {
 						max_failure_ratio = "0.9"
 						order             = "stop-first"
 					}
+
+					configs = [
+						{
+							config_id   = "${docker_config.service_config.id}"
+							config_name = "${docker_config.service_config.name}"
+							file_name   = "/root/configs/configs.json"
+						},
+					]
+				
+					secrets = [
+						{
+							secret_id   = "${docker_secret.service_secret.id}"
+							secret_name = "${docker_secret.service_secret.name}"
+							file_name   = "/root/configs/secrets.json"
+						},
+					]
 
 					ports {
 						internal = "10000"
@@ -147,6 +173,12 @@ func TestAccDockerService_full(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_service.foo", "rollback_config.0.monitor", "10h"),
 					resource.TestCheckResourceAttr("docker_service.foo", "rollback_config.0.max_failure_ratio", "0.9"),
 					resource.TestCheckResourceAttr("docker_service.foo", "rollback_config.0.order", "stop-first"),
+					resource.TestCheckResourceAttr("docker_service.foo", "configs.#", "1"),
+					// resource.TestCheckResourceAttr("docker_service.foo", "configs.0.config_name", "myconfig"),
+					// resource.TestCheckResourceAttr("docker_service.foo", "configs.0.file_name", "/root/configs/configs.json"),
+					resource.TestCheckResourceAttr("docker_service.foo", "secrets.#", "1"),
+					// resource.TestCheckResourceAttr("docker_service.foo", "secrets.0.config_name", "mysecret"),
+					// resource.TestCheckResourceAttr("docker_service.foo", "secrets.0.file_name", "/root/configs/secrets.json"),
 					resource.TestCheckResourceAttr("docker_service.foo", "ports.#", "1"),
 					// TODO
 					// resource.TestCheckResourceAttr("docker_service.foo", "ports.0.internal", "10000"),
