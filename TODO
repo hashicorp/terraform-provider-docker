@@ -1,3 +1,5 @@
+- remove all custom hash functions (tf has a default one now)
+- provdide a funcs file for every resource
 - implement and test updates on service (https://docs.docker.com/engine/reference/commandline/service_update/)
 - setup travis for acc tests
   - docker container for private registry
