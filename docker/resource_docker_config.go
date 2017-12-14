@@ -16,7 +16,12 @@ func resourceDockerConfig() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 			},
-
+			// "docker_config_id": &schema.Schema{
+			// 	Type:     schema.TypeString,
+			// 	Computed: true,
+			// 	// ComputedWhen: ["data"] not yet implemented: https://github.com/hashicorp/terraform/pull/4846
+			// 	// Hence no recomputation is triggered when 'data' is changed and depending resources are not triggered
+			// },
 			"data": &schema.Schema{
 				Type:         schema.TypeString,
 				Required:     true,

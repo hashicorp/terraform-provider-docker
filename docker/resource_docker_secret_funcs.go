@@ -10,7 +10,8 @@ import (
 
 func resourceDockerSecretCreate(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*ProviderConfig).DockerClient
-	data, err := base64.StdEncoding.DecodeString(d.Get("data").(string))
+	// is validated on resource creation
+	data, _ := base64.StdEncoding.DecodeString(d.Get("data").(string))
 
 	createSecretOpts := dc.CreateSecretOptions{
 		SecretSpec: swarm.SecretSpec{
@@ -43,6 +44,7 @@ func resourceDockerSecretRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func resourceDockerSecretUpdate(d *schema.ResourceData, meta interface{}) error {
+	// NOTE: atm only the labels of a config can be updated. not the data
 	client := meta.(*ProviderConfig).DockerClient
 	data, err := base64.StdEncoding.DecodeString(d.Get("data").(string))
 
@@ -59,15 +61,16 @@ func resourceDockerSecretUpdate(d *schema.ResourceData, meta interface{}) error 
 }
 
 func resourceDockerSecretDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderConfig).DockerClient
-	err := client.RemoveSecret(dc.RemoveSecretOptions{
-		ID: d.Id(),
-	})
+	// HACK configs simply cannot be deleted to have an update mechanism
+	// client := meta.(*ProviderConfig).DockerClient
+	// err := client.RemoveSecret(dc.RemoveSecretOptions{
+	// 	ID: d.Id(),
+	// })
 
-	if err != nil {
-		return err
-	}
+	// if err != nil {
+	// 	return err
+	// }
 
-	d.SetId("")
+	// d.SetId("")
 	return nil
 }

@@ -43,10 +43,11 @@ func resourceDockerConfigRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func resourceDockerConfigUpdate(d *schema.ResourceData, meta interface{}) error {
+	// NOTE: atm only the labels of a config can be updated. not the data
 	client := meta.(*ProviderConfig).DockerClient
-	data, err := base64.StdEncoding.DecodeString(d.Get("data").(string))
+	data, _ := base64.StdEncoding.DecodeString(d.Get("data").(string))
 
-	err = client.UpdateConfig(d.Id(), dc.UpdateConfigOptions{
+	err := client.UpdateConfig(d.Id(), dc.UpdateConfigOptions{
 		ConfigSpec: swarm.ConfigSpec{
 			Data: data,
 		},
@@ -59,15 +60,17 @@ func resourceDockerConfigUpdate(d *schema.ResourceData, meta interface{}) error 
 }
 
 func resourceDockerConfigDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderConfig).DockerClient
-	err := client.RemoveConfig(dc.RemoveConfigOptions{
-		ID: d.Id(),
-	})
+	// HACK configs simply cannot be deleted to have an update mechanism
 
-	if err != nil {
-		return err
-	}
+	// client := meta.(*ProviderConfig).DockerClient
+	// err := client.RemoveConfig(dc.RemoveConfigOptions{
+	// 	ID: d.Id(),
+	// })
 
-	d.SetId("")
+	// if err != nil {
+	// 	return err
+	// }
+
+	// d.SetId("")
 	return nil
 }
