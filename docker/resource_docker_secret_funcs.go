@@ -45,6 +45,7 @@ func resourceDockerSecretRead(d *schema.ResourceData, meta interface{}) error {
 
 func resourceDockerSecretUpdate(d *schema.ResourceData, meta interface{}) error {
 	// NOTE: atm only the labels of a config can be updated. not the data
+	// Wait for https://github.com/moby/moby/issues/35803
 	client := meta.(*ProviderConfig).DockerClient
 	data, err := base64.StdEncoding.DecodeString(d.Get("data").(string))
 
@@ -62,6 +63,7 @@ func resourceDockerSecretUpdate(d *schema.ResourceData, meta interface{}) error 
 
 func resourceDockerSecretDelete(d *schema.ResourceData, meta interface{}) error {
 	// HACK configs simply cannot be deleted to have an update mechanism
+	// Wait for https://github.com/moby/moby/issues/35803
 	// client := meta.(*ProviderConfig).DockerClient
 	// err := client.RemoveSecret(dc.RemoveSecretOptions{
 	// 	ID: d.Id(),
