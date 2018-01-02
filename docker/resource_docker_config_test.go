@@ -15,12 +15,16 @@ func TestAccDockerConfig_basic(t *testing.T) {
 			resource.TestStep{
 				Config: `
 				resource "docker_config" "foo" {
-					name = "foo"
+					name = "foo-${replace(timestamp(),":", ".")}"
 					data = "Ymxhc2RzYmxhYmxhMTI0ZHNkd2VzZA=="
+
+					lifecycle {
+						ignore_changes = ["name"]
+					}
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("docker_config.foo", "name", "foo"),
+					// resource.TestCheckResourceAttr("docker_config.foo", "name", "foo"),
 					resource.TestCheckResourceAttr("docker_config.foo", "data", "Ymxhc2RzYmxhYmxhMTI0ZHNkd2VzZA=="),
 				),
 			},
