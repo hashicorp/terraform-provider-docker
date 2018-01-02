@@ -61,7 +61,7 @@ In order to run the full suite of Acceptance tests, run `make testacc`.
 ```sh
 $ make testacc
 # e.g. run a single acceptance test: e.g. 'TestAccDockerRegistryImage_private' in 'data_source_docker_registry_image_test.go'
-go test -v -timeout 30s github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerRegistryImage_private$
+TF_ACC=1 go test -v -timeout 30s github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerRegistryImage_private$
 ```
 
 In order to extend the provider and test it with `terraform`, build the provider as mentioned above with
