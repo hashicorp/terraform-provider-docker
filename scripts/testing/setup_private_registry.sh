@@ -8,7 +8,7 @@ openssl req \
   -nodes \
   -x509 \
   -days 365 \
-  -subj "/C=US/ST=Denial/L=Springfield/O=Dis/CN=localhost" \
+  -subj "/C=US/ST=Denial/L=Springfield/O=Dis/CN=127.0.0.1" \
   -keyout scripts/testing/certs/registry_auth.key \
   -out scripts/testing/certs/registry_auth.crt
 ## Create auth
@@ -24,10 +24,12 @@ docker run -d -p 5000:5000 --rm --name private_registry \
   -e "REGISTRY_HTTP_TLS_CERTIFICATE=/certs/registry_auth.crt" \
   -e "REGISTRY_HTTP_TLS_KEY=/certs/registry_auth.key" \
   registry:2
+# wait a bit for travis...
+sleep 5
 # Login to private registry
-docker login -u testuser -p testpwd localhost:5000
+docker login -u testuser -p testpwd 127.0.0.1:5000
 # Build private image
 docker build -t my-private-service ./scripts/testing
-docker tag my-private-service localhost:5000/my-private-service:latest
+docker tag my-private-service 127.0.0.1:5000/my-private-service:latest
 # Push private image into private registry
-docker push localhost:5000/my-private-service
+docker push 127.0.0.1:5000/my-private-service
