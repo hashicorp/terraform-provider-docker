@@ -1,6 +1,7 @@
 package docker
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -76,7 +77,14 @@ func dataSourceDockerRegistryImageRead(d *schema.ResourceData, meta interface{})
 }
 
 func getImageDigest(registry, image, tag, username, password string, fallback bool) (string, error) {
+	// Disabled TLS verify to allow local registries with self signed certs
+	cfg := &tls.Config{
+		InsecureSkipVerify: true,
+	}
 	client := http.DefaultClient
+	client.Transport = &http.Transport{
+		TLSClientConfig: cfg,
+	}
 
 	req, err := http.NewRequest("GET", "https://"+registry+"/v2/"+image+"/manifests/"+tag, nil)
 	if err != nil {

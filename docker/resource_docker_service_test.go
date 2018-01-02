@@ -102,13 +102,21 @@ func TestAccDockerService_full(t *testing.T) {
 			resource.TestStep{
 				Config: `
 				resource "docker_config" "service_config" {
-					name = "myconfig"
+					name = "myconfig-${replace(timestamp(),":", ".")}"
 					data = "eyJhIjoiYiJ9"
+
+					lifecycle {
+						ignore_changes = ["name"]
+					}
 				}
 				
 				resource "docker_secret" "service_secret" {
-					name = "mysecret"
+					name = "mysecret-${replace(timestamp(),":", ".")}"
 					data = "eyJhIjoiYiJ9"
+
+					lifecycle {
+						ignore_changes = ["name"]
+					}
 				}
 
 				resource "docker_service" "foo" {

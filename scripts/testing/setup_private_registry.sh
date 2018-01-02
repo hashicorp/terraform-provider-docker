@@ -1,0 +1,33 @@
+set -e
+
+# Create private registry
+## Create self signed certs
+mkdir -p scripts/testing/certs
+openssl req \
+  -newkey rsa:2048 \
+  -nodes \
+  -x509 \
+  -days 365 \
+  -subj "/C=US/ST=Denial/L=Springfield/O=Dis/CN=localhost" \
+  -keyout scripts/testing/certs/registry_auth.key \
+  -out scripts/testing/certs/registry_auth.crt
+## Create auth
+mkdir -p scripts/testing/auth
+# Start registry
+docker run --entrypoint htpasswd registry:2 -Bbn testuser testpwd > scripts/testing/auth/htpasswd
+docker run -d -p 5000:5000 --rm --name private_registry \
+  -v "$(pwd)"/scripts/testing/auth:/auth \
+  -e "REGISTRY_AUTH=htpasswd" \
+  -e "REGISTRY_AUTH_HTPASSWD_REALM=Registry Realm" \
+  -e "REGISTRY_AUTH_HTPASSWD_PATH=/auth/htpasswd" \
+  -v "$(pwd)"/scripts/testing/certs:/certs \
+  -e "REGISTRY_HTTP_TLS_CERTIFICATE=/certs/registry_auth.crt" \
+  -e "REGISTRY_HTTP_TLS_KEY=/certs/registry_auth.key" \
+  registry:2
+# Login to private registry
+docker login -u testuser -p testpwd localhost:5000
+# Build private image
+docker build -t my-private-service ./scripts/testing
+docker tag my-private-service localhost:5000/my-private-service:latest
+# Push private image into private registry
+docker push localhost:5000/my-private-service
