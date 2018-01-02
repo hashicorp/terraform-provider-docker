@@ -335,7 +335,7 @@ func resourceDockerContainer() *schema.Resource {
 				Optional:     true,
 				ForceNew:     true,
 				Default:      "json-file",
-				ValidateFunc: validateStringMatchesPattern(`^(json-file|syslog|journald|gelf|fluentd)$`),
+				ValidateFunc: validateStringMatchesPattern(`^(json-file|syslog|journald|gelf|fluentd|awslogs)$`),
 			},
 
 			"log_opts": &schema.Schema{
