@@ -12,6 +12,8 @@ Manages the secreturation of a Docker service in a swarm.
 
 ## Example Usage
 
+### Basic
+
 ```hcl
 # Creates a secret
 resource "docker_secret" "foo_secret" {
@@ -19,6 +21,9 @@ resource "docker_secret" "foo_secret" {
   data = "ewogICJzZXJsaasIfQo="
 }
 ```
+
+### Advanced
+See `docker_config` resource.
 
 ## Argument Reference
 

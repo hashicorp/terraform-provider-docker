@@ -22,12 +22,14 @@ resource "docker_config" "foo_config" {
 ```
 
 ### Advanced
+#### Dynamically set config with a template
 In this example you can use the `${var.foo_port}` variable to dynamically
 set the `${port}` variable in the `foo.configs.json.tpl` template and create
 the data of the `foo_config` with the help of the `base64encode` interpolation 
 function.
 
-`foo.config.json.tpl`
+File `foo.config.json.tpl`
+
 ```json
 {
   "server": {
@@ -35,6 +37,8 @@ function.
   }
 }
 ```
+
+File `main.tf`
 
 ```hcl
 # Creates the template in renders the variable
@@ -50,6 +54,33 @@ data "template_file" "foo_config_tpl" {
 resource "docker_config" "foo_config" {
   name = "foo_config"
   data = "${base64encode(data.template_file.foo_config_tpl.rendered)}"
+}
+```
+
+#### Update config with no downtime
+This example shows how a config can be updated and the service has not to be shutdown.
+Each config gets a unique timestamp. The drawback is that for every update a new config will be created. This is because at the moment
+it is not possible to update the data for a config (or secret). The issue [moby-35803](https://github.com/moby/moby/issues/35803)
+will solve this in the future.
+
+```hcl
+resource "docker_config" "service_config" {
+  name = "${var.service_name}-config-${replace(timestamp(),":", ".")}"
+  data = "${base64encode(data.template_file.service_config_tpl.rendered)}"
+
+  lifecycle {
+    ignore_changes = ["name"]
+  }
+}
+resource "docker_service" "service" {
+   # ...
+   configs = [
+    {
+      config_id   = "${docker_config.service_config.id}"
+      config_name = "${docker_config.service_config.name}"
+      file_name   = "/root/configs/configs.json"
+    },
+  ]
 }
 ```
 

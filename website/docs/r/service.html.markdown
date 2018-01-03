@@ -12,6 +12,7 @@ Manages the lifecycle of a Docker service.
 
 ## Example Usage
 
+### Basic
 ```hcl
 # Start a service
 resource "docker_service" "foo_service" {
@@ -22,6 +23,70 @@ resource "docker_service" "foo_service" {
   ports {
     internal = 80
     external = 8888
+  }
+}
+```
+
+### Advanced
+```hcl
+resource "docker_service" "service" {
+  name     = "swarm-foo-random"
+  image    = "repo.mycompany.com:8080/foo-service"
+  replicas = "10"
+
+  update_config {
+    parallelism       = 2
+    delay             = "10s"
+    failure_action    = "pause"
+    monitor           = "5s"
+    max_failure_ratio = 0.1
+    order             = "start-first"
+  }
+
+  rollback_config {
+    parallelism       = 2
+    delay             = "10s"
+    failure_action    = "pause"
+    monitor           = "5s"
+    max_failure_ratio = 0.1
+    order             = "start-first"
+  }
+
+  configs = [
+    {
+      config_id   = "${docker_config.service_config.id}"
+      config_name = "${docker_config.service_config.name}"
+      file_name   = "/root/configs/configs.json"
+    },
+  ]
+
+  secrets = [
+    {
+      secret_id   = "${docker_secret.service_secret.id}"
+      secret_name = "${docker_secret.service_secret.name}"
+      file_name   = "/root/configs/secrets.json"
+    },
+  ]
+
+  ports {
+    internal = "${var.internal_port}"
+    external = "${var.port}"
+  }
+
+  logging {
+    driver_name = "awslogs"
+
+    options {
+      awslogs-region = "${var.aws_region}"
+      awslogs-group  = "${var.env}/${var.service_name}"
+    }
+  }
+
+  healthcheck {
+    test     = ["CMD", "curl", "-f", "http://localhost:10000/${var.health_path}"]
+    interval = "15s"
+    timeout  = "10s"
+    retries  = 4
   }
 }
 ```
@@ -136,6 +201,7 @@ the following:
 
 * `driver_name` - (Required, string) Either `none`, `json-file`, `syslog`, `journald`, `gelf`, `fluentd`, `awslogs`, `splunk`, `etwlogs` or `gcplogs`.
 * `options` - (Optional, map of strings and strings) E.g.
+
 ```hcl
 options {
   awslogs-region = "us-west-2"
