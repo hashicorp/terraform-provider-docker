@@ -182,11 +182,12 @@ func TestAccDockerService_full(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_service.foo", "rollback_config.0.max_failure_ratio", "0.9"),
 					resource.TestCheckResourceAttr("docker_service.foo", "rollback_config.0.order", "stop-first"),
 					resource.TestCheckResourceAttr("docker_service.foo", "configs.#", "1"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "configs.0.config_name", "myconfig"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "configs.0.file_name", "/root/configs/configs.json"),
+					//  Note: the hash changes every time due to the usage of timestamp()
+					// resource.TestCheckResourceAttr("docker_service.foo", "configs.1255247167.config_name", "myconfig"),
+					// resource.TestCheckResourceAttr("docker_service.foo", "configs.1255247167.file_name", "/root/configs/configs.json"),
 					resource.TestCheckResourceAttr("docker_service.foo", "secrets.#", "1"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "secrets.0.config_name", "mysecret"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "secrets.0.file_name", "/root/configs/secrets.json"),
+					// resource.TestCheckResourceAttr("docker_service.foo", "secrets.3229549426.config_name", "mysecret"),
+					// resource.TestCheckResourceAttr("docker_service.foo", "secrets.3229549426.file_name", "/root/configs/secrets.json"),
 					resource.TestCheckResourceAttr("docker_service.foo", "ports.#", "1"),
 					// TODO
 					// resource.TestCheckResourceAttr("docker_service.foo", "ports.0.internal", "10000"),
