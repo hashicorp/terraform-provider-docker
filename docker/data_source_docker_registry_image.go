@@ -7,6 +7,8 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
+	"strconv"
 	"strings"
 
 	"github.com/hashicorp/terraform/helper/schema"
@@ -77,13 +79,19 @@ func dataSourceDockerRegistryImageRead(d *schema.ResourceData, meta interface{})
 }
 
 func getImageDigest(registry, image, tag, username, password string, fallback bool) (string, error) {
-	// Disabled TLS verify to allow local registries with self signed certs
-	cfg := &tls.Config{
-		InsecureSkipVerify: true,
-	}
 	client := http.DefaultClient
-	client.Transport = &http.Transport{
-		TLSClientConfig: cfg,
+
+	// Allow insecure registries only for ACC tests
+	// cuz we don't have a valid certs for this case
+	if env, okEnv := os.LookupEnv("TF_ACC"); okEnv {
+		if i, errConv := strconv.Atoi(env); errConv == nil && i >= 1 {
+			cfg := &tls.Config{
+				InsecureSkipVerify: true,
+			}
+			client.Transport = &http.Transport{
+				TLSClientConfig: cfg,
+			}
+		}
 	}
 
 	req, err := http.NewRequest("GET", "https://"+registry+"/v2/"+image+"/manifests/"+tag, nil)
