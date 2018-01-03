@@ -1,10 +1,6 @@
 package docker
 
 import (
-	"bytes"
-	"fmt"
-
-	"github.com/hashicorp/terraform/helper/hashcode"
 	"github.com/hashicorp/terraform/helper/schema"
 )
 
@@ -45,7 +41,6 @@ func resourceDockerService() *schema.Resource {
 						},
 					},
 				},
-				Set: resourceDockerAuthHash,
 			},
 			"name": &schema.Schema{
 				Type:     schema.TypeString,
@@ -154,7 +149,6 @@ func resourceDockerService() *schema.Resource {
 						},
 					},
 				},
-				Set: resourceDockerMountsHash,
 			},
 
 			"configs": &schema.Schema{
@@ -176,7 +170,6 @@ func resourceDockerService() *schema.Resource {
 						},
 					},
 				},
-				Set: resourceDockerConfigsHash,
 			},
 
 			"secrets": &schema.Schema{
@@ -198,7 +191,6 @@ func resourceDockerService() *schema.Resource {
 						},
 					},
 				},
-				Set: resourceDockerSecretsHash,
 			},
 			// == end Container Spec
 
@@ -227,7 +219,6 @@ func resourceDockerService() *schema.Resource {
 						},
 					},
 				},
-				Set: resourceDockerPortsHash,
 			},
 
 			"update_config": &schema.Schema{
@@ -395,39 +386,4 @@ func resourceDockerService() *schema.Resource {
 			},
 		},
 	}
-}
-
-func resourceDockerAuthHash(v interface{}) int {
-	var buf bytes.Buffer
-	m := v.(map[string]interface{})
-
-	buf.WriteString(fmt.Sprintf("%v-", m["server_address"].(string)))
-
-	if v, ok := m["username"]; ok {
-		buf.WriteString(fmt.Sprintf("%v-", v.(string)))
-	}
-	if v, ok := m["password"]; ok {
-		buf.WriteString(fmt.Sprintf("%v-", v.(string)))
-	}
-
-	return hashcode.String(buf.String())
-}
-
-func resourceDockerMountsHash(v interface{}) int {
-	var buf bytes.Buffer
-	m := v.(map[string]interface{})
-
-	if v, ok := m["target"]; ok {
-		buf.WriteString(fmt.Sprintf("%v-", v.(string)))
-	}
-
-	if v, ok := m["source"]; ok {
-		buf.WriteString(fmt.Sprintf("%v-", v.(string)))
-	}
-
-	if v, ok := m["type"]; ok {
-		buf.WriteString(fmt.Sprintf("%v-", v.(string)))
-	}
-
-	return hashcode.String(buf.String())
 }

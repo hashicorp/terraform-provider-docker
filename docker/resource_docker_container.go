@@ -1,12 +1,10 @@
 package docker
 
 import (
-	"bytes"
 	"fmt"
 
 	"regexp"
 
-	"github.com/hashicorp/terraform/helper/hashcode"
 	"github.com/hashicorp/terraform/helper/schema"
 )
 
@@ -155,7 +153,6 @@ func resourceDockerContainer() *schema.Resource {
 						},
 					},
 				},
-				Set: resourceDockerCapabilitiesHash,
 			},
 
 			"volumes": &schema.Schema{
@@ -196,7 +193,6 @@ func resourceDockerContainer() *schema.Resource {
 						},
 					},
 				},
-				Set: resourceDockerVolumesHash,
 			},
 
 			"ports": &schema.Schema{
@@ -231,7 +227,6 @@ func resourceDockerContainer() *schema.Resource {
 						},
 					},
 				},
-				Set: resourceDockerPortsHash,
 			},
 
 			"host": &schema.Schema{
@@ -253,7 +248,6 @@ func resourceDockerContainer() *schema.Resource {
 						},
 					},
 				},
-				Set: resourceDockerHostsHash,
 			},
 
 			"env": &schema.Schema{
@@ -386,133 +380,9 @@ func resourceDockerContainer() *schema.Resource {
 						},
 					},
 				},
-				Set: resourceDockerUploadHash,
 			},
 		},
 	}
-}
-
-func resourceDockerCapabilitiesHash(v interface{}) int {
-	var buf bytes.Buffer
-	m := v.(map[string]interface{})
-
-	if v, ok := m["add"]; ok {
-		buf.WriteString(fmt.Sprintf("%v-", v))
-	}
-
-	if v, ok := m["remove"]; ok {
-		buf.WriteString(fmt.Sprintf("%v-", v))
-	}
-
-	return hashcode.String(buf.String())
-}
-
-func resourceDockerPortsHash(v interface{}) int {
-	var buf bytes.Buffer
-	m := v.(map[string]interface{})
-
-	buf.WriteString(fmt.Sprintf("%v-", m["internal"].(int)))
-
-	if v, ok := m["external"]; ok {
-		buf.WriteString(fmt.Sprintf("%v-", v.(int)))
-	}
-
-	if v, ok := m["ip"]; ok {
-		buf.WriteString(fmt.Sprintf("%v-", v.(string)))
-	}
-
-	if v, ok := m["protocol"]; ok {
-		buf.WriteString(fmt.Sprintf("%v-", v.(string)))
-	}
-
-	return hashcode.String(buf.String())
-}
-
-func resourceDockerHostsHash(v interface{}) int {
-	var buf bytes.Buffer
-	m := v.(map[string]interface{})
-
-	if v, ok := m["ip"]; ok {
-		buf.WriteString(fmt.Sprintf("%v-", v.(string)))
-	}
-
-	if v, ok := m["host"]; ok {
-		buf.WriteString(fmt.Sprintf("%v-", v.(string)))
-	}
-
-	return hashcode.String(buf.String())
-}
-
-func resourceDockerConfigsHash(v interface{}) int {
-	var buf bytes.Buffer
-	m := v.(map[string]interface{})
-
-	if v, ok := m["config_id"]; ok {
-		buf.WriteString(fmt.Sprintf("%v-", v.(string)))
-	}
-
-	if v, ok := m["file_name"]; ok {
-		buf.WriteString(fmt.Sprintf("%v-", v.(string)))
-	}
-
-	return hashcode.String(buf.String())
-}
-
-func resourceDockerSecretsHash(v interface{}) int {
-	var buf bytes.Buffer
-	m := v.(map[string]interface{})
-
-	if v, ok := m["secret_id"]; ok {
-		buf.WriteString(fmt.Sprintf("%v-", v.(string)))
-	}
-
-	if v, ok := m["file_name"]; ok {
-		buf.WriteString(fmt.Sprintf("%v-", v.(string)))
-	}
-
-	return hashcode.String(buf.String())
-}
-
-func resourceDockerVolumesHash(v interface{}) int {
-	var buf bytes.Buffer
-	m := v.(map[string]interface{})
-
-	if v, ok := m["from_container"]; ok {
-		buf.WriteString(fmt.Sprintf("%v-", v.(string)))
-	}
-
-	if v, ok := m["container_path"]; ok {
-		buf.WriteString(fmt.Sprintf("%v-", v.(string)))
-	}
-
-	if v, ok := m["host_path"]; ok {
-		buf.WriteString(fmt.Sprintf("%v-", v.(string)))
-	}
-
-	if v, ok := m["volume_name"]; ok {
-		buf.WriteString(fmt.Sprintf("%v-", v.(string)))
-	}
-
-	if v, ok := m["read_only"]; ok {
-		buf.WriteString(fmt.Sprintf("%v-", v.(bool)))
-	}
-
-	return hashcode.String(buf.String())
-}
-
-func resourceDockerUploadHash(v interface{}) int {
-	var buf bytes.Buffer
-	m := v.(map[string]interface{})
-
-	if v, ok := m["content"]; ok {
-		buf.WriteString(fmt.Sprintf("%v-", v.(string)))
-	}
-
-	if v, ok := m["file"]; ok {
-		buf.WriteString(fmt.Sprintf("%v-", v.(string)))
-	}
-
-	return hashcode.String(buf.String())
 }
 
 func validateDockerContainerPath(v interface{}, k string) (ws []string, errors []error) {
