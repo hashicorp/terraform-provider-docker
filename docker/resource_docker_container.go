@@ -420,6 +420,12 @@ func resourceDockerContainer() *schema.Resource {
 				},
 				Set: resourceDockerUploadHash,
 			},
+
+			"userns": &schema.Schema{
+				Type:     schema.TypeString,
+				Optional: true,
+				ForceNew: true,
+			},
 		},
 	}
 }

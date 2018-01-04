@@ -111,6 +111,7 @@ func resourceDockerContainerCreate(d *schema.ResourceData, meta interface{}) err
 		LogConfig: dc.LogConfig{
 			Type: d.Get("log_driver").(string),
 		},
+		UsernsMode: d.Get("userns").(string),
 	}
 
 	if len(portBindings) != 0 {

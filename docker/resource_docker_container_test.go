@@ -203,6 +203,10 @@ func TestAccDockerContainer_customized(t *testing.T) {
 			return fmt.Errorf("Container has incorrect extra host string: %q", c.HostConfig.ExtraHosts[1])
 		}
 
+		if c.HostConfig.UsernsMode != "host" {
+			return fmt.Errorf("Container has incorrect user namespace string: %q", c.HostConfig.UsernsMode)
+		}
+
 		if _, ok := c.NetworkSettings.Networks["test"]; !ok {
 			return fmt.Errorf("Container is not connected to the right user defined network: test")
 		}
@@ -386,6 +390,8 @@ resource "docker_container" "foo" {
 		host = "testhost2"
 		ip = "10.0.2.0"
 	}
+
+	userns = "host"
 }
 
 resource "docker_network" "test_network" {
