@@ -175,6 +175,14 @@ func resourceDockerContainerCreate(d *schema.ResourceData, meta interface{}) err
 		hostConfig.NetworkMode = v.(string)
 	}
 
+	if v, ok := d.GetOk("userns_mode"); ok {
+		hostConfig.UsernsMode = v.(string)
+	}
+
+	if v, ok := d.GetOk("pid_mode"); ok {
+		hostConfig.PidMode = v.(string)
+	}
+
 	createOpts.HostConfig = hostConfig
 
 	var retContainer *dc.Container

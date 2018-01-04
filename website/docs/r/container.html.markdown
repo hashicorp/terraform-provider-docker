@@ -79,6 +79,8 @@ The following arguments are supported:
   the logging driver.
 * `network_alias` - (Optional, set of strings) Network aliases of the container for user-defined networks only.
 * `network_mode` - (Optional, string) Network mode of the container.
+* `userns_mode` - (Optional, string) User namespace mode of the container.
+* `pid_mode` - (Optional, string) PID mode of the container.
 * `networks` - (Optional, set of strings) Id of the networks in which the
   container is.
 * `destroy_grace_seconds` - (Optional, int) If defined will attempt to stop the container before destroying. Container will be destroyed after `n` seconds or on successful stop.
