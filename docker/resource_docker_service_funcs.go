@@ -2,6 +2,7 @@ package docker
 
 import (
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -64,50 +65,73 @@ func resourceDockerServiceCreate(d *schema.ResourceData, meta interface{}) error
 	}
 
 	filter := make(map[string][]string)
-	filter["service"] = []string{d.Get("name").(string)}
+	filter["service"] = []string{service.Spec.Name}
 
-	taskID := ""
+	taskIDs := make([]string, 0)
+	desiredContainersToStart := d.Get("replicas").(int)
 	errorCount := 0
 	loops := 900
 	sleepTime := 1000 * time.Millisecond
+	// Wait until all replicas of the service registered as task
 	for i := loops; i > 0; i-- {
-		if taskID == "" {
+		log.Printf("[INFO] Replica loop: %d of %d", loops-i+1, loops)
+		if len(taskIDs) == 0 {
 			tasks, err := client.ListTasks(dc.ListTasksOptions{
 				Filters: filter,
 			})
 			if err != nil {
 				return err
 			}
-			if len(tasks) >= 1 {
-				taskID = tasks[0].ID
+			// wait until all containers are running
+			if len(tasks) == desiredContainersToStart { // we have default 1 here
+				log.Printf("[INFO] All %d containers are up", desiredContainersToStart)
+				for i := 0; i < len(tasks); i++ {
+					taskIDs = append(taskIDs, tasks[i].ID)
+				}
+				break
 			} else {
 				time.Sleep(sleepTime)
 				continue
 			}
 		}
+	}
 
-		task, err := client.InspectTask(taskID)
-		if err != nil {
-			return err
-		}
-
-		if task.DesiredState == task.Status.State {
-			break
-		}
-
-		if task.Status.State == swarm.TaskStateFailed || task.Status.State == swarm.TaskStateRejected || task.Status.State == swarm.TaskStateShutdown {
-			errorCount++
-			taskID = ""
-			if errorCount >= 3 {
-				return fmt.Errorf("Failed to start container: %s", task.Status.Err)
+	// Check that all are in the desired state
+	allContainersAreUp := true
+	log.Printf("[INFO] Tasks to check: %d", len(taskIDs))
+	for t := 0; t < len(taskIDs); t++ { // for each container of the service aka task
+		for i := loops; i > 0; i-- {
+			taskID := taskIDs[t]
+			task, err := client.InspectTask(taskID)
+			if err != nil {
+				return err
+			}
+			log.Printf("[INFO] Status loop: %d of %d for task %d", loops-i+1, loops, t)
+			if task.DesiredState == task.Status.State {
+				log.Printf("[INFO] Task check %d: container '%s' is running", t, task.Status.ContainerStatus.ContainerID)
+				break
+			} else {
+				if task.Status.State == swarm.TaskStateFailed || task.Status.State == swarm.TaskStateRejected || task.Status.State == swarm.TaskStateShutdown {
+					errorCount++
+					if errorCount >= 3 {
+						log.Printf("[INFO] %d: failed to put container '%s' into running", t, task.Status.ContainerStatus.ContainerID)
+						allContainersAreUp = false
+					}
+				}
+				time.Sleep(sleepTime)
+				continue
 			}
 		}
+	}
 
-		time.Sleep(sleepTime)
+	if !allContainersAreUp {
+		// ignoring the error. it should not happen
+		// because the service was successfully created before
+		deleteService(service.ID, client)
+		return fmt.Errorf("Failed to start all %d containers", desiredContainersToStart)
 	}
 
 	d.SetId(service.ID)
-
 	return resourceDockerServiceRead(d, meta)
 }
 
@@ -129,8 +153,21 @@ func resourceDockerServiceRead(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("Error inspecting service %s: %s", apiService.ID, err)
 	}
 
+	serviceContainerIds := make([]string, 0)
+	filter := make(map[string][]string)
+	filter["service"] = []string{service.Spec.Name}
+	tasks, err := client.ListTasks(dc.ListTasksOptions{
+		Filters: filter,
+	})
+	for i := 0; i < len(tasks); i++ {
+		log.Printf("[%d]: %s", i, tasks[i].Status.ContainerStatus.ContainerID)
+		task, _ := client.InspectTask(tasks[i].ID)
+		serviceContainerIds = append(serviceContainerIds, task.Status.ContainerStatus.ContainerID)
+	}
+
 	d.Set("version", service.Version.Index)
 	d.Set("name", service.Spec.Name)
+	d.Set("container_ids", serviceContainerIds)
 
 	d.SetId(service.ID)
 
@@ -172,15 +209,45 @@ func resourceDockerServiceUpdate(d *schema.ResourceData, meta interface{}) error
 func resourceDockerServiceDelete(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*ProviderConfig).DockerClient
 
-	removeOpts := dc.RemoveServiceOptions{
-		ID: d.Id(),
+	if err := deleteService(d.Id(), client); err != nil {
+		return err
 	}
 
-	if err := client.RemoveService(removeOpts); err != nil {
-		return fmt.Errorf("Error deleting service %s: %s", d.Id(), err)
+	// wait until all containers of the service are down
+	// to be able to unmount the associated volumes
+	containerIDs := d.Get("container_ids")
+	for _, containerID := range containerIDs.([]interface{}) {
+		log.Printf("[INFO] Waiting for container: %s to exit", containerID)
+		if exitCode, errOnExit := client.WaitContainer(containerID.(string)); errOnExit == nil {
+			log.Printf("[INFO] Container: %s exited with code %d", containerID, exitCode)
+			// Remove the container if it did not exit properly
+			// to be able to unmount the volumes
+			if exitCode != 0 {
+				removeOps := dc.RemoveContainerOptions{
+					ID:    containerID.(string),
+					Force: true,
+				}
+				if errOnRemove := client.RemoveContainer(removeOps); errOnRemove != nil {
+					// if the removal is already in progress, this error can be ignored
+					log.Printf("[INFO] Error %s on removal of Container: %s", errOnRemove, containerID)
+				}
+			}
+		}
 	}
 
 	d.SetId("")
+	return nil
+}
+
+func deleteService(serviceID string, client *dc.Client) error {
+	removeOpts := dc.RemoveServiceOptions{
+		ID: serviceID,
+	}
+
+	if err := client.RemoveService(removeOpts); err != nil {
+		return fmt.Errorf("Error deleting service %s: %s", serviceID, err)
+	}
+
 	return nil
 }
 
@@ -238,15 +305,16 @@ func createServiceSpec(d *schema.ResourceData) (swarm.ServiceSpec, error) {
 		containerSpec.Env = stringSetToStringSlice(v.(*schema.Set))
 	}
 
-	if v, ok := d.GetOk("hosts"); ok {
-		containerSpec.Hosts = stringSetToStringSlice(v.(*schema.Set))
+	if v, ok := d.GetOk("host"); ok {
+		containerSpec.Hosts = extraHostsSetToDockerExtraHosts(v.(*schema.Set))
 	}
 
 	endpointSpec := swarm.EndpointSpec{}
 
-	if v, ok := d.GetOk("network_mode"); ok {
-		endpointSpec.Mode = swarm.ResolutionMode(v.(string))
-	}
+	// TODO
+	// if v, ok := d.GetOk("network_mode"); ok {
+	// 	endpointSpec.Mode = swarm.ResolutionMode(v.(string))
+	// }
 
 	portBindings := []swarm.PortConfig{}
 

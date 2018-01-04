@@ -47,6 +47,11 @@ func resourceDockerService() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
+			"container_ids": &schema.Schema{
+				Type:     schema.TypeList,
+				Computed: true,
+				Elem:     &schema.Schema{Type: schema.TypeString},
+			},
 			// == start Container Spec
 			"image": &schema.Schema{
 				Type:     schema.TypeString,
@@ -55,6 +60,7 @@ func resourceDockerService() *schema.Resource {
 			"replicas": &schema.Schema{
 				Type:         schema.TypeInt,
 				Optional:     true,
+				Default:      1,
 				ValidateFunc: validateIntegerGeqThan(1),
 			},
 			"hostname": &schema.Schema{
@@ -72,16 +78,30 @@ func resourceDockerService() *schema.Resource {
 				Elem:     &schema.Schema{Type: schema.TypeString},
 				Set:      schema.HashString,
 			},
-			"hosts": &schema.Schema{
+			"host": &schema.Schema{
 				Type:     schema.TypeSet,
 				Optional: true,
-				Elem:     &schema.Schema{Type: schema.TypeString},
-				Set:      schema.HashString,
+				ForceNew: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"ip": &schema.Schema{
+							Type:     schema.TypeString,
+							Required: true,
+							ForceNew: true,
+						},
+
+						"host": &schema.Schema{
+							Type:     schema.TypeString,
+							Required: true,
+							ForceNew: true,
+						},
+					},
+				},
 			},
-			"network_mode": &schema.Schema{
-				Type:     schema.TypeString,
-				Optional: true,
-			},
+			// "network_mode": &schema.Schema{
+			// 	Type:     schema.TypeString,
+			// 	Optional: true,
+			// },
 			"networks": &schema.Schema{
 				Type:     schema.TypeSet,
 				Optional: true,

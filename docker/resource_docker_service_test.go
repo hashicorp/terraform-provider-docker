@@ -101,6 +101,15 @@ func TestAccDockerService_full(t *testing.T) {
 		Steps: []resource.TestStep{
 			resource.TestStep{
 				Config: `
+				resource "docker_network" "test_network" {
+					name   = "testNetwork"
+					driver = "overlay"
+				}
+
+				resource "docker_volume" "foo" {
+					name = "testVolume"
+				}
+
 				resource "docker_config" "service_config" {
 					name = "myconfig-${replace(timestamp(),":", ".")}"
 					data = "eyJhIjoiYiJ9"
@@ -124,6 +133,29 @@ func TestAccDockerService_full(t *testing.T) {
 					image    = "127.0.0.1:5000/my-private-service"
 					replicas = 2
 					
+					hostname = "myfooservice"
+
+					networks = ["${docker_network.test_network.name}"]
+
+					host {
+						host = "testhost"
+						ip = "10.0.1.0"
+					}
+
+					mounts = [
+						{
+							source = "${docker_volume.foo.name}"
+							target = "/mount/test"
+							type   = "volume"
+							consistency = "default"
+							read_only = true
+							volume_labels {
+								env = "dev"
+								terraform = "true"
+							}
+						}
+					]
+
 					update_config {
 						parallelism       = 2
 						delay             = "10s"
@@ -174,8 +206,8 @@ func TestAccDockerService_full(t *testing.T) {
 
 					healthcheck {
 						test     = ["CMD", "curl", "-f", "http://localhost:8080"]
-						interval = "15s"
-						timeout  = "10s"
+						interval = "5s"
+						timeout  = "2s"
 						retries  = 4
 					}
 				}
@@ -185,6 +217,26 @@ func TestAccDockerService_full(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/my-private-service"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "hostname", "myfooservice"),
+					resource.TestCheckResourceAttr("docker_service.foo", "networks.#", "1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "networks.3251854989", "testNetwork"),
+					resource.TestCheckResourceAttr("docker_service.foo", "host.#", "1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "host.1878413705.host", "testhost"),
+					resource.TestCheckResourceAttr("docker_service.foo", "host.1878413705.ip", "10.0.1.0"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mounts.#", "1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mounts.3510941185.bind_propagation", ""),
+					resource.TestCheckResourceAttr("docker_service.foo", "mounts.3510941185.consistency", "default"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mounts.3510941185.read_only", "true"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mounts.3510941185.source", "testVolume"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mounts.3510941185.target", "/mount/test"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mounts.3510941185.tmpfs_mode", "0"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mounts.3510941185.type", "volume"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mounts.3510941185.volume_driver_name", ""),
+					resource.TestCheckResourceAttr("docker_service.foo", "mounts.3510941185.volume_driver_options.#", "0"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mounts.3510941185.volume_labels.%", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mounts.3510941185.volume_labels.env", "dev"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mounts.3510941185.volume_labels.terraform", "true"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mounts.3510941185.volume_no_copy", "false"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "10s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "pause"),
@@ -215,15 +267,14 @@ func TestAccDockerService_full(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.1", "curl"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.2", "-f"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.3", "http://localhost:8080"),
-					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.interval", "15s"),
-					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.timeout", "10s"),
+					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.interval", "5s"),
+					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.timeout", "2s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.retries", "4"),
 				),
 			},
 		},
 	})
 }
-
 func TestAccDockerService_private(t *testing.T) {
 	registry := os.Getenv("DOCKER_REGISTRY_ADDRESS")
 	image := os.Getenv("DOCKER_PRIVATE_IMAGE")
