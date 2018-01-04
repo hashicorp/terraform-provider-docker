@@ -32,4 +32,4 @@ cleanup() {
 ## main
 log "setup" && setup 
 log "run" && run
-#log "cleanup" && cleanup
+log "cleanup" && cleanup
