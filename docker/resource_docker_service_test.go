@@ -121,7 +121,7 @@ func TestAccDockerService_full(t *testing.T) {
 
 				resource "docker_service" "foo" {
 					name     = "service-foo"
-					image    = "stovogel/friendlyhello:part2"
+					image    = "127.0.0.1:5000/my-private-service"
 					replicas = 2
 					
 					update_config {
@@ -146,7 +146,7 @@ func TestAccDockerService_full(t *testing.T) {
 						{
 							config_id   = "${docker_config.service_config.id}"
 							config_name = "${docker_config.service_config.name}"
-							file_name   = "/root/configs/configs.json"
+							file_name   = "/root/configs.json"
 						},
 					]
 				
@@ -154,20 +154,36 @@ func TestAccDockerService_full(t *testing.T) {
 						{
 							secret_id   = "${docker_secret.service_secret.id}"
 							secret_name = "${docker_secret.service_secret.name}"
-							file_name   = "/root/configs/secrets.json"
+							file_name   = "/root/secrets.json"
 						},
 					]
 
 					ports {
-						internal = "10000"
-						external = "5555"
+						internal = "8080"
+						external = "8080"
+					}
+
+					logging {
+						driver_name = "json-file"
+					
+						options {
+							max-size = "10m"
+							max-file = "3"
+						}
+					}
+
+					healthcheck {
+						test     = ["CMD", "curl", "-f", "http://localhost:8080"]
+						interval = "15s"
+						timeout  = "10s"
+						retries  = 4
 					}
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
-					resource.TestCheckResourceAttr("docker_service.foo", "image", "stovogel/friendlyhello:part2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/my-private-service"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "10s"),
@@ -184,45 +200,29 @@ func TestAccDockerService_full(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_service.foo", "configs.#", "1"),
 					//  Note: the hash changes every time due to the usage of timestamp()
 					// resource.TestCheckResourceAttr("docker_service.foo", "configs.1255247167.config_name", "myconfig"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "configs.1255247167.file_name", "/root/configs/configs.json"),
+					// resource.TestCheckResourceAttr("docker_service.foo", "configs.1255247167.file_name", "/root/configs.json"),
 					resource.TestCheckResourceAttr("docker_service.foo", "secrets.#", "1"),
 					// resource.TestCheckResourceAttr("docker_service.foo", "secrets.3229549426.config_name", "mysecret"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "secrets.3229549426.file_name", "/root/configs/secrets.json"),
+					// resource.TestCheckResourceAttr("docker_service.foo", "secrets.3229549426.file_name", "/root/secrets.json"),
 					resource.TestCheckResourceAttr("docker_service.foo", "ports.#", "1"),
-					// TODO
-					// resource.TestCheckResourceAttr("docker_service.foo", "ports.0.internal", "10000"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "ports.0.external", "5555"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "logging.0.driver_name", "none"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "logging.0.options.0.op1", "11"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "logging.0.options.0.op2", "22"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.0", "CMD"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.1", "curl"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.2", "-f"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.3", "http://localhost:10000/health"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.interval", "15s"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.timeout", "10s"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.retries", "4"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.1093694028.internal", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.1093694028.external", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "logging.0.driver_name", "json-file"),
+					resource.TestCheckResourceAttr("docker_service.foo", "logging.0.options.%", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "logging.0.options.max-size", "10m"),
+					resource.TestCheckResourceAttr("docker_service.foo", "logging.0.options.max-file", "3"),
+					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.0", "CMD"),
+					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.1", "curl"),
+					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.2", "-f"),
+					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.3", "http://localhost:8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.interval", "15s"),
+					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.timeout", "10s"),
+					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.retries", "4"),
 				),
 			},
 		},
 	})
 }
-
-// logging {
-// 	driver_name = "none"
-
-// 	options {
-// 		op1 = "11"
-// 		op2  = "22"
-// 	}
-// }
-
-// healthcheck {
-// 	test     = ["CMD", "curl", "-f", "http://localhost:10000/health"]
-// 	interval = "15s"
-// 	timeout  = "10s"
-// 	retries  = 4
-// }
 
 func TestAccDockerService_private(t *testing.T) {
 	registry := os.Getenv("DOCKER_REGISTRY_ADDRESS")
