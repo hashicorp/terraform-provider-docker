@@ -263,6 +263,32 @@ func resourceDockerContainer() *schema.Resource {
 				Set: resourceDockerHostsHash,
 			},
 
+			"ulimit": &schema.Schema{
+				Type:     schema.TypeSet,
+				Optional: true,
+				ForceNew: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"name": &schema.Schema{
+							Type:     schema.TypeString,
+							Required: true,
+							ForceNew: true,
+						},
+						"soft": &schema.Schema{
+							Type:     schema.TypeInt,
+							Required: true,
+							ForceNew: true,
+						},
+						"hard": &schema.Schema{
+							Type:     schema.TypeInt,
+							Required: true,
+							ForceNew: true,
+						},
+					},
+				},
+				Set: resourceDockerUlimitsHash,
+			},
+
 			"env": &schema.Schema{
 				Type:     schema.TypeSet,
 				Optional: true,
@@ -455,6 +481,25 @@ func resourceDockerPortsHash(v interface{}) int {
 
 	if v, ok := m["protocol"]; ok {
 		buf.WriteString(fmt.Sprintf("%v-", v.(string)))
+	}
+
+	return hashcode.String(buf.String())
+}
+
+func resourceDockerUlimitsHash(v interface{}) int {
+	var buf bytes.Buffer
+	m := v.(map[string]interface{})
+
+	if v, ok := m["name"]; ok {
+		buf.WriteString(fmt.Sprintf("%s-", v.(string)))
+	}
+
+	if v, ok := m["soft"]; ok {
+		buf.WriteString(fmt.Sprintf("%d-", v.(int)))
+	}
+
+	if v, ok := m["hard"]; ok {
+		buf.WriteString(fmt.Sprintf("%d-", v.(int)))
 	}
 
 	return hashcode.String(buf.String())
