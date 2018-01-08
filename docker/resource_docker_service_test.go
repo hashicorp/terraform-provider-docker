@@ -112,7 +112,7 @@ func TestAccDockerService_full(t *testing.T) {
 
 				resource "docker_config" "service_config" {
 					name = "myconfig-${replace(timestamp(),":", ".")}"
-					data = "eyJhIjoiYiJ9"
+					data = "ewogICJwcmVmaXgiOiAiMTIzIgp9"
 
 					lifecycle {
 						ignore_changes = ["name"]
@@ -121,7 +121,7 @@ func TestAccDockerService_full(t *testing.T) {
 				
 				resource "docker_secret" "service_secret" {
 					name = "mysecret-${replace(timestamp(),":", ".")}"
-					data = "eyJhIjoiYiJ9"
+					data = "ewogICJrZXkiOiAiUVdFUlRZIgp9"
 
 					lifecycle {
 						ignore_changes = ["name"]
@@ -130,7 +130,7 @@ func TestAccDockerService_full(t *testing.T) {
 
 				resource "docker_service" "foo" {
 					name     = "service-foo"
-					image    = "127.0.0.1:5000/my-private-service"
+					image    = "127.0.0.1:5000/my-private-service:v1"
 					replicas = 2
 					
 					hostname = "myfooservice"
@@ -178,7 +178,7 @@ func TestAccDockerService_full(t *testing.T) {
 						{
 							config_id   = "${docker_config.service_config.id}"
 							config_name = "${docker_config.service_config.name}"
-							file_name   = "/root/configs.json"
+							file_name   = "/configs.json"
 						},
 					]
 				
@@ -186,7 +186,7 @@ func TestAccDockerService_full(t *testing.T) {
 						{
 							secret_id   = "${docker_secret.service_secret.id}"
 							secret_name = "${docker_secret.service_secret.name}"
-							file_name   = "/root/secrets.json"
+							file_name   = "/secrets.json"
 						},
 					]
 
@@ -205,7 +205,7 @@ func TestAccDockerService_full(t *testing.T) {
 					}
 
 					healthcheck {
-						test     = ["CMD", "curl", "-f", "http://localhost:8080"]
+						test     = ["CMD", "curl", "-f", "http://localhost:8080/health"]
 						interval = "5s"
 						timeout  = "2s"
 						retries  = 4
@@ -215,7 +215,7 @@ func TestAccDockerService_full(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
-					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/my-private-service"),
+					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/my-private-service:v1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "hostname", "myfooservice"),
 					resource.TestCheckResourceAttr("docker_service.foo", "networks.#", "1"),
@@ -252,10 +252,10 @@ func TestAccDockerService_full(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_service.foo", "configs.#", "1"),
 					//  Note: the hash changes every time due to the usage of timestamp()
 					// resource.TestCheckResourceAttr("docker_service.foo", "configs.1255247167.config_name", "myconfig"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "configs.1255247167.file_name", "/root/configs.json"),
+					// resource.TestCheckResourceAttr("docker_service.foo", "configs.1255247167.file_name", "/configs.json"),
 					resource.TestCheckResourceAttr("docker_service.foo", "secrets.#", "1"),
 					// resource.TestCheckResourceAttr("docker_service.foo", "secrets.3229549426.config_name", "mysecret"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "secrets.3229549426.file_name", "/root/secrets.json"),
+					// resource.TestCheckResourceAttr("docker_service.foo", "secrets.3229549426.file_name", "/secrets.json"),
 					resource.TestCheckResourceAttr("docker_service.foo", "ports.#", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "ports.1093694028.internal", "8080"),
 					resource.TestCheckResourceAttr("docker_service.foo", "ports.1093694028.external", "8080"),
@@ -266,7 +266,7 @@ func TestAccDockerService_full(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.0", "CMD"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.1", "curl"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.2", "-f"),
-					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.3", "http://localhost:8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.3", "http://localhost:8080/health"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.interval", "5s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.timeout", "2s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.retries", "4"),
@@ -275,6 +275,7 @@ func TestAccDockerService_full(t *testing.T) {
 		},
 	})
 }
+
 func TestAccDockerService_update(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
@@ -282,9 +283,18 @@ func TestAccDockerService_update(t *testing.T) {
 		Steps: []resource.TestStep{
 			resource.TestStep{
 				Config: `
+				resource "docker_config" "service_config" {
+					name = "myconfig-${uuid()}"
+					data = "ewogICJwcmVmaXgiOiAiMTIzIgp9"
+
+					lifecycle {
+						ignore_changes = ["name"]
+					}
+				}
+
 				resource "docker_service" "foo" {
 					name     = "service-foo"
-					image    = "127.0.0.1:5000/my-private-service"
+					image    = "127.0.0.1:5000/my-private-service:v1"
 					replicas = 2
 					
 					update_config {
@@ -295,9 +305,22 @@ func TestAccDockerService_update(t *testing.T) {
 						max_failure_ratio = 0.1
 						order             = "start-first"
 					}
-					
+
+					configs = [
+						{
+							config_id   = "${docker_config.service_config.id}"
+							config_name = "${docker_config.service_config.name}"
+							file_name   = "/configs.json"
+						},
+					]
+
+					ports {
+						internal = "8080"
+						external = "8080"
+					}
+
 					healthcheck {
-						test     = ["CMD", "curl", "-f", "http://localhost:8080"]
+						test     = ["CMD", "curl", "-f", "http://localhost:8080/health"]
 						interval = "5s"
 						timeout  = "2s"
 						retries  = 4
@@ -308,17 +331,20 @@ func TestAccDockerService_update(t *testing.T) {
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "container_ids.#", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
-					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/my-private-service"),
+					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/my-private-service:v1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "10s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "pause"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.monitor", "5s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.order", "start-first"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.#", "1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.1093694028.internal", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.1093694028.external", "8080"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.0", "CMD"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.1", "curl"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.2", "-f"),
-					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.3", "http://localhost:8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.3", "http://localhost:8080/health"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.interval", "5s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.timeout", "2s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.retries", "4"),
@@ -326,9 +352,18 @@ func TestAccDockerService_update(t *testing.T) {
 			},
 			resource.TestStep{
 				Config: `
+				resource "docker_config" "service_config" {
+					name = "myconfig-${uuid()}"
+					data = "ewogICJwcmVmaXgiOiAiNTY3Igp9"
+
+					lifecycle {
+						ignore_changes = ["name"]
+					}
+				}
+
 				resource "docker_service" "foo" {
 					name     = "service-foo"
-					image    = "127.0.0.1:5000/my-private-service"
+					image    = "127.0.0.1:5000/my-private-service:v1"
 					replicas = 5
 					
 					update_config {
@@ -339,9 +374,22 @@ func TestAccDockerService_update(t *testing.T) {
 						max_failure_ratio = 0.2
 						order             = "start-first"
 					}
+
+					configs = [
+						{
+							config_id   = "${docker_config.service_config.id}"
+							config_name = "${docker_config.service_config.name}"
+							file_name   = "/root/configs.json"
+						},
+					]
+
+					ports {
+						internal = "8080"
+						external = "8080"
+					}
 					
 					healthcheck {
-						test     = ["CMD", "curl", "-f", "http://localhost:8080"]
+						test     = ["CMD", "curl", "-f", "http://localhost:8080/health"]
 						interval = "5s"
 						timeout  = "2s"
 						retries  = 4
@@ -352,17 +400,20 @@ func TestAccDockerService_update(t *testing.T) {
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "container_ids.#", "5"),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
-					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/my-private-service"),
+					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/my-private-service:v1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "5"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "15s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "pause"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.monitor", "7s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.order", "start-first"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.#", "1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.1093694028.internal", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.1093694028.external", "8080"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.0", "CMD"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.1", "curl"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.2", "-f"),
-					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.3", "http://localhost:8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.3", "http://localhost:8080/health"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.interval", "5s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.timeout", "2s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.retries", "4"),

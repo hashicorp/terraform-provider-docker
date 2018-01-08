@@ -11,7 +11,7 @@ setup() {
   export DOCKER_REGISTRY_ADDRESS="127.0.0.1:5000"
   export DOCKER_REGISTRY_USER="testuser"
   export DOCKER_REGISTRY_PASS="testpwd"
-  export DOCKER_PRIVATE_IMAGE="127.0.0.1:5000/my-private-service"
+  export DOCKER_PRIVATE_IMAGE="127.0.0.1:5000/my-private-service:v1"
   sh scripts/testing/setup_private_registry.sh
 }
 
@@ -19,7 +19,7 @@ run() {
   # Run the acc test suite
   make testacc
   # for a single test
-  #TF_LOG=INFO TF_ACC=1 go test -v -timeout 40s github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerService_full$
+  #TF_LOG=INFO TF_ACC=1 go test -v -timeout 60s github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerService_updateConfig$
 }
 
 cleanup() {

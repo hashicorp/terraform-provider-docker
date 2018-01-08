@@ -97,9 +97,11 @@ func resourceDockerServiceRead(d *schema.ResourceData, meta interface{}) error {
 		Filters: filter,
 	})
 	for i := 0; i < len(tasks); i++ {
-		log.Printf("[%d]: %s", i, tasks[i].Status.ContainerStatus.ContainerID)
 		task, _ := client.InspectTask(tasks[i].ID)
-		serviceContainerIds = append(serviceContainerIds, task.Status.ContainerStatus.ContainerID)
+		log.Printf("[INFO] %d Container inspecting for id '%s' with state %s", i, task.Status.ContainerStatus.ContainerID, task.Status.State)
+		if strings.TrimSpace(task.Status.ContainerStatus.ContainerID) != "" && task.Status.State != swarm.TaskStateShutdown {
+			serviceContainerIds = append(serviceContainerIds, task.Status.ContainerStatus.ContainerID)
+		}
 	}
 
 	d.Set("version", service.Version.Index)
@@ -569,12 +571,16 @@ func areAllContainersUp(serviceName string, replicas int, serviceID string, clie
 					errorCount++
 					if errorCount >= 3 {
 						log.Printf("[INFO] %d: failed to put container '%s' into running", t, task.Status.ContainerStatus.ContainerID)
-						allContainersAreUp = false
+						// allContainersAreUp = false
+						break
 					}
 				}
 				time.Sleep(sleepTime)
 				continue
 			}
+		}
+		if !allContainersAreUp {
+			break
 		}
 	}
 
@@ -583,7 +589,7 @@ func areAllContainersUp(serviceName string, replicas int, serviceID string, clie
 		// because the service was successfully created before
 		// OLD deleteService(service.ID, client)
 		deleteService(serviceID, client)
-		return fmt.Errorf("Failed to start all %d containers", desiredContainersToStart)
+		return fmt.Errorf("Failed to start all %d containers. Deleting service", desiredContainersToStart)
 	}
 
 	return nil
