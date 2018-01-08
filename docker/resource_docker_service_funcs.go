@@ -64,71 +64,8 @@ func resourceDockerServiceCreate(d *schema.ResourceData, meta interface{}) error
 		return err
 	}
 
-	filter := make(map[string][]string)
-	filter["service"] = []string{service.Spec.Name}
-
-	taskIDs := make([]string, 0)
-	desiredContainersToStart := d.Get("replicas").(int)
-	errorCount := 0
-	loops := 900
-	sleepTime := 1000 * time.Millisecond
-	// Wait until all replicas of the service registered as task
-	for i := loops; i > 0; i-- {
-		log.Printf("[INFO] Replica loop: %d of %d", loops-i+1, loops)
-		if len(taskIDs) == 0 {
-			tasks, err := client.ListTasks(dc.ListTasksOptions{
-				Filters: filter,
-			})
-			if err != nil {
-				return err
-			}
-			// wait until all containers are running
-			if len(tasks) == desiredContainersToStart { // we have default 1 here
-				log.Printf("[INFO] All %d containers are up", desiredContainersToStart)
-				for i := 0; i < len(tasks); i++ {
-					taskIDs = append(taskIDs, tasks[i].ID)
-				}
-				break
-			} else {
-				time.Sleep(sleepTime)
-				continue
-			}
-		}
-	}
-
-	// Check that all are in the desired state
-	allContainersAreUp := true
-	log.Printf("[INFO] Tasks to check: %d", len(taskIDs))
-	for t := 0; t < len(taskIDs); t++ { // for each container of the service aka task
-		for i := loops; i > 0; i-- {
-			taskID := taskIDs[t]
-			task, err := client.InspectTask(taskID)
-			if err != nil {
-				return err
-			}
-			log.Printf("[INFO] Status loop: %d of %d for task %d", loops-i+1, loops, t)
-			if task.DesiredState == task.Status.State {
-				log.Printf("[INFO] Task check %d: container '%s' is running", t, task.Status.ContainerStatus.ContainerID)
-				break
-			} else {
-				if task.Status.State == swarm.TaskStateFailed || task.Status.State == swarm.TaskStateRejected || task.Status.State == swarm.TaskStateShutdown {
-					errorCount++
-					if errorCount >= 3 {
-						log.Printf("[INFO] %d: failed to put container '%s' into running", t, task.Status.ContainerStatus.ContainerID)
-						allContainersAreUp = false
-					}
-				}
-				time.Sleep(sleepTime)
-				continue
-			}
-		}
-	}
-
-	if !allContainersAreUp {
-		// ignoring the error. it should not happen
-		// because the service was successfully created before
-		deleteService(service.ID, client)
-		return fmt.Errorf("Failed to start all %d containers", desiredContainersToStart)
+	if err := areAllContainersUp(d.Get("name").(string), d.Get("replicas").(int), service.ID, client); err != nil {
+		return err
 	}
 
 	d.SetId(service.ID)
@@ -203,6 +140,10 @@ func resourceDockerServiceUpdate(d *schema.ResourceData, meta interface{}) error
 		return err
 	}
 
+	if err := areAllContainersUp(d.Get("name").(string), d.Get("replicas").(int), d.Id(), client); err != nil {
+		return err
+	}
+
 	return resourceDockerServiceRead(d, meta)
 }
 
@@ -250,6 +191,10 @@ func deleteService(serviceID string, client *dc.Client) error {
 
 	return nil
 }
+
+////////////
+// Helpers
+////////////
 
 func fetchDockerService(ID string, name string, client *dc.Client) (*swarm.Service, error) {
 	apiServices, err := client.ListServices(dc.ListServicesOptions{})
@@ -568,4 +513,78 @@ func fromRegistryAuth(image string, configs map[string]dc.AuthConfiguration) dc.
 	}
 
 	return dc.AuthConfiguration{}
+}
+
+func areAllContainersUp(serviceName string, replicas int, serviceID string, client *dc.Client) error {
+	filter := make(map[string][]string)
+	// OLD filter["service"] = []string{service.Spec.Name}
+	filter["service"] = []string{serviceName}
+
+	taskIDs := make([]string, 0)
+	// OLD desiredContainersToStart := d.Get("replicas").(int)
+	desiredContainersToStart := replicas
+	errorCount := 0
+	loops := 900
+	sleepTime := 1000 * time.Millisecond
+	// Wait until all replicas of the service registered as task
+	for i := loops; i > 0; i-- {
+		log.Printf("[INFO] Replica loop: %d of %d", loops-i+1, loops)
+		if len(taskIDs) == 0 {
+			tasks, err := client.ListTasks(dc.ListTasksOptions{
+				Filters: filter,
+			})
+			if err != nil {
+				return err
+			}
+			// wait until all containers are running
+			if len(tasks) == desiredContainersToStart { // we have default 1 here
+				log.Printf("[INFO] All %d containers are up", desiredContainersToStart)
+				for i := 0; i < len(tasks); i++ {
+					taskIDs = append(taskIDs, tasks[i].ID)
+				}
+				break
+			} else {
+				time.Sleep(sleepTime)
+				continue
+			}
+		}
+	}
+
+	// Check that all are in the desired state
+	allContainersAreUp := true
+	log.Printf("[INFO] Tasks to check: %d", len(taskIDs))
+	for t := 0; t < len(taskIDs); t++ { // for each container of the service aka task
+		for i := loops; i > 0; i-- {
+			taskID := taskIDs[t]
+			task, err := client.InspectTask(taskID)
+			if err != nil {
+				return err
+			}
+			log.Printf("[INFO] Status loop: %d of %d for task %d", loops-i+1, loops, t)
+			if task.DesiredState == task.Status.State {
+				log.Printf("[INFO] Task check %d: container '%s' is running", t, task.Status.ContainerStatus.ContainerID)
+				break
+			} else {
+				if task.Status.State == swarm.TaskStateFailed || task.Status.State == swarm.TaskStateRejected || task.Status.State == swarm.TaskStateShutdown {
+					errorCount++
+					if errorCount >= 3 {
+						log.Printf("[INFO] %d: failed to put container '%s' into running", t, task.Status.ContainerStatus.ContainerID)
+						allContainersAreUp = false
+					}
+				}
+				time.Sleep(sleepTime)
+				continue
+			}
+		}
+	}
+
+	if !allContainersAreUp {
+		// ignoring the error. it should not happen
+		// because the service was successfully created before
+		// OLD deleteService(service.ID, client)
+		deleteService(serviceID, client)
+		return fmt.Errorf("Failed to start all %d containers", desiredContainersToStart)
+	}
+
+	return nil
 }
