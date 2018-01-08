@@ -8,6 +8,9 @@ var handleRequest = function(request, response) {
   if(request.url === '/health') {
     response.writeHead(200);
     response.end('ok');  
+  } else if(request.url === '/newroute') {
+    response.writeHead(200);
+    response.end('new Route!');  
   } else {
     response.writeHead(200);
     response.end(configs.prefix + ' - Hello World!');

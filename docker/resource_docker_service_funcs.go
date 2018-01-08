@@ -519,11 +519,9 @@ func fromRegistryAuth(image string, configs map[string]dc.AuthConfiguration) dc.
 
 func areAllContainersUp(serviceName string, replicas int, serviceID string, client *dc.Client) error {
 	filter := make(map[string][]string)
-	// OLD filter["service"] = []string{service.Spec.Name}
 	filter["service"] = []string{serviceName}
 
 	taskIDs := make([]string, 0)
-	// OLD desiredContainersToStart := d.Get("replicas").(int)
 	desiredContainersToStart := replicas
 	errorCount := 0
 	loops := 900
@@ -539,7 +537,7 @@ func areAllContainersUp(serviceName string, replicas int, serviceID string, clie
 				return err
 			}
 			// wait until all containers are running
-			if len(tasks) == desiredContainersToStart { // we have default 1 here
+			if len(tasks) == desiredContainersToStart {
 				log.Printf("[INFO] All %d containers are up", desiredContainersToStart)
 				for i := 0; i < len(tasks); i++ {
 					taskIDs = append(taskIDs, tasks[i].ID)
@@ -587,7 +585,6 @@ func areAllContainersUp(serviceName string, replicas int, serviceID string, clie
 	if !allContainersAreUp {
 		// ignoring the error. it should not happen
 		// because the service was successfully created before
-		// OLD deleteService(service.ID, client)
 		deleteService(serviceID, client)
 		return fmt.Errorf("Failed to start all %d containers. Deleting service", desiredContainersToStart)
 	}

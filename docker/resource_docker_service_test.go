@@ -2,12 +2,17 @@ package docker
 
 import (
 	"fmt"
+	"io/ioutil"
+	"net/http"
 	"os"
 	"regexp"
+	"strings"
 	"testing"
+	"time"
 
 	dc "github.com/fsouza/go-dockerclient"
 	"github.com/hashicorp/terraform/helper/resource"
+	"github.com/hashicorp/terraform/terraform"
 )
 
 // ----------------------------------------
@@ -295,13 +300,13 @@ func TestAccDockerService_update(t *testing.T) {
 				resource "docker_service" "foo" {
 					name     = "service-foo"
 					image    = "127.0.0.1:5000/my-private-service:v1"
-					replicas = 2
+					replicas = 1
 					
 					update_config {
 						parallelism       = 2
-						delay             = "10s"
+						delay             = "1s"
 						failure_action    = "pause"
-						monitor           = "5s"
+						monitor           = "1s"
 						max_failure_ratio = 0.1
 						order             = "start-first"
 					}
@@ -329,13 +334,14 @@ func TestAccDockerService_update(t *testing.T) {
 				`,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
-					resource.TestCheckResourceAttr("docker_service.foo", "container_ids.#", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "container_ids.#", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/my-private-service:v1"),
-					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
-					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "10s"),
+					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "pause"),
-					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.monitor", "5s"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.monitor", "1s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.order", "start-first"),
 					resource.TestCheckResourceAttr("docker_service.foo", "ports.#", "1"),
@@ -348,13 +354,14 @@ func TestAccDockerService_update(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.interval", "5s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.timeout", "2s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.retries", "4"),
+					resource.ComposeTestCheckFunc(testCheckDockerServiceHasPrefix("http://localhost:8080", "123", 0)),
 				),
 			},
 			resource.TestStep{
 				Config: `
 				resource "docker_config" "service_config" {
 					name = "myconfig-${uuid()}"
-					data = "ewogICJwcmVmaXgiOiAiNTY3Igp9"
+					data = "ewogICJwcmVmaXgiOiAiNTY3Igp9" # UPDATED
 
 					lifecycle {
 						ignore_changes = ["name"]
@@ -363,14 +370,14 @@ func TestAccDockerService_update(t *testing.T) {
 
 				resource "docker_service" "foo" {
 					name     = "service-foo"
-					image    = "127.0.0.1:5000/my-private-service:v1"
-					replicas = 5
+					image    = "127.0.0.1:5000/my-private-service:v2"
+					replicas = 2
 					
 					update_config {
 						parallelism       = 2
-						delay             = "15s"
+						delay             = "2s"
 						failure_action    = "pause"
-						monitor           = "7s"
+						monitor           = "2s"
 						max_failure_ratio = 0.2
 						order             = "start-first"
 					}
@@ -379,7 +386,7 @@ func TestAccDockerService_update(t *testing.T) {
 						{
 							config_id   = "${docker_config.service_config.id}"
 							config_name = "${docker_config.service_config.name}"
-							file_name   = "/root/configs.json"
+							file_name   = "/configs.json"
 						},
 					]
 
@@ -398,13 +405,14 @@ func TestAccDockerService_update(t *testing.T) {
 				`,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
-					resource.TestCheckResourceAttr("docker_service.foo", "container_ids.#", "5"),
+					resource.TestCheckResourceAttr("docker_service.foo", "container_ids.#", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
-					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/my-private-service:v1"),
-					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "5"),
-					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "15s"),
+					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/my-private-service:v2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "2s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "pause"),
-					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.monitor", "7s"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.monitor", "2s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.order", "start-first"),
 					resource.TestCheckResourceAttr("docker_service.foo", "ports.#", "1"),
@@ -417,11 +425,14 @@ func TestAccDockerService_update(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.interval", "5s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.timeout", "2s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.retries", "4"),
+					resource.ComposeTestCheckFunc(testCheckDockerServiceHasPrefix("http://localhost:8080/newroute", "new", 5000)),
+					resource.ComposeTestCheckFunc(testCheckDockerServiceHasPrefix("http://localhost:8080", "567", 0)),
 				),
 			},
 		},
 	})
 }
+
 func TestAccDockerService_private(t *testing.T) {
 	registry := os.Getenv("DOCKER_REGISTRY_ADDRESS")
 	image := os.Getenv("DOCKER_PRIVATE_IMAGE")
@@ -455,4 +466,32 @@ func TestAccDockerService_private(t *testing.T) {
 			},
 		},
 	})
+}
+
+/////////////
+// Helpers
+/////////////
+func testCheckDockerServiceHasPrefix(url string, prefix string, sleepTime int) resource.TestCheckFunc {
+	if sleepTime > 0 {
+		time.Sleep(10000 * time.Millisecond)
+	} // TODO still hacky
+	return func(s *terraform.State) error {
+		resp, err := http.Get(url)
+		if err != nil {
+			return fmt.Errorf("Could not query")
+		}
+
+		defer resp.Body.Close()
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return fmt.Errorf("Could not read body")
+		}
+
+		bodyString := string(body[:])
+		if !strings.HasPrefix(bodyString, prefix) {
+			return fmt.Errorf("Body '%s' does not have the prefix '%s'", bodyString, prefix)
+		}
+
+		return nil
+	}
 }

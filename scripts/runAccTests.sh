@@ -19,7 +19,7 @@ run() {
   # Run the acc test suite
   make testacc
   # for a single test
-  #TF_LOG=INFO TF_ACC=1 go test -v -timeout 60s github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerService_updateConfig$
+  #TF_LOG=INFO TF_ACC=1 go test -v -timeout 120s github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerService_update$
 }
 
 cleanup() {
