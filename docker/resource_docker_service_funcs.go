@@ -74,21 +74,6 @@ func resourceDockerServiceCreate(d *schema.ResourceData, meta interface{}) error
 	return resourceDockerServiceRead(d, meta)
 }
 
-// TODO
-func extractSetProperty(d *schema.ResourceData, setKey string, key string) []string {
-	properties := make([]string, 0)
-	if givenSet, ok := d.GetOk(setKey); ok {
-		for _, rawSet := range givenSet.(*schema.Set).List() {
-			rawSet := rawSet.(map[string]interface{})
-			if value, ok := rawSet[key]; ok {
-				log.Printf("[INFO] Found propery '%s' in set '%s'", key, setKey)
-				properties = append(properties, value.(string))
-			}
-		}
-	}
-	return properties
-}
-
 func resourceDockerServiceRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*ProviderConfig).DockerClient
 
@@ -584,6 +569,20 @@ func isSecretIDPresent(secrets []*swarm.SecretReference, secretIDs []string) boo
 	return false
 }
 
+func extractSetProperty(d *schema.ResourceData, setKey string, key string) []string {
+	properties := make([]string, 0)
+	if givenSet, ok := d.GetOk(setKey); ok {
+		for _, rawSet := range givenSet.(*schema.Set).List() {
+			rawSet := rawSet.(map[string]interface{})
+			if value, ok := rawSet[key]; ok {
+				log.Printf("[INFO] Found propery '%s' in set '%s'", key, setKey)
+				properties = append(properties, value.(string))
+			}
+		}
+	}
+	return properties
+}
+
 func areAtLeastNContainersUp(serviceName string, image string, serviceID string, configIDs []string, secretIDs []string, n int, client *dc.Client) error {
 	// config
 	loops := 60
@@ -628,8 +627,12 @@ func areAtLeastNContainersUp(serviceName string, image string, serviceID string,
 			task, err := client.InspectTask(taskID)
 			// handle special case of decreasing amount of replicas
 			// then the taskID may not exist any more at this point
-			if err != nil && !strings.Contains(err.Error(), "No such task") {
-				return err
+			if err != nil {
+				if !strings.Contains(err.Error(), "No such task") {
+					return err
+				}
+				// TODO here: seg fault somtimes
+				log.Printf("[INFO] --> new error: %s", err.Error())
 			}
 			log.Printf("[INFO] Inspecting task with ID '%s' in loop %02d/%d to be in state: [%s]->[%s]", taskID, i, loops, task.Status.State, task.DesiredState)
 			if task.DesiredState == task.Status.State {
@@ -645,7 +648,7 @@ func areAtLeastNContainersUp(serviceName string, image string, serviceID string,
 				if errorCount >= maxErrorCount {
 					log.Printf("[INFO] Task '%s' for service '%s' in state '%s' after %d errors. Deleting service!", taskID, serviceName, task.Status.State, maxErrorCount)
 					deleteService(serviceID, client)
-					return fmt.Errorf("[INFO] Deleted service %s", serviceName)
+					return fmt.Errorf("[INFO] Deleted service '%s'", serviceName)
 				}
 			}
 			time.Sleep(sleepTime) // sleep between inspecting tasks
