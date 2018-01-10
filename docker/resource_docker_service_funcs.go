@@ -64,7 +64,7 @@ func resourceDockerServiceCreate(d *schema.ResourceData, meta interface{}) error
 		return err
 	}
 
-	if err := isAtLeastOneContainerUp(d.Get("name").(string), service.ID, client); err != nil {
+	if err := areAtLeastNContainersUp(d.Get("name").(string), d.Get("image").(string), service.ID, d.Get("replicas").(int), client); err != nil {
 		return err
 	}
 
@@ -127,8 +127,7 @@ func resourceDockerServiceUpdate(d *schema.ResourceData, meta interface{}) error
 		return err
 	}
 
-	// TODO put exiting container ids here!!! cuz update mode
-	if err := isAtLeastOneContainerUp(d.Get("name").(string), d.Id(), client); err != nil {
+	if err := areAtLeastNContainersUp(d.Get("name").(string), d.Get("image").(string), d.Id(), d.Get("replicas").(int), client); err != nil {
 		return err
 	}
 
@@ -184,6 +183,9 @@ func resourceDockerServiceDelete(d *schema.ResourceData, meta interface{}) error
 	return nil
 }
 
+////////////
+// Helpers
+////////////
 func deleteService(serviceID string, client *dc.Client) error {
 	removeOpts := dc.RemoveServiceOptions{
 		ID: serviceID,
@@ -195,10 +197,6 @@ func deleteService(serviceID string, client *dc.Client) error {
 
 	return nil
 }
-
-////////////
-// Helpers
-////////////
 
 func fetchDockerService(ID string, name string, client *dc.Client) (*swarm.Service, error) {
 	apiServices, err := client.ListServices(dc.ListServicesOptions{})
@@ -519,67 +517,84 @@ func fromRegistryAuth(image string, configs map[string]dc.AuthConfiguration) dc.
 	return dc.AuthConfiguration{}
 }
 
-func isAtLeastOneContainerUp(serviceName string, serviceID string, client *dc.Client) error {
+func getAmountOfTasksWithImage(tasks []swarm.Task, image string) int {
+	amount := 0
+	for _, task := range tasks {
+		if task.Spec.ContainerSpec.Image == image {
+			amount++
+		}
+	}
+	return amount
+}
+
+func areAtLeastNContainersUp(serviceName string, image string, serviceID string, n int, client *dc.Client) error {
 	// config
-	loops := 25
+	loops := 60
 	sleepTime := 1000 * time.Millisecond
 	maxErrorCount := 3
 
 	// == 1: get at least one task for the given service name
-	var taskID string
+	taskIDs := make([]string, 0)
 	filter := make(map[string][]string)
 	filter["service"] = []string{serviceName}
 
 	for i := 1; i <= loops; i++ {
-		log.Printf("[INFO] Service '%s' task loop: %d/%d", serviceName, i, loops)
 		tasks, err := client.ListTasks(dc.ListTasksOptions{
 			Filters: filter,
 		})
 		if err != nil {
 			return err
 		}
-		if len(tasks) > 0 {
-			taskID = tasks[0].ID
-			log.Printf("[INFO] Got at least one running task for service '%s' after %d seconds", serviceName, i)
+		amountOfTasksWithImage := getAmountOfTasksWithImage(tasks, image)
+		if amountOfTasksWithImage >= n {
+			for _, task := range tasks {
+				taskIDs = append(taskIDs, task.ID)
+			}
+			log.Printf("[INFO] Got at least %d running task(s) for service '%s' and image '%s' after %d seconds", n, serviceName, image, i)
 			break
 		}
+		log.Printf("[INFO] Service '%s' task loop: %02d/%d for amount of registered tasks %02d/%d", serviceName, i, loops, amountOfTasksWithImage, n)
 		time.Sleep(sleepTime)
 	}
 
 	// no running task found -> deleting service
-	if taskID == "" {
+	if len(taskIDs) == 0 {
 		log.Printf("[INFO] Found no running task for service '%s' after %d seconds", serviceName, loops)
 		deleteService(serviceID, client)
 		return fmt.Errorf("[INFO] Deleted service %s", serviceName)
 	}
 
-	// == 2: inspect that this task is up
-	errorCount := 0
-	for i := 1; i <= loops; i++ {
-		task, err := client.InspectTask(taskID)
-		if err != nil {
-			return err
-		}
-		log.Printf("[INFO] Inspecting task with ID '%s' in loop %d/%d to be in state: [%s]->[%s]", taskID, i, loops, task.Status.State, task.DesiredState)
-		if task.DesiredState == task.Status.State {
-			log.Printf("[INFO] Task '%s' containerID '%s' is in desired state '%s'", taskID, task.Status.ContainerStatus.ContainerID, task.DesiredState)
-			break // success here
-		}
-
-		if task.Status.State == swarm.TaskStateFailed ||
-			task.Status.State == swarm.TaskStateRejected ||
-			task.Status.State == swarm.TaskStateShutdown {
-			errorCount++
-			log.Printf("[INFO] Task '%s' containerID '%s' is in error state '%s' for %d/%d", taskID, task.Status.ContainerStatus.ContainerID, task.Status.State, errorCount, maxErrorCount)
-			if errorCount >= maxErrorCount {
-				log.Printf("[INFO] Task '%s' for service '%s' in state '%s' after %d errors", taskID, serviceName, task.Status.State, maxErrorCount)
-				deleteService(serviceID, client)
-				return fmt.Errorf("[INFO] Deleted service %s", serviceName)
+	// == 2: inspect that n tasks are up
+	for _, taskID := range taskIDs {
+		errorCount := 0
+		for i := 1; i <= loops; i++ {
+			task, err := client.InspectTask(taskID)
+			// handle special case of decreasing amount of replicas
+			// then the taskID may not exist any more at this point
+			if err != nil && !strings.Contains(err.Error(), "No such task") {
+				return err
 			}
-		}
+			log.Printf("[INFO] Inspecting task with ID '%s' in loop %02d/%d to be in state: [%s]->[%s]", taskID, i, loops, task.Status.State, task.DesiredState)
+			if task.DesiredState == task.Status.State {
+				log.Printf("[INFO] Task '%s' containerID '%s' is in desired state '%s'", taskID, task.Status.ContainerStatus.ContainerID, task.DesiredState)
+				break // success here, next task
+			}
 
-		time.Sleep(sleepTime)
+			if task.Status.State == swarm.TaskStateFailed ||
+				task.Status.State == swarm.TaskStateRejected ||
+				task.Status.State == swarm.TaskStateShutdown {
+				errorCount++
+				log.Printf("[INFO] Task '%s' containerID '%s' is in error state '%s' for %d/%d", taskID, task.Status.ContainerStatus.ContainerID, task.Status.State, errorCount, maxErrorCount)
+				if errorCount >= maxErrorCount {
+					log.Printf("[INFO] Task '%s' for service '%s' in state '%s' after %d errors. Deleting service!", taskID, serviceName, task.Status.State, maxErrorCount)
+					deleteService(serviceID, client)
+					return fmt.Errorf("[INFO] Deleted service %s", serviceName)
+				}
+			}
+			time.Sleep(sleepTime) // sleep between inspecting tasks
+		}
 	}
 
+	log.Printf("[INFO] >> For service '%s' and image '%s' desired '%d' replica(s) are up!", serviceName, image, n)
 	return nil
 }
