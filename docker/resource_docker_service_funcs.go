@@ -64,12 +64,29 @@ func resourceDockerServiceCreate(d *schema.ResourceData, meta interface{}) error
 		return err
 	}
 
-	if err := areAtLeastNContainersUp(d.Get("name").(string), d.Get("image").(string), service.ID, d.Get("replicas").(int), client); err != nil {
+	configIDs := extractSetProperty(d, "configs", "config_id")
+	secretIDs := extractSetProperty(d, "secrets", "secret_id")
+	if err := areAtLeastNContainersUp(d.Get("name").(string), d.Get("image").(string), service.ID, configIDs, secretIDs, d.Get("replicas").(int), client); err != nil {
 		return err
 	}
 
 	d.SetId(service.ID)
 	return resourceDockerServiceRead(d, meta)
+}
+
+// TODO
+func extractSetProperty(d *schema.ResourceData, setKey string, key string) []string {
+	properties := make([]string, 0)
+	if givenSet, ok := d.GetOk(setKey); ok {
+		for _, rawSet := range givenSet.(*schema.Set).List() {
+			rawSet := rawSet.(map[string]interface{})
+			if value, ok := rawSet[key]; ok {
+				log.Printf("[INFO] Found propery '%s' in set '%s'", key, setKey)
+				properties = append(properties, value.(string))
+			}
+		}
+	}
+	return properties
 }
 
 func resourceDockerServiceRead(d *schema.ResourceData, meta interface{}) error {
@@ -127,7 +144,9 @@ func resourceDockerServiceUpdate(d *schema.ResourceData, meta interface{}) error
 		return err
 	}
 
-	if err := areAtLeastNContainersUp(d.Get("name").(string), d.Get("image").(string), d.Id(), d.Get("replicas").(int), client); err != nil {
+	configIDs := extractSetProperty(d, "configs", "config_id")
+	secretIDs := extractSetProperty(d, "secrets", "secret_id")
+	if err := areAtLeastNContainersUp(d.Get("name").(string), d.Get("image").(string), d.Id(), configIDs, secretIDs, d.Get("replicas").(int), client); err != nil {
 		return err
 	}
 
@@ -517,17 +536,55 @@ func fromRegistryAuth(image string, configs map[string]dc.AuthConfiguration) dc.
 	return dc.AuthConfiguration{}
 }
 
-func getAmountOfTasksWithImage(tasks []swarm.Task, image string) int {
+func getAmountOfTasksWithImageConfigAndSecret(tasks []swarm.Task, image string, configIDs []string, secretIDs []string) int {
 	amount := 0
 	for _, task := range tasks {
-		if task.Spec.ContainerSpec.Image == image {
+		// 1: check for images updates
+		if task.Spec.ContainerSpec.Image == image &&
+			isConfigIDPresent(task.Spec.ContainerSpec.Configs, configIDs) &&
+			isSecretIDPresent(task.Spec.ContainerSpec.Secrets, secretIDs) {
+			// 2: check for config and secret updates/additions
 			amount++
 		}
 	}
 	return amount
 }
 
-func areAtLeastNContainersUp(serviceName string, image string, serviceID string, n int, client *dc.Client) error {
+func isConfigIDPresent(configs []*swarm.ConfigReference, configIDs []string) bool {
+	if len(configs) == 0 || len(configIDs) == 0 {
+		log.Printf("[INFO] no configID presence to perform")
+		return true
+	}
+
+	for _, config := range configs {
+		for _, configID := range configIDs {
+			if (*config).ConfigID == configID {
+				log.Printf("[INFO] configID '%s is present", configID)
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func isSecretIDPresent(secrets []*swarm.SecretReference, secretIDs []string) bool {
+	if len(secrets) == 0 || len(secretIDs) == 0 {
+		log.Printf("[INFO] no secretID presence to perform")
+		return true
+	}
+
+	for _, secret := range secrets {
+		for _, secretID := range secretIDs {
+			if (*secret).SecretID == secretID {
+				log.Printf("[INFO] secretID '%s is present", secretID)
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func areAtLeastNContainersUp(serviceName string, image string, serviceID string, configIDs []string, secretIDs []string, n int, client *dc.Client) error {
 	// config
 	loops := 60
 	sleepTime := 1000 * time.Millisecond
@@ -545,15 +602,15 @@ func areAtLeastNContainersUp(serviceName string, image string, serviceID string,
 		if err != nil {
 			return err
 		}
-		amountOfTasksWithImage := getAmountOfTasksWithImage(tasks, image)
-		if amountOfTasksWithImage >= n {
+		amountOfTasksWithImageConfigAndSecret := getAmountOfTasksWithImageConfigAndSecret(tasks, image, configIDs, secretIDs)
+		if amountOfTasksWithImageConfigAndSecret >= n {
 			for _, task := range tasks {
 				taskIDs = append(taskIDs, task.ID)
 			}
 			log.Printf("[INFO] Got at least %d running task(s) for service '%s' and image '%s' after %d seconds", n, serviceName, image, i)
 			break
 		}
-		log.Printf("[INFO] Service '%s' task loop: %02d/%d for amount of registered tasks %02d/%d", serviceName, i, loops, amountOfTasksWithImage, n)
+		log.Printf("[INFO] Service '%s' task loop: %02d/%d for amount of registered tasks %02d/%d", serviceName, i, loops, amountOfTasksWithImageConfigAndSecret, n)
 		time.Sleep(sleepTime)
 	}
 
