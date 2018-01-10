@@ -47,11 +47,6 @@ func resourceDockerService() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
-			"container_ids": &schema.Schema{
-				Type:     schema.TypeList,
-				Computed: true,
-				Elem:     &schema.Schema{Type: schema.TypeString},
-			},
 			// == start Container Spec
 			"image": &schema.Schema{
 				Type:     schema.TypeString,
@@ -217,6 +212,7 @@ func resourceDockerService() *schema.Resource {
 			"ports": &schema.Schema{
 				Type:     schema.TypeSet,
 				Optional: true,
+				// ForceNew: true, TODO later
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"internal": &schema.Schema{
