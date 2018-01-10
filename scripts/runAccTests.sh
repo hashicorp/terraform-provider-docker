@@ -1,4 +1,5 @@
 #!/bin/sh
+set -e
 
 log() {
   echo ""
@@ -19,7 +20,15 @@ run() {
   # Run the acc test suite
   make testacc
   # for a single test
-  #TF_LOG=INFO TF_ACC=1 go test -v -timeout 120s github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerService_update$
+  #TF_LOG=INFO TF_ACC=1 go test -v -timeout 120s github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerService_basic$
+  #TF_LOG=INFO TF_ACC=1 go test -v -timeout 120s github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerService_full$
+  #TF_LOG=INFO TF_ACC=1 go test -v -timeout 120s github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerService_updateHealthcheck$
+  #TF_LOG=INFO TF_ACC=1 go test -v -timeout 120s github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerService_updateIncreaseReplicas$
+  #TF_LOG=INFO TF_ACC=1 go test -v -timeout 120s github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerService_updateDecreaseReplicas$
+  #TF_LOG=INFO TF_ACC=1 go test -v -timeout 120s github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerService_updateImage$
+  #TF_LOG=INFO TF_ACC=1 go test -v -timeout 120s github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerService_updateConfig$
+  #TF_LOG=INFO TF_ACC=1 go test -v -timeout 120s github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerService_updateConfigAndSecret$
+  #TF_LOG=INFO TF_ACC=1 go test -v -timeout 120s github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerService_updateMultipleConfigs$
 }
 
 cleanup() {
