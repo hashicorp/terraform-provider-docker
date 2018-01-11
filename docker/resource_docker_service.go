@@ -212,7 +212,6 @@ func resourceDockerService() *schema.Resource {
 			"ports": &schema.Schema{
 				Type:     schema.TypeSet,
 				Optional: true,
-				// ForceNew: true, TODO later
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"internal": &schema.Schema{
@@ -224,9 +223,10 @@ func resourceDockerService() *schema.Resource {
 							Optional: true,
 						},
 						"mode": &schema.Schema{
-							Type:     schema.TypeString,
-							Default:  "ingress",
-							Optional: true,
+							Type:         schema.TypeString,
+							Default:      "vip",
+							Optional:     true,
+							ValidateFunc: validateStringMatchesPattern(`^(vip|dnsrr)$`),
 						},
 						"protocol": &schema.Schema{
 							Type:     schema.TypeString,
