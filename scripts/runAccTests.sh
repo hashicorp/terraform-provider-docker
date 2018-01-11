@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 set -e
 
 log() {
@@ -19,26 +19,27 @@ setup() {
 run() {
   # Run the acc test suite
   make testacc
+  return $?
   # for a single test
   #TF_LOG=INFO TF_ACC=1 go test -v -timeout 120s github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerService_basic$
-  #TF_LOG=INFO TF_ACC=1 go test -v -timeout 120s github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerService_full$
-  #TF_LOG=INFO TF_ACC=1 go test -v -timeout 120s github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerService_updateHealthcheck$
-  #TF_LOG=INFO TF_ACC=1 go test -v -timeout 120s github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerService_updateIncreaseReplicas$
-  #TF_LOG=INFO TF_ACC=1 go test -v -timeout 120s github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerService_updateDecreaseReplicas$
-  #TF_LOG=INFO TF_ACC=1 go test -v -timeout 120s github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerService_updateImage$
-  #TF_LOG=INFO TF_ACC=1 go test -v -timeout 120s github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerService_updateConfig$
-  #TF_LOG=INFO TF_ACC=1 go test -v -timeout 120s github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerService_updateConfigAndSecret$
-  #TF_LOG=INFO TF_ACC=1 go test -v -timeout 120s github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerService_updateMultipleConfigs$
 }
 
 cleanup() {
-  docker stop private_registry
   unset DOCKER_REGISTRY_ADDRESS DOCKER_REGISTRY_USER DOCKER_REGISTRY_PASS DOCKER_PRIVATE_IMAGE
   rm -f scripts/testing/auth/htpasswd
   rm -f scripts/testing/certs/registry_auth.*
+  docker stop private_registry
+  # consider running this manually to clean up the
+  # updateabe configs and secrets
+  #docker config rm $(docker config ls -q)
+  #docker secret rm $(docker secret ls -q)
 }
 
 ## main
 log "setup" && setup 
-log "run" && run
+log "run" && run && echo $?
+if [ $? -ne 0 ]; then
+  log "cleanup" && cleanup 
+  exit 1
+fi
 log "cleanup" && cleanup
