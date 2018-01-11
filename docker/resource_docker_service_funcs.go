@@ -589,11 +589,11 @@ func areAtLeastNContainersUp(serviceName string, image string, serviceID string,
 	// handle the special case of decreasing the replicas
 	if newN >= oldN {
 		// config
-		loops := 60
+		loops := 120
 		sleepTime := 1000 * time.Millisecond
 		maxErrorCount := 3
 
-		// == 1: get at least one task for the given service name
+		// == 1: get at least n tasks for the given service name
 		taskIDs := make([]string, 0)
 		filter := make(map[string][]string)
 		filter["service"] = []string{serviceName}
@@ -621,7 +621,7 @@ func areAtLeastNContainersUp(serviceName string, image string, serviceID string,
 		if len(taskIDs) == 0 {
 			log.Printf("[INFO] Found no running task for service '%s' after %d seconds", serviceName, loops)
 			deleteService(serviceID, client)
-			return fmt.Errorf("[INFO] Deleted service %s", serviceName)
+			return fmt.Errorf("[INFO] Deleted service '%s' due to no task registration", serviceName)
 		}
 
 		// == 2: inspect that n tasks are up
@@ -652,7 +652,7 @@ func areAtLeastNContainersUp(serviceName string, image string, serviceID string,
 					if errorCount >= maxErrorCount {
 						log.Printf("[INFO] Task '%s' for service '%s' in state '%s' after %d errors. Deleting service!", taskID, serviceName, task.Status.State, maxErrorCount)
 						deleteService(serviceID, client)
-						return fmt.Errorf("[INFO] Deleted service '%s'", serviceName)
+						return fmt.Errorf("[INFO] Deleted service '%s' due to not all tasks were up", serviceName)
 					}
 				}
 				time.Sleep(sleepTime) // sleep between inspecting tasks
