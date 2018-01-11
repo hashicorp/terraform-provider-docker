@@ -115,21 +115,13 @@ func TestAccDockerService_full(t *testing.T) {
 				}
 
 				resource "docker_config" "service_config" {
-					name = "myconfig-${replace(timestamp(),":", ".")}"
+					name = "myconfig"
 					data = "ewogICJwcmVmaXgiOiAiMTIzIgp9"
-
-					lifecycle {
-						ignore_changes = ["name"]
-					}
 				}
 				
 				resource "docker_secret" "service_secret" {
-					name = "mysecret-${replace(timestamp(),":", ".")}"
+					name = "mysecret"
 					data = "ewogICJrZXkiOiAiUVdFUlRZIgp9"
-
-					lifecycle {
-						ignore_changes = ["name"]
-					}
 				}
 
 				resource "docker_service" "foo" {
@@ -288,12 +280,8 @@ func TestAccDockerService_updateHealthcheck(t *testing.T) {
 			resource.TestStep{
 				Config: `
 				resource "docker_config" "service_config" {
-					name = "myconfig-${uuid()}"
+					name = "myconfig"
 					data = "ewogICJwcmVmaXgiOiAiMTIzIgp9"
-
-					lifecycle {
-						ignore_changes = ["name"]
-					}
 				}
 
 				resource "docker_service" "foo" {
@@ -436,12 +424,8 @@ func TestAccDockerService_updateIncreaseReplicas(t *testing.T) {
 			resource.TestStep{
 				Config: `
 				resource "docker_config" "service_config" {
-					name = "myconfig-${uuid()}"
+					name = "myconfig"
 					data = "ewogICJwcmVmaXgiOiAiMTIzIgp9"
-
-					lifecycle {
-						ignore_changes = ["name"]
-					}
 				}
 
 				resource "docker_service" "foo" {
@@ -506,12 +490,8 @@ func TestAccDockerService_updateIncreaseReplicas(t *testing.T) {
 			resource.TestStep{
 				Config: `
 				resource "docker_config" "service_config" {
-					name = "myconfig-${uuid()}"
+					name = "myconfig"
 					data = "ewogICJwcmVmaXgiOiAiMTIzIgp9"
-
-					lifecycle {
-						ignore_changes = ["name"]
-					}
 				}
 
 				resource "docker_service" "foo" {
@@ -584,12 +564,8 @@ func TestAccDockerService_updateDecreaseReplicas(t *testing.T) {
 			resource.TestStep{
 				Config: `
 				resource "docker_config" "service_config" {
-					name = "myconfig-${uuid()}"
+					name = "myconfig"
 					data = "ewogICJwcmVmaXgiOiAiMTIzIgp9"
-
-					lifecycle {
-						ignore_changes = ["name"]
-					}
 				}
 
 				resource "docker_service" "foo" {
@@ -654,12 +630,8 @@ func TestAccDockerService_updateDecreaseReplicas(t *testing.T) {
 			resource.TestStep{
 				Config: `
 				resource "docker_config" "service_config" {
-					name = "myconfig-${uuid()}"
+					name = "myconfig"
 					data = "ewogICJwcmVmaXgiOiAiMTIzIgp9"
-
-					lifecycle {
-						ignore_changes = ["name"]
-					}
 				}
 
 				resource "docker_service" "foo" {
@@ -732,12 +704,8 @@ func TestAccDockerService_updateImage(t *testing.T) {
 			resource.TestStep{
 				Config: `
 				resource "docker_config" "service_config" {
-					name = "myconfig-${uuid()}"
+					name = "myconfig"
 					data = "ewogICJwcmVmaXgiOiAiMTIzIgp9"
-
-					lifecycle {
-						ignore_changes = ["name"]
-					}
 				}
 
 				resource "docker_service" "foo" {
@@ -802,12 +770,8 @@ func TestAccDockerService_updateImage(t *testing.T) {
 			resource.TestStep{
 				Config: `
 				resource "docker_config" "service_config" {
-					name = "myconfig-${uuid()}"
+					name = "myconfig"
 					data = "ewogICJwcmVmaXgiOiAiMTIzIgp9"
-
-					lifecycle {
-						ignore_changes = ["name"]
-					}
 				}
 
 				resource "docker_service" "foo" {
@@ -882,8 +846,9 @@ func TestAccDockerService_updateConfig(t *testing.T) {
 			resource.TestStep{
 				Config: `
 				resource "docker_config" "service_config" {
-					name = "myconfig-${uuid()}"
-					data = "ewogICJwcmVmaXgiOiAiMTIzIgp9"
+					name 			 = "myconfig-${uuid()}"
+					data 			 = "ewogICJwcmVmaXgiOiAiMTIzIgp9"
+					updateable = true
 
 					lifecycle {
 						ignore_changes = ["name"]
@@ -952,8 +917,9 @@ func TestAccDockerService_updateConfig(t *testing.T) {
 			resource.TestStep{
 				Config: `
 				resource "docker_config" "service_config" {
-					name = "myconfig-${uuid()}"
-					data = "ewogICJwcmVmaXgiOiAiNTY3Igp9" # UPDATED to prefix: 567
+					name 			 = "myconfig-${uuid()}"
+					data 			 = "ewogICJwcmVmaXgiOiAiNTY3Igp9" # UPDATED to prefix: 567
+					updateable = true
 
 					lifecycle {
 						ignore_changes = ["name"]
@@ -1030,8 +996,9 @@ func TestAccDockerService_updateConfigAndSecret(t *testing.T) {
 			resource.TestStep{
 				Config: `
 				resource "docker_config" "service_config" {
-					name = "myconfig-${uuid()}"
-					data = "ewogICJwcmVmaXgiOiAiMTIzIgp9"
+					name 			 = "myconfig-${uuid()}"
+					data 			 = "ewogICJwcmVmaXgiOiAiMTIzIgp9"
+					updateable = true
 
 					lifecycle {
 						ignore_changes = ["name"]
@@ -1039,8 +1006,9 @@ func TestAccDockerService_updateConfigAndSecret(t *testing.T) {
 				}
 
 				resource "docker_secret" "service_secret" {
-					name = "mysecret-${replace(timestamp(),":", ".")}"
-					data = "ewogICJrZXkiOiAiUVdFUlRZIgp9"
+					name 			 = "mysecret-${replace(timestamp(),":", ".")}"
+					data 			 = "ewogICJrZXkiOiAiUVdFUlRZIgp9"
+					updateable = true
 
 					lifecycle {
 						ignore_changes = ["name"]
@@ -1119,8 +1087,9 @@ func TestAccDockerService_updateConfigAndSecret(t *testing.T) {
 			resource.TestStep{
 				Config: `
 				resource "docker_config" "service_config" {
-					name = "myconfig-${uuid()}"
-					data = "ewogICJwcmVmaXgiOiAiNTY3Igp9" # UPDATED to prefix: 567
+					name       = "myconfig-${uuid()}"
+					data       = "ewogICJwcmVmaXgiOiAiNTY3Igp9" # UPDATED to prefix: 567
+					updateable = true
 
 					lifecycle {
 						ignore_changes = ["name"]
@@ -1128,8 +1097,9 @@ func TestAccDockerService_updateConfigAndSecret(t *testing.T) {
 				}
 
 				resource "docker_secret" "service_secret" {
-					name = "mysecret-${replace(timestamp(),":", ".")}"
-					data = "ewogICJrZXkiOiAiUVdFUlRZIgp9" # UPDATED to YXCVB
+					name       = "mysecret-${replace(timestamp(),":", ".")}"
+					data       = "ewogICJrZXkiOiAiUVdFUlRZIgp9" # UPDATED to YXCVB
+					updateable = true
 
 					lifecycle {
 						ignore_changes = ["name"]
@@ -1217,8 +1187,9 @@ func TestAccDockerService_updateMultipleConfigs(t *testing.T) {
 			resource.TestStep{
 				Config: `
 				resource "docker_config" "service_config" {
-					name = "myconfig-${uuid()}"
-					data = "ewogICJwcmVmaXgiOiAiMTIzIgp9"
+					name       = "myconfig-${uuid()}"
+					data       = "ewogICJwcmVmaXgiOiAiMTIzIgp9"
+					updateable = true
 
 					lifecycle {
 						ignore_changes = ["name"]
@@ -1226,8 +1197,9 @@ func TestAccDockerService_updateMultipleConfigs(t *testing.T) {
 				}
 				
 				resource "docker_config" "service_config_2" {
-					name = "myconfig-2-${uuid()}"
-					data = "ewogICJwcmVmaXgiOiAiMTIzIgp9"
+					name       = "myconfig-2-${uuid()}"
+					data       = "ewogICJwcmVmaXgiOiAiMTIzIgp9"
+					updateable = true
 
 					lifecycle {
 						ignore_changes = ["name"]
@@ -1302,8 +1274,9 @@ func TestAccDockerService_updateMultipleConfigs(t *testing.T) {
 			resource.TestStep{
 				Config: `
 				resource "docker_config" "service_config" {
-					name = "myconfig-${uuid()}"
-					data = "ewogICJwcmVmaXgiOiAiNTY3Igp9" # UPDATED to prefix: 567
+					name       = "myconfig-${uuid()}"
+					data       = "ewogICJwcmVmaXgiOiAiNTY3Igp9" # UPDATED to prefix: 567
+					updateable = true
 
 					lifecycle {
 						ignore_changes = ["name"]
@@ -1311,8 +1284,9 @@ func TestAccDockerService_updateMultipleConfigs(t *testing.T) {
 				}
 
 				resource "docker_config" "service_config_2" {
-					name = "myconfig-2-${uuid()}"
-					data = "ewogICJwcmVmaXgiOiAiNTY3Igp9" # UPDATED to prefix: 567
+					name       = "myconfig-2-${uuid()}"
+					data       = "ewogICJwcmVmaXgiOiAiNTY3Igp9" # UPDATED to prefix: 567
+					updateable = true
 
 					lifecycle {
 						ignore_changes = ["name"]

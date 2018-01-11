@@ -24,6 +24,14 @@ func resourceDockerSecret() *schema.Resource {
 				ForceNew:     true,
 				ValidateFunc: validateStringIsBase64Encoded(),
 			},
+
+			// Workaround until https://github.com/moby/moby/issues/35803 is fixed
+			"updateable": &schema.Schema{
+				Type:     schema.TypeBool,
+				Optional: true,
+				ForceNew: true,
+				Default:  false,
+			},
 		},
 	}
 }

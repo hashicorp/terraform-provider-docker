@@ -63,16 +63,17 @@ func resourceDockerConfigUpdate(d *schema.ResourceData, meta interface{}) error 
 func resourceDockerConfigDelete(d *schema.ResourceData, meta interface{}) error {
 	// HACK configs simply cannot be deleted to have an update mechanism
 	// Wait for https://github.com/moby/moby/issues/35803
+	isUpdateable := d.Get("updateable").(bool)
+	if !isUpdateable {
+		client := meta.(*ProviderConfig).DockerClient
+		err := client.RemoveConfig(dc.RemoveConfigOptions{
+			ID: d.Id(),
+		})
+		if err != nil {
+			return err
+		}
+	}
 
-	// client := meta.(*ProviderConfig).DockerClient
-	// err := client.RemoveConfig(dc.RemoveConfigOptions{
-	// 	ID: d.Id(),
-	// })
-
-	// if err != nil {
-	// 	return err
-	// }
-
-	// d.SetId("")
+	d.SetId("")
 	return nil
 }

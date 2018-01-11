@@ -64,15 +64,18 @@ func resourceDockerSecretUpdate(d *schema.ResourceData, meta interface{}) error 
 func resourceDockerSecretDelete(d *schema.ResourceData, meta interface{}) error {
 	// HACK configs simply cannot be deleted to have an update mechanism
 	// Wait for https://github.com/moby/moby/issues/35803
-	// client := meta.(*ProviderConfig).DockerClient
-	// err := client.RemoveSecret(dc.RemoveSecretOptions{
-	// 	ID: d.Id(),
-	// })
+	isUpdateable := d.Get("updateable").(bool)
+	if !isUpdateable {
+		client := meta.(*ProviderConfig).DockerClient
+		err := client.RemoveSecret(dc.RemoveSecretOptions{
+			ID: d.Id(),
+		})
 
-	// if err != nil {
-	// 	return err
-	// }
+		if err != nil {
+			return err
+		}
+	}
 
-	// d.SetId("")
+	d.SetId("")
 	return nil
 }
