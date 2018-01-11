@@ -26,10 +26,7 @@ install:
 
 script:
 - make test
-# build take ATM 11/Jan/2018 ca 12min locally
-# https://docs.travis-ci.com/user/common-build-problems/#Build-times-out-because-no-output-was-received
-# extends to 20 min
-- travis_wait bash scripts/runAccTests.sh
+- bash scripts/runAccTests.sh
 - make vendor-status
 - make vet
 
