@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/net/context"
+
 	"os"
 
 	"github.com/docker/docker/api/types/container"
@@ -169,13 +171,31 @@ func resourceDockerServiceDelete(d *schema.ResourceData, meta interface{}) error
 	// == 3: wait until all containers of the service are down to be able to unmount the associated volumes
 	for _, containerID := range serviceContainerIds {
 		log.Printf("[INFO] Waiting for container: %s to exit", containerID)
-		if exitCode, errOnExit := client.WaitContainer(containerID); errOnExit == nil {
-			log.Printf("[INFO] Container: %s exited with code %d", containerID, exitCode)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+		defer cancel() // releases resources if operation completes before timeout elapses
+		if exitCode, errOnExit := client.WaitContainerWithContext(containerID, ctx); errOnExit == nil {
+			log.Printf("[INFO] Container: %s exited with code '%d'", containerID, exitCode)
+			select {
+			case <-ctx.Done():
+				// ctx is cancelled, kill the container
+				log.Printf("[INFO] Container: %s shutdown was canceled. Killing it now", containerID)
+				killOps := dc.KillContainerOptions{
+					Signal:  dc.SIGKILL,
+					Context: ctx,
+				}
+				if errOnKill := client.KillContainer(killOps); errOnKill != nil {
+					log.Printf("[INFO] Container: %s killing errord with '%s'", containerID, errOnKill)
+				}
+			default:
+				// ctx is not canceled, continue immediately
+			}
 			// Remove the container if it did not exit properly to be able to unmount the volumes
 			if exitCode != 0 {
+				log.Printf("[INFO] Container: %s exited with non-null code '%d' -> removing it", containerID, exitCode)
 				removeOps := dc.RemoveContainerOptions{
-					ID:    containerID,
-					Force: true,
+					ID:      containerID,
+					Force:   true,
+					Context: ctx, // 1 min timeout as well here
 				}
 				if errOnRemove := client.RemoveContainer(removeOps); errOnRemove != nil {
 					// if the removal is already in progress, this error can be ignored
@@ -586,7 +606,7 @@ func extractSetProperty(d *schema.ResourceData, setKey string, key string) []str
 
 func areAtLeastNContainersUp(serviceName string, image string, serviceID string, configIDs []string, secretIDs []string, n int, client *dc.Client) error {
 	// config
-	loops := 120
+	loops := 240
 	sleepTime := 1000 * time.Millisecond
 	maxErrorCount := 3
 
