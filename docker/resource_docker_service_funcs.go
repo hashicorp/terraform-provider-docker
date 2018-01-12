@@ -1,12 +1,11 @@
 package docker
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strings"
 	"time"
-
-	"golang.org/x/net/context"
 
 	"os"
 
@@ -170,28 +169,29 @@ func resourceDockerServiceDelete(d *schema.ResourceData, meta interface{}) error
 
 	// == 3: wait until all containers of the service are down to be able to unmount the associated volumes
 	for _, containerID := range serviceContainerIds {
-		log.Printf("[INFO] Waiting for container: %s to exit", containerID)
+		log.Printf("[INFO] Waiting for container: '%s' to exit max 1 minute", containerID)
 		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 		defer cancel() // releases resources if operation completes before timeout elapses
 		if exitCode, errOnExit := client.WaitContainerWithContext(containerID, ctx); errOnExit == nil {
-			log.Printf("[INFO] Container: %s exited with code '%d'", containerID, exitCode)
+			log.Printf("[INFO] Container: '%s' exited with code '%d'", containerID, exitCode)
 			select {
 			case <-ctx.Done():
 				// ctx is cancelled, kill the container
-				log.Printf("[INFO] Container: %s shutdown was canceled. Killing it now", containerID)
+				log.Printf("[INFO] Container: '%s' shutdown was canceled. Killing it now", containerID)
 				killOps := dc.KillContainerOptions{
 					Signal:  dc.SIGKILL,
 					Context: ctx,
 				}
 				if errOnKill := client.KillContainer(killOps); errOnKill != nil {
-					log.Printf("[INFO] Container: %s killing errord with '%s'", containerID, errOnKill)
+					log.Printf("[INFO] Container: '%s' killing errord with '%s'", containerID, errOnKill)
 				}
 			default:
 				// ctx is not canceled, continue immediately
+				log.Printf("[INFO] Container: '%s' shutdown was NOT canceled. Continueing", containerID)
 			}
 			// Remove the container if it did not exit properly to be able to unmount the volumes
 			if exitCode != 0 {
-				log.Printf("[INFO] Container: %s exited with non-null code '%d' -> removing it", containerID, exitCode)
+				log.Printf("[INFO] Container: '%s' exited with non-null code '%d' -> removing it", containerID, exitCode)
 				removeOps := dc.RemoveContainerOptions{
 					ID:      containerID,
 					Force:   true,
@@ -199,7 +199,7 @@ func resourceDockerServiceDelete(d *schema.ResourceData, meta interface{}) error
 				}
 				if errOnRemove := client.RemoveContainer(removeOps); errOnRemove != nil {
 					// if the removal is already in progress, this error can be ignored
-					log.Printf("[INFO] Error %s on removal of Container: %s", errOnRemove, containerID)
+					log.Printf("[INFO] Error '%s' on removal of Container: '%s'", errOnRemove, containerID)
 				}
 			}
 		}
@@ -558,7 +558,7 @@ func getAmountOfTasksWithImageConfigAndSecret(tasks []swarm.Task, image string, 
 
 func isConfigIDPresent(configs []*swarm.ConfigReference, configIDs []string) bool {
 	if len(configs) == 0 || len(configIDs) == 0 {
-		log.Printf("[INFO] no configID presence to perform")
+		log.Printf("[INFO] NO configID presence to perform") // TODO
 		return true
 	}
 
@@ -575,7 +575,7 @@ func isConfigIDPresent(configs []*swarm.ConfigReference, configIDs []string) boo
 
 func isSecretIDPresent(secrets []*swarm.SecretReference, secretIDs []string) bool {
 	if len(secrets) == 0 || len(secretIDs) == 0 {
-		log.Printf("[INFO] no secretID presence to perform")
+		log.Printf("[INFO] NO secretID presence to perform")
 		return true
 	}
 
@@ -677,6 +677,6 @@ func areAtLeastNContainersUp(serviceName string, image string, serviceID string,
 		}
 	}
 
-	log.Printf("[INFO] For service '%s' and image '%s' desired '%d' replica(s) are up!", serviceName, image, n)
+	log.Printf("[INFO] For service '%s' and image '%s' desired '%d' replica(s) with configIDs: '%v' and secretIDs: %v are up!", serviceName, image, n, configIDs, secretIDs)
 	return nil
 }
