@@ -264,10 +264,9 @@ func createServiceSpec(d *schema.ResourceData) (swarm.ServiceSpec, error) {
 
 	endpointSpec := swarm.EndpointSpec{}
 
-	// TODO
-	// if v, ok := d.GetOk("network_mode"); ok {
-	// 	endpointSpec.Mode = swarm.ResolutionMode(v.(string))
-	// }
+	if v, ok := d.GetOk("network_mode"); ok {
+		endpointSpec.Mode = swarm.ResolutionMode(v.(string))
+	}
 
 	portBindings := []swarm.PortConfig{}
 

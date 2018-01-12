@@ -93,10 +93,11 @@ func resourceDockerService() *schema.Resource {
 					},
 				},
 			},
-			// "network_mode": &schema.Schema{
-			// 	Type:     schema.TypeString,
-			// 	Optional: true,
-			// },
+			"network_mode": &schema.Schema{
+				Type:         schema.TypeString,
+				Optional:     true,
+				ValidateFunc: validateStringMatchesPattern(`^(vip|dnsrr)$`),
+			},
 			"networks": &schema.Schema{
 				Type:     schema.TypeSet,
 				Optional: true,
@@ -229,9 +230,10 @@ func resourceDockerService() *schema.Resource {
 							ValidateFunc: validateStringMatchesPattern(`^(vip|dnsrr)$`),
 						},
 						"protocol": &schema.Schema{
-							Type:     schema.TypeString,
-							Default:  "tcp",
-							Optional: true,
+							Type:         schema.TypeString,
+							Default:      "tcp",
+							Optional:     true,
+							ValidateFunc: validateStringMatchesPattern(`^(tcp|udp)$`),
 						},
 					},
 				},
