@@ -33,5 +33,6 @@ docker build -t my-private-service ./scripts/testing -f ./scripts/testing/Docker
 docker tag my-private-service 127.0.0.1:5000/my-private-service:v1
 docker build -t my-private-service ./scripts/testing -f ./scripts/testing/Dockerfile_v2
 docker tag my-private-service 127.0.0.1:5000/my-private-service:v2
-# Push private image into private registry
-docker push 127.0.0.1:5000/my-private-service
+# Push private images into private registry
+docker push 127.0.0.1:5000/my-private-service:v1
+docker push 127.0.0.1:5000/my-private-service:v2
