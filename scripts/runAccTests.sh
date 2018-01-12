@@ -18,12 +18,9 @@ setup() {
 
 run() {
   # Run the acc test suite
-  #make testacc
+  make testacc
   # for a single test
-  #TF_LOG=INFO TF_ACC=1 go test -v -timeout 240s github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerService_updateImage$
-  #TF_LOG=INFO TF_ACC=1 go test -v -timeout 240s github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerService_updateConfigForMultipleServices$
-  #TF_LOG=INFO TF_ACC=1 go test -v -timeout 240s github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerService_updateConfigAndDecreaseReplicas$
-  TF_LOG=INFO TF_ACC=1 go test -v -timeout 240s github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseReplicas$
+  #TF_LOG=INFO TF_ACC=1 go test -v -timeout 240s github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseReplicas$
   
   # keep the return for the scripts to fail and clean properly
   return $?
@@ -52,4 +49,8 @@ if [ $? -ne 0 ]; then
   log "cleanup" && cleanup 
   exit 1
 fi
-log "cleanup" && cleanup
+# we only clean on local envs. travis fails from time to time there
+# cuz it cannot remove the images
+if [ "$TRAVIS" != "true" ]; then
+  log "cleanup" && cleanup
+fi
