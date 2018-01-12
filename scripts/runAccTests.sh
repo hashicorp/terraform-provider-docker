@@ -18,9 +18,12 @@ setup() {
 
 run() {
   # Run the acc test suite
-  make testacc
+  #make testacc
   # for a single test
-  TF_LOG=INFO TF_ACC=1 go test -v -timeout 240s github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerService_updateMultipleConfigs$
+  TF_LOG=INFO TF_ACC=1 go test -v -timeout 240s github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerService_updateImage$
+  TF_LOG=INFO TF_ACC=1 go test -v -timeout 240s github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerService_updateConfigForMultipleServices$
+  TF_LOG=INFO TF_ACC=1 go test -v -timeout 240s github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerService_updateConfigAndDecreaseReplicas$
+  TF_LOG=INFO TF_ACC=1 go test -v -timeout 240s github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseReplicas$
   
   # keep the return for the scripts to fail and clean properly
   return $?

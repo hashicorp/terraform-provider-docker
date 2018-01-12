@@ -132,6 +132,7 @@ func TestAccDockerService_full(t *testing.T) {
 					hostname = "myfooservice"
 
 					networks = ["${docker_network.test_network.name}"]
+					network_mode = "vip"
 
 					host {
 						host = "testhost"
@@ -216,6 +217,7 @@ func TestAccDockerService_full(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_service.foo", "hostname", "myfooservice"),
 					resource.TestCheckResourceAttr("docker_service.foo", "networks.#", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "networks.3251854989", "testNetwork"),
+					resource.TestCheckResourceAttr("docker_service.foo", "network_mode", "vip"),
 					resource.TestCheckResourceAttr("docker_service.foo", "host.#", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "host.1878413705.host", "testhost"),
 					resource.TestCheckResourceAttr("docker_service.foo", "host.1878413705.ip", "10.0.1.0"),
@@ -266,6 +268,7 @@ func TestAccDockerService_full(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.interval", "5s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.timeout", "2s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.retries", "4"),
+					resource.ComposeTestCheckFunc(testCheckDockerServiceHasPrefix("http://localhost:8080", "123")),
 				),
 			},
 		},
@@ -698,7 +701,6 @@ func TestAccDockerService_updateDecreaseReplicas(t *testing.T) {
 }
 
 func TestAccDockerService_updateImage(t *testing.T) {
-	t.Skip("Skipping...")
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
 		Providers: testAccProviders,
@@ -1676,7 +1678,6 @@ func TestAccDockerService_updateConfigReplicasImageAndHealth(t *testing.T) {
 }
 
 func TestAccDockerService_updateConfigForMultipleServices(t *testing.T) {
-	t.Skip("Skipping...")
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
 		Providers: testAccProviders,
