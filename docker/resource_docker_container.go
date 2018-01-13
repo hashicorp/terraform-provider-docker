@@ -286,7 +286,6 @@ func resourceDockerContainer() *schema.Resource {
 						},
 					},
 				},
-				Set: resourceDockerUlimitsHash,
 			},
 
 			"env": &schema.Schema{
@@ -481,25 +480,6 @@ func resourceDockerPortsHash(v interface{}) int {
 
 	if v, ok := m["protocol"]; ok {
 		buf.WriteString(fmt.Sprintf("%v-", v.(string)))
-	}
-
-	return hashcode.String(buf.String())
-}
-
-func resourceDockerUlimitsHash(v interface{}) int {
-	var buf bytes.Buffer
-	m := v.(map[string]interface{})
-
-	if v, ok := m["name"]; ok {
-		buf.WriteString(fmt.Sprintf("%s-", v.(string)))
-	}
-
-	if v, ok := m["soft"]; ok {
-		buf.WriteString(fmt.Sprintf("%d-", v.(int)))
-	}
-
-	if v, ok := m["hard"]; ok {
-		buf.WriteString(fmt.Sprintf("%d-", v.(int)))
 	}
 
 	return hashcode.String(buf.String())
