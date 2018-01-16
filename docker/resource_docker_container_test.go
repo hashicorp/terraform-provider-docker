@@ -92,6 +92,32 @@ func TestAccDockerContainer_volume(t *testing.T) {
 	})
 }
 
+func TestAccDockerContainer_userNSDefault(t *testing.T) {
+	var c dc.Container
+
+	testCheck := func(*terraform.State) error {
+		if c.HostConfig.UsernsMode != "" {
+			return fmt.Errorf("User NS mode was not set correct: expected \"\", got %s", c.HostConfig.UsernsMode)
+		}
+
+		return nil
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:  func() { testAccPreCheck(t) },
+		Providers: testAccProviders,
+		Steps: []resource.TestStep{
+			resource.TestStep{
+				Config: testAccDockerContainerUserNSVolumeDefaultConfig,
+				Check: resource.ComposeTestCheckFunc(
+					testAccContainerRunning("docker_container.foo", &c),
+					testCheck,
+				),
+			},
+		},
+	})
+}
+
 func TestAccDockerContainer_customized(t *testing.T) {
 	var c dc.Container
 
@@ -412,5 +438,16 @@ resource "docker_container" "foo" {
 		content = "foo"
 		file = "/terraform/test.txt"
 	}
+}
+`
+
+const testAccDockerContainerUserNSVolumeDefaultConfig = `
+resource "docker_image" "foo" {
+	name = "nginx:latest"
+}
+
+resource "docker_container" "foo" {
+	name = "tf-test"
+	image = "${docker_image.foo.latest}"
 }
 `
