@@ -5,13 +5,20 @@
 package docker
 
 import (
+<<<<<<< HEAD
 	"context"
+=======
+>>>>>>> Update dependencies. Mainly go-dockerclient.
 	"encoding/json"
 	"net/http"
 	"net/url"
 	"strconv"
 
 	"github.com/docker/docker/api/types/swarm"
+<<<<<<< HEAD
+=======
+	"golang.org/x/net/context"
+>>>>>>> Update dependencies. Mainly go-dockerclient.
 )
 
 // NoSuchNode is the error returned when a given node does not exist.

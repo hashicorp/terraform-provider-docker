@@ -5,6 +5,7 @@
 package docker
 
 import (
+<<<<<<< HEAD
 	"context"
 	"encoding/json"
 	"io"
@@ -12,6 +13,17 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types/swarm"
+=======
+	"encoding/json"
+	"io"
+	"net/http"
+	"net/url"
+	"strconv"
+	"time"
+
+	"github.com/docker/docker/api/types/swarm"
+	"golang.org/x/net/context"
+>>>>>>> Update dependencies. Mainly go-dockerclient.
 )
 
 // NoSuchService is the error returned when a given service does not exist.
@@ -91,11 +103,18 @@ func (c *Client) RemoveService(opts RemoveServiceOptions) error {
 //
 // See https://goo.gl/wu3MmS for more details.
 type UpdateServiceOptions struct {
+<<<<<<< HEAD
 	Auth              AuthConfiguration `qs:"-"`
 	swarm.ServiceSpec `qs:"-"`
 	Context           context.Context
 	Version           uint64
 	Rollback          string
+=======
+	Auth AuthConfiguration `qs:"-"`
+	swarm.ServiceSpec
+	Context context.Context
+	Version uint64
+>>>>>>> Update dependencies. Mainly go-dockerclient.
 }
 
 // UpdateService updates the service at ID with the options
@@ -106,7 +125,13 @@ func (c *Client) UpdateService(id string, opts UpdateServiceOptions) error {
 	if err != nil {
 		return err
 	}
+<<<<<<< HEAD
 	resp, err := c.do("POST", "/services/"+id+"/update?"+queryString(opts), doOptions{
+=======
+	params := make(url.Values)
+	params.Set("version", strconv.FormatUint(opts.Version, 10))
+	resp, err := c.do("POST", "/services/"+id+"/update?"+params.Encode(), doOptions{
+>>>>>>> Update dependencies. Mainly go-dockerclient.
 		headers:   headers,
 		data:      opts.ServiceSpec,
 		forceJSON: true,

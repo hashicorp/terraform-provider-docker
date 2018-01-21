@@ -425,10 +425,17 @@
 			"revisionTime": "2017-12-21T20:03:56Z"
 		},
 		{
+<<<<<<< HEAD
 			"checksumSHA1": "LxmlsftDto7ZuwfNmJRdKPah1t8=",
 			"path": "github.com/fsouza/go-dockerclient",
 			"revision": "bf3bc17bb026cbe5e9203374f9a1ce37e521a364",
 			"revisionTime": "2018-03-03T17:22:32Z"
+=======
+			"checksumSHA1": "zPr72xFV/wCmMdsyfiq4AVxLWpw=",
+			"path": "github.com/fsouza/go-dockerclient",
+			"revision": "ef22af91edfe4744e8aed4037d032f86eed17444",
+			"revisionTime": "2017-11-04T15:36:32Z"
+>>>>>>> Update dependencies. Mainly go-dockerclient.
 		},
 		{
 			"checksumSHA1": "1K+xrZ1PBez190iGt5OnMtGdih4=",

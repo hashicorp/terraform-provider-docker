@@ -16,7 +16,12 @@ import (
 	"strings"
 	"time"
 
+<<<<<<< HEAD
 	units "github.com/docker/go-units"
+=======
+	"github.com/docker/go-units"
+	"golang.org/x/net/context"
+>>>>>>> Update dependencies. Mainly go-dockerclient.
 )
 
 // ErrContainerAlreadyExists is the error returned by CreateContainer when the
@@ -300,7 +305,10 @@ type Config struct {
 	ExposedPorts      map[Port]struct{}   `json:"ExposedPorts,omitempty" yaml:"ExposedPorts,omitempty" toml:"ExposedPorts,omitempty"`
 	PublishService    string              `json:"PublishService,omitempty" yaml:"PublishService,omitempty" toml:"PublishService,omitempty"`
 	StopSignal        string              `json:"StopSignal,omitempty" yaml:"StopSignal,omitempty" toml:"StopSignal,omitempty"`
+<<<<<<< HEAD
 	StopTimeout       int                 `json:"StopTimeout,omitempty" yaml:"StopTimeout,omitempty" toml:"StopTimeout,omitempty"`
+=======
+>>>>>>> Update dependencies. Mainly go-dockerclient.
 	Env               []string            `json:"Env,omitempty" yaml:"Env,omitempty" toml:"Env,omitempty"`
 	Cmd               []string            `json:"Cmd" yaml:"Cmd" toml:"Cmd"`
 	Healthcheck       *HealthConfig       `json:"Healthcheck,omitempty" yaml:"Healthcheck,omitempty" toml:"Healthcheck,omitempty"`
@@ -753,7 +761,11 @@ type HostConfig struct {
 	MemoryReservation    int64                  `json:"MemoryReservation,omitempty" yaml:"MemoryReservation,omitempty" toml:"MemoryReservation,omitempty"`
 	KernelMemory         int64                  `json:"KernelMemory,omitempty" yaml:"KernelMemory,omitempty" toml:"KernelMemory,omitempty"`
 	MemorySwap           int64                  `json:"MemorySwap,omitempty" yaml:"MemorySwap,omitempty" toml:"MemorySwap,omitempty"`
+<<<<<<< HEAD
 	MemorySwappiness     int64                  `json:"MemorySwappiness,omitempty" yaml:"MemorySwappiness,omitempty" toml:"MemorySwappiness,omitempty"`
+=======
+	MemorySwappiness     int64                  `json:"MemorySwappiness" yaml:"MemorySwappiness" toml:"MemorySwappiness"`
+>>>>>>> Update dependencies. Mainly go-dockerclient.
 	CPUShares            int64                  `json:"CpuShares,omitempty" yaml:"CpuShares,omitempty" toml:"CpuShares,omitempty"`
 	CPUSet               string                 `json:"Cpuset,omitempty" yaml:"Cpuset,omitempty" toml:"Cpuset,omitempty"`
 	CPUSetCPUs           string                 `json:"CpusetCpus,omitempty" yaml:"CpusetCpus,omitempty" toml:"CpusetCpus,omitempty"`
@@ -1052,7 +1064,10 @@ type CPUStats struct {
 		UsageInKernelmode uint64   `json:"usage_in_kernelmode,omitempty" yaml:"usage_in_kernelmode,omitempty" toml:"usage_in_kernelmode,omitempty"`
 	} `json:"cpu_usage,omitempty" yaml:"cpu_usage,omitempty" toml:"cpu_usage,omitempty"`
 	SystemCPUUsage uint64 `json:"system_cpu_usage,omitempty" yaml:"system_cpu_usage,omitempty" toml:"system_cpu_usage,omitempty"`
+<<<<<<< HEAD
 	OnlineCPUs     uint64 `json:"online_cpus,omitempty" yaml:"online_cpus,omitempty" toml:"online_cpus,omitempty"`
+=======
+>>>>>>> Update dependencies. Mainly go-dockerclient.
 	ThrottlingData struct {
 		Periods          uint64 `json:"periods,omitempty"`
 		ThrottledPeriods uint64 `json:"throttled_periods,omitempty"`
@@ -1290,7 +1305,11 @@ func (c *Client) DownloadFromContainer(id string, opts DownloadFromContainerOpti
 // CopyFromContainerOptions contains the set of options used for copying
 // files from a container.
 //
+<<<<<<< HEAD
 // Deprecated: Use DownloadFromContainerOptions and DownloadFromContainer instead.
+=======
+// See https://goo.gl/nWk2YQ for more details.
+>>>>>>> Update dependencies. Mainly go-dockerclient.
 type CopyFromContainerOptions struct {
 	OutputStream io.Writer `json:"-"`
 	Container    string    `json:"-"`
@@ -1300,7 +1319,11 @@ type CopyFromContainerOptions struct {
 
 // CopyFromContainer copies files from a container.
 //
+<<<<<<< HEAD
 // Deprecated: Use DownloadFromContainer and DownloadFromContainer instead.
+=======
+// See https://goo.gl/nWk2YQ for more details.
+>>>>>>> Update dependencies. Mainly go-dockerclient.
 func (c *Client) CopyFromContainer(opts CopyFromContainerOptions) error {
 	if opts.Container == "" {
 		return &NoSuchContainer{ID: opts.Container}
