@@ -11,7 +11,7 @@ Requirements
 ------------
 
 -	[Terraform](https://www.terraform.io/downloads.html) 0.10.x
--	[Go](https://golang.org/doc/install) 1.8 (to build the provider plugin)
+-	[Go](https://golang.org/doc/install) 1.9.1 (to build the provider plugin)
 
 Building The Provider
 ---------------------
@@ -54,14 +54,12 @@ In order to test the provider, you can simply run `make test`.
 $ make test
 ```
 
-In order to run the full suite of Acceptance tests, run `make testacc`.
+In order to run the full suite of Acceptance tests, run `sh scripts/runAccTests.sh`.
 
-*Note:* Acceptance tests create real resources, and often cost money to run.
+*Note:* Acceptance tests create a local registry which will be deleted afterwards.
 
 ```sh
-$ make testacc
-# e.g. run a single acceptance test: e.g. 'TestAccDockerRegistryImage_private' in 'data_source_docker_registry_image_test.go'
-go test -v -timeout 30s github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerRegistryImage_private$
+$ sh scripts/runAccTests.sh
 ```
 
 In order to extend the provider and test it with `terraform`, build the provider as mentioned above with
