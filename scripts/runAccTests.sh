@@ -34,8 +34,8 @@ cleanup() {
   echo "### removed auth and certs ###"
   docker stop private_registry
   echo "### stopped private registry ###"
-  #docker rmi -f $(docker images -aq 127.0.0.1:5000/my-private-service)
-  #echo "### removed my-private-service images ###"
+  docker rmi -f $(docker images -aq 127.0.0.1:5000/my-private-service)
+  echo "### removed my-private-service images ###"
   # consider running this manually to clean up the
   # updateabe configs and secrets
   #docker config rm $(docker config ls -q)
