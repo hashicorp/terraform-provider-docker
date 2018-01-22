@@ -41,6 +41,7 @@ func resourceDockerVolume() *schema.Resource {
 		},
 	}
 }
+<<<<<<< HEAD
 
 func resourceDockerVolumeCreate(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*ProviderConfig).DockerClient
@@ -126,3 +127,5 @@ func resourceDockerVolumeDelete(d *schema.ResourceData, meta interface{}) error 
 	d.SetId("")
 	return nil
 }
+=======
+>>>>>>> Added funcs file for volumes to be consistent.
