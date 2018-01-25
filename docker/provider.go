@@ -86,6 +86,71 @@ func Provider() terraform.ResourceProvider {
 					},
 				},
 			},
+
+			"forward_config": &schema.Schema{
+				Type:        schema.TypeList,
+				MaxItems:    1,
+				Optional:    true,
+				Description: "Configuration to forward the docker daemon from a remote to a local address",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"bastion_host": &schema.Schema{
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "The host address of the bastion host",
+						},
+						"bastion_host_user": &schema.Schema{
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "The user to login via ssh on the bastion host",
+						},
+						"bastion_host_password": &schema.Schema{
+							Type:          schema.TypeString,
+							Optional:      true,
+							ConflictsWith: []string{"forward_config.bastion_host_private_key_file"},
+							Description:   "The password of the user to login via ssh on the bastion host",
+						},
+						"bastion_host_private_key_file": &schema.Schema{
+							Type:          schema.TypeString,
+							Optional:      true,
+							ConflictsWith: []string{"forward_config.bastion_host_password"},
+							Description:   "The private key file associated with the user to login via ssh on the bastion host",
+						},
+						"end_host": &schema.Schema{
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The host address of the end host",
+						},
+						"end_host_user": &schema.Schema{
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The user to login via ssh on the end host",
+						},
+						"end_host_password": &schema.Schema{
+							Type:          schema.TypeString,
+							Optional:      true,
+							ConflictsWith: []string{"forward_config.end_host_private_key_file"},
+							Description:   "The password of the user to login via ssh on the end host",
+						},
+						"end_host_private_key_file": &schema.Schema{
+							Type:          schema.TypeString,
+							Optional:      true,
+							ConflictsWith: []string{"forward_config.end_host_password"},
+							Description:   "The private key file associated with the user to login via ssh on the end host",
+						},
+						"local_address": &schema.Schema{
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The local address the docker daemon is forwarded to",
+						},
+						"remote_address": &schema.Schema{
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The address on the remote/end host the docker daemon is forwarded from",
+						},
+					},
+				},
+			},
 		},
 
 		ResourcesMap: map[string]*schema.Resource{
@@ -108,11 +173,15 @@ func Provider() terraform.ResourceProvider {
 
 func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	config := DockerConfig{
-		Host:     d.Get("host").(string),
-		Ca:       d.Get("ca_material").(string),
-		Cert:     d.Get("cert_material").(string),
-		Key:      d.Get("key_material").(string),
-		CertPath: d.Get("cert_path").(string),
+		Host:          d.Get("host").(string),
+		Ca:            d.Get("ca_material").(string),
+		Cert:          d.Get("cert_material").(string),
+		Key:           d.Get("key_material").(string),
+		CertPath:      d.Get("cert_path").(string),
+		ForwardConfig: nil,
+	}
+	if forwardConfig, ok := d.GetOk("forward_config"); ok {
+		config.ForwardConfig = forwardConfig.([]interface{})
 	}
 
 	client, err := config.NewClient()
@@ -126,7 +195,6 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	}
 
 	authConfigs := &dc.AuthConfigurations{}
-
 	if v, ok := d.GetOk("registry_auth"); ok {
 		authConfigs, err = providerSetToRegistryAuth(v.(*schema.Set))
 
