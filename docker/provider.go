@@ -113,6 +113,7 @@ func Provider() terraform.ResourceProvider {
 						"bastion_host_password": &schema.Schema{
 							Type:          schema.TypeString,
 							Optional:      true,
+							Sensitive:     true,
 							ConflictsWith: []string{"forward_config.bastion_host_private_key_file"},
 							Description:   "The password of the user to login via ssh on the bastion host",
 						},
@@ -136,6 +137,7 @@ func Provider() terraform.ResourceProvider {
 						"end_host_password": &schema.Schema{
 							Type:          schema.TypeString,
 							Optional:      true,
+							Sensitive:     true,
 							ConflictsWith: []string{"forward_config.end_host_private_key_file"},
 							Description:   "The password of the user to login via ssh on the end host",
 						},
