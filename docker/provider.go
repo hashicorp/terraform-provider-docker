@@ -100,9 +100,10 @@ func Provider() terraform.ResourceProvider {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"bastion_host": &schema.Schema{
-							Type:        schema.TypeString,
-							Optional:    true,
-							Description: "The host address of the bastion host",
+							Type:         schema.TypeString,
+							Optional:     true,
+							Description:  "The host address of the bastion host",
+							ValidateFunc: validateStringMatchesPattern(`^.+:\d+$`),
 						},
 						"bastion_host_user": &schema.Schema{
 							Type:        schema.TypeString,
@@ -122,9 +123,10 @@ func Provider() terraform.ResourceProvider {
 							Description:   "The private key file associated with the user to login via ssh on the bastion host",
 						},
 						"end_host": &schema.Schema{
-							Type:        schema.TypeString,
-							Required:    true,
-							Description: "The host address of the end host",
+							Type:         schema.TypeString,
+							Required:     true,
+							Description:  "The host address of the end host",
+							ValidateFunc: validateStringMatchesPattern(`^.+:\d+$`),
 						},
 						"end_host_user": &schema.Schema{
 							Type:        schema.TypeString,
@@ -144,16 +146,16 @@ func Provider() terraform.ResourceProvider {
 							Description:   "The private key file associated with the user to login via ssh on the end host",
 						},
 						"local_address": &schema.Schema{
-							Type:        schema.TypeString,
-							Required:    true,
-							Description: "The local address the docker daemon is forwarded to",
-							// ValidateFunc: validateStringMatchesPattern(`^(TODO)$`),
+							Type:         schema.TypeString,
+							Required:     true,
+							Description:  "The local address the docker daemon is forwarded to",
+							ValidateFunc: validateStringMatchesPattern(`^.+:\d+$`),
 						},
 						"remote_address": &schema.Schema{
-							Type:        schema.TypeString,
-							Required:    true,
-							Description: "The address on the remote/end host the docker daemon is forwarded from",
-							// ValidateFunc: validateStringMatchesPattern(`^(TODO)$`),
+							Type:         schema.TypeString,
+							Required:     true,
+							Description:  "The address on the remote/end host the docker daemon is forwarded from",
+							ValidateFunc: validateStringMatchesPattern(`^.+:\d+$`),
 						},
 					},
 				},

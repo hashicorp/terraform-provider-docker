@@ -76,6 +76,32 @@ func TestValidateStringMatchesPattern(t *testing.T) {
 	if _, error := validateStringMatchesPattern(pattern)(v, "name"); error != nil {
 		t.Fatalf("%q should match the pattern", v)
 	}
+
+	pattern = `^.+:\d+$`
+	v = "10.2.4.5:22"
+	if _, error := validateStringMatchesPattern(pattern)(v, "name"); error != nil {
+		t.Fatalf("%q should match the pattern", v)
+	}
+	v = "10.2.4.5:1"
+	if _, error := validateStringMatchesPattern(pattern)(v, "name"); error != nil {
+		t.Fatalf("%q should match the pattern", v)
+	}
+	v = "localhost:2376"
+	if _, error := validateStringMatchesPattern(pattern)(v, "name"); error != nil {
+		t.Fatalf("%q should match the pattern", v)
+	}
+	v = "10.2.1.1"
+	if _, error := validateStringMatchesPattern(pattern)(v, "name"); error == nil {
+		t.Fatalf("%q should not match the pattern", v)
+	}
+	v = ":"
+	if _, error := validateStringMatchesPattern(pattern)(v, "name"); error == nil {
+		t.Fatalf("%q should not match the pattern", v)
+	}
+	v = ":2375"
+	if _, error := validateStringMatchesPattern(pattern)(v, "name"); error == nil {
+		t.Fatalf("%q should not match the pattern", v)
+	}
 }
 
 func TestValidateStringShouldBeBase64Encoded(t *testing.T) {
