@@ -9,7 +9,12 @@ import (
 	dc "github.com/fsouza/go-dockerclient"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
+	fw "github.com/mavogel/sshforward"
 )
+
+// Workaround for mutiple calls for configureFunc
+// and no teardown method in provider https://github.com/hashicorp/terraform/issues/6258
+var isForwardEstablished = false
 
 // Provider creates the Docker provider
 func Provider() terraform.ResourceProvider {
@@ -142,11 +147,13 @@ func Provider() terraform.ResourceProvider {
 							Type:        schema.TypeString,
 							Required:    true,
 							Description: "The local address the docker daemon is forwarded to",
+							// ValidateFunc: validateStringMatchesPattern(`^(TODO)$`),
 						},
 						"remote_address": &schema.Schema{
 							Type:        schema.TypeString,
 							Required:    true,
 							Description: "The address on the remote/end host the docker daemon is forwarded from",
+							// ValidateFunc: validateStringMatchesPattern(`^(TODO)$`),
 						},
 					},
 				},
@@ -173,15 +180,20 @@ func Provider() terraform.ResourceProvider {
 
 func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	config := DockerConfig{
-		Host:          d.Get("host").(string),
-		Ca:            d.Get("ca_material").(string),
-		Cert:          d.Get("cert_material").(string),
-		Key:           d.Get("key_material").(string),
-		CertPath:      d.Get("cert_path").(string),
-		ForwardConfig: nil,
+		Host:     d.Get("host").(string),
+		Ca:       d.Get("ca_material").(string),
+		Cert:     d.Get("cert_material").(string),
+		Key:      d.Get("key_material").(string),
+		CertPath: d.Get("cert_path").(string),
 	}
+
 	if forwardConfig, ok := d.GetOk("forward_config"); ok {
-		config.ForwardConfig = forwardConfig.([]interface{})
+		if !isForwardEstablished {
+			if err := createForward(forwardConfig.([]interface{})); err != nil {
+				return nil, fmt.Errorf("Error creating forward: %s", err)
+			}
+			isForwardEstablished = true
+		}
 	}
 
 	client, err := config.NewClient()
@@ -209,6 +221,72 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	}
 
 	return &providerConfig, nil
+}
+
+// Takes the given forward config and parses it into the fw.Config
+func parseForwardConfig(forwardConfigList []interface{}) (*fw.Config, error) {
+	forwardConfig := &fw.Config{}
+
+	if forwardConfigList != nil && len(forwardConfigList) > 0 {
+		fc := forwardConfigList[0].(map[string]interface{})
+
+		if v, ok := fc["bastion_host"]; ok {
+			jumpHostConfigs := make([]*fw.SSHConfig, 0)
+			bastionHostConfig := &fw.SSHConfig{}
+			bastionHostConfig.Address = v.(string)
+			if v, ok := fc["bastion_host_user"]; ok {
+				bastionHostConfig.User = v.(string)
+			}
+			if v, ok := fc["bastion_host_password"]; ok {
+				bastionHostConfig.Password = v.(string)
+			}
+			if v, ok := fc["bastion_host_private_key_file"]; ok {
+				bastionHostConfig.PrivateKeyFile = v.(string)
+			}
+			jumpHostConfigs = append(jumpHostConfigs, bastionHostConfig)
+			forwardConfig.JumpHostConfigs = jumpHostConfigs
+		}
+
+		forwardConfig.EndHostConfig = &fw.SSHConfig{}
+		if v, ok := fc["end_host"]; ok {
+			forwardConfig.EndHostConfig.Address = v.(string)
+		}
+		if v, ok := fc["end_host_user"]; ok {
+			forwardConfig.EndHostConfig.User = v.(string)
+		}
+		if v, ok := fc["end_host_password"]; ok {
+			forwardConfig.EndHostConfig.Password = v.(string)
+		}
+		if v, ok := fc["end_host_private_key_file"]; ok {
+			forwardConfig.EndHostConfig.PrivateKeyFile = v.(string)
+		}
+
+		if v, ok := fc["local_address"]; ok {
+			forwardConfig.LocalAddress = v.(string)
+		}
+
+		if v, ok := fc["remote_address"]; ok {
+			forwardConfig.RemoteAddress = v.(string)
+		}
+	}
+
+	return forwardConfig, nil
+}
+
+// Creates a forward
+func createForward(forwardConfig []interface{}) error {
+	parsedForwardConfig, err := parseForwardConfig(forwardConfig)
+	if err != nil {
+		return fmt.Errorf("Invalid forward config: %s", err)
+	}
+
+	// NOTE: when teardown exists https://github.com/hashicorp/terraform/issues/6258
+	// we should close the forward then
+	_, _, bootstrapErr := fw.NewForward(parsedForwardConfig)
+	if bootstrapErr != nil {
+		return fmt.Errorf("bootstrapErr while establishing forward: %s", bootstrapErr)
+	}
+	return nil
 }
 
 // Take the given registry_auth schemas and return a map of registry auth configurations
