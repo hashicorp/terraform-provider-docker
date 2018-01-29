@@ -91,6 +91,48 @@ and paste it into `~/.docker/config.json`:
 }
 ```
 
+## Bastion Host
+
+A configuration to forward the Docker Daemon to a local address with an optional
+Bastion host in between. For example if the Docker Daemon is in a private network which is only 
+accessible via a Bastion host.
+
+```hcl
+provider "docker" {
+  host      = "tcp://127.0.0.1:2376/"
+  cert_path = "${pathexpand("~/.docker")}"
+  
+  forward_config {
+    bastion_host                  = "10.0.0.1:22"
+    bastion_host_user             = "bastionuser"
+    bastion_host_private_key_file = "${pathexpand("~/.ssh/bastionkey)}"
+
+    end_host                  = "20.0.0.1:22"
+    end_host_user             = "endhostuser"
+    end_host_private_key_file = "${pathexpand("~/.ssh/endhostkey)}"
+
+    local_address  = "localhost:2376"
+    remote_address = "localhost:2376"
+  }
+}
+```
+
+You can test before if the `forward` can be succesfully established with the following
+command assuming you have a secured Docker Socket with `127.0.0.1` as authorized IP address
+at the endhost on port 2376. It closes the forward after 10s of inactivity.
+
+```sh
+# setup the forward
+$ ssh -f -L 2376:localhost:2376 \ 
+    -o ExitOnForwardFailure=yes \ 
+    -o ProxyCommand="ssh -l bastionuser -i ~/.ssh/bastionkey 10.0.0.1 -W %h:%p" \ 
+    -o UserKnownHostsFile=/dev/null \ 
+    -o StrictHostKeyChecking=no \ 
+    -i ~/.ssh/endhostkey endhostuser@20.0.0.1 sleep 10
+# access the forwarded docker host
+$ docker --tlsverify -H 127.0.0.1:2376 info
+```
+
 ## Argument Reference
 
 The following arguments are supported:
@@ -122,7 +164,35 @@ The following arguments are supported:
   authenticating to the registry. Cannot be used with the `username`/`password` options.
   If this is blank, the `DOCKER_CONFIG` will also be checked.
  
- 
+* `forward_config` - (Optional) Configuration to forward the Docker Daemon from a remote to a 
+local address.
+   
+  * `bastion_host` - (Optional) The host address of the bastion host. A port for ssh needs
+  to be specified explicitly, e.g. 10.0.0.1:22
+  
+  * `bastion_host_user` - (Optional) The user to login via ssh on the bastion host.
+  
+  * `bastion_host_password` - (Optional) The password of the user to login via ssh on the 
+  bastion host. Cannot be used with the `bastion_host_private_key_file` option.
+  
+  * `bastion_host_private_key_file` - (Optional) The private key file associated with the user  
+  to login via ssh on the bastion host. Cannot be used with the `bastion_host_password` option.
+  
+  * `end_host` - (Required) The host address of the end host where the Docker 
+  Daemon is running. A port for ssh needs to be specified explicitly, e.g. 20.0.0.1:22.
+  
+  * `end_host_user` - (Optional) The user to login via ssh on the end host.
+  
+  * `end_host_password` - (Optional) The password of the user to login via ssh on the 
+  end host. Cannot be used with the `end_host_private_key_file` option.
+  
+  * `end_host_private_key_file` - (Optional) The private key file associated with the user  
+  to login via ssh on the end host. Cannot be used with the `end_host_password` option.
+  
+  * `local_address` - (Required) The local address the Docker Daemon is forwarded to.
+  
+  * `remote_address` - (Required) The address on the remote/end host the Docker Daemon is 
+  forwarded from.
 
 ~> **NOTE on Certificates and `docker-machine`:**  As per [Docker Remote API
 documentation](https://docs.docker.com/engine/reference/api/docker_remote_api/),
