@@ -18,9 +18,10 @@ setup() {
 
 run() {
   # Run the acc test suite
-  make testacc
+  TF_ACC=1 go test ./docker -v -timeout 120m
+  
   # for a single test
-  #TF_LOG=INFO TF_ACC=1 go test -v -timeout 360s github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerService_updateConfigForMultipleServices$
+  # TF_LOG=INFO TF_ACC=1 go test -v github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerContainer_basic$ -timeout 360s
   
   # keep the return for the scripts to fail and clean properly
   return $?
