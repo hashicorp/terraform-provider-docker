@@ -97,22 +97,25 @@ func resourceDockerVolumeDelete(d *schema.ResourceData, meta interface{}) error 
 
 	if err := client.RemoveVolume(d.Id()); err != nil && err != dc.ErrNoSuchVolume {
 		if err == dc.ErrVolumeInUse {
-			loops := 50
+			loops := 20
 			sleepTime := 1000 * time.Millisecond
 			for i := loops; i > 0; i-- {
 				if err = client.RemoveVolume(d.Id()); err != nil {
-					log.Printf("[INFO] Volume remove loop: %d of %d due to error: %s", loops-i+1, loops, err)
 					if err == dc.ErrVolumeInUse {
+						log.Printf("[INFO] Volume remove loop: %d of %d due to error: %s", loops-i+1, loops, err)
 						time.Sleep(sleepTime)
 						continue
 					}
 					if err == dc.ErrNoSuchVolume {
-						break // it's removed
+						log.Printf("[INFO] Volume successfully removed")
+						d.SetId("")
+						return nil
 					}
 					// if it's not in use any more (so it's deleted successfully) and another error occurred
 					return fmt.Errorf("Error deleting volume %s: %s", d.Id(), err)
 				}
 			}
+			return fmt.Errorf("Error deleting volume %s: %s after %d tries", d.Id(), err, loops)
 		}
 	}
 
