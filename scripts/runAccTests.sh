@@ -21,7 +21,7 @@ run() {
   TF_ACC=1 go test ./docker -v -timeout 120m
   
   # for a single test
-  # TF_LOG=INFO TF_ACC=1 go test -v github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerContainer_basic$ -timeout 360s
+  #TF_LOG=INFO TF_ACC=1 go test -v github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerService_full$ -timeout 360s
   
   # keep the return for the scripts to fail and clean properly
   return $?
@@ -39,8 +39,8 @@ cleanup() {
   echo "### removed my-private-service images ###"
   # consider running this manually to clean up the
   # updateabe configs and secrets
-  #docker config rm $(docker config ls -q)
-  #docker secret rm $(docker secret ls -q)
+  # docker config rm $(docker config ls -q)
+  # docker secret rm $(docker secret ls -q)
 }
 
 ## main

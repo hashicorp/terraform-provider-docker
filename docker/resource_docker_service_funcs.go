@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os/signal"
 	"strings"
 	"time"
 
@@ -14,6 +15,29 @@ import (
 	"github.com/docker/docker/api/types/swarm"
 	dc "github.com/fsouza/go-dockerclient"
 	"github.com/hashicorp/terraform/helper/schema"
+)
+
+var (
+	numberedStates = map[swarm.TaskState]int64{
+		swarm.TaskStateNew:       1,
+		swarm.TaskStateAllocated: 2,
+		swarm.TaskStatePending:   3,
+		swarm.TaskStateAssigned:  4,
+		swarm.TaskStateAccepted:  5,
+		swarm.TaskStatePreparing: 6,
+		swarm.TaskStateReady:     7,
+		swarm.TaskStateStarting:  8,
+		swarm.TaskStateRunning:   9,
+
+		// The following states are not actually shown in progress
+		// output, but are used internally for ordering.
+		swarm.TaskStateComplete: 10,
+		swarm.TaskStateShutdown: 11,
+		swarm.TaskStateFailed:   12,
+		swarm.TaskStateRejected: 13,
+	}
+
+	longestState int
 )
 
 func resourceDockerServiceExists(d *schema.ResourceData, meta interface{}) (bool, error) {
@@ -65,10 +89,13 @@ func resourceDockerServiceCreate(d *schema.ResourceData, meta interface{}) error
 		return err
 	}
 
-	configIDs := extractSetProperty(d, "configs", "config_id")
-	secretIDs := extractSetProperty(d, "secrets", "secret_id")
-	n := d.Get("replicas")
-	if err := areAtLeastNContainersUp(d.Get("name").(string), d.Get("image").(string), service.ID, configIDs, secretIDs, n.(int), client); err != nil {
+	// configIDs := extractSetProperty(d, "configs", "config_id")
+	// secretIDs := extractSetProperty(d, "secrets", "secret_id")
+	// n := d.Get("replicas")
+	// if err := areAtLeastNContainersUp(d.Get("name").(string), d.Get("image").(string), service.ID, configIDs, secretIDs, n.(int), client); err != nil {
+	// 	return err
+	// }
+	if err := waitOnService(context.Background(), client, service.ID); err != nil {
 		return err
 	}
 
@@ -131,10 +158,13 @@ func resourceDockerServiceUpdate(d *schema.ResourceData, meta interface{}) error
 		return err
 	}
 
-	configIDs := extractSetProperty(d, "configs", "config_id")
-	secretIDs := extractSetProperty(d, "secrets", "secret_id")
-	n := d.Get("replicas")
-	if err := areAtLeastNContainersUp(d.Get("name").(string), d.Get("image").(string), d.Id(), configIDs, secretIDs, n.(int), client); err != nil {
+	// configIDs := extractSetProperty(d, "configs", "config_id")
+	// secretIDs := extractSetProperty(d, "secrets", "secret_id")
+	// n := d.Get("replicas")
+	// if err := areAtLeastNContainersUp(d.Get("name").(string), d.Get("image").(string), d.Id(), configIDs, secretIDs, n.(int), client); err != nil {
+	// 	return err
+	// }
+	if err := waitOnService(context.Background(), client, service.ID); err != nil {
 		return err
 	}
 
@@ -169,9 +199,9 @@ func resourceDockerServiceDelete(d *schema.ResourceData, meta interface{}) error
 
 	// == 3: wait until all containers of the service are down to be able to unmount the associated volumes
 	for _, containerID := range serviceContainerIds {
-		log.Printf("[INFO] Waiting for container: '%s' to exit max 1 minute", containerID)
+		log.Printf("[INFO] Waiting for container: '%s' to exit: max 1 minute", containerID)
 		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-		defer cancel() // releases resources if operation completes before timeout elapses
+		defer cancel() // release resources if operation completes before timeout elapses
 		if exitCode, errOnExit := client.WaitContainerWithContext(containerID, ctx); errOnExit == nil {
 			log.Printf("[INFO] Container: '%s' exited with code '%d'", containerID, exitCode)
 			select {
@@ -186,22 +216,21 @@ func resourceDockerServiceDelete(d *schema.ResourceData, meta interface{}) error
 					log.Printf("[INFO] Container: '%s' killing errord with '%s'", containerID, errOnKill)
 				}
 			default:
-				// ctx is not canceled, continue immediately
-				log.Printf("[INFO] Container: '%s' shutdown was NOT canceled. Continueing", containerID)
+				// ctx is not canceled, continue with removal
 			}
 			// Remove the container if it did not exit properly to be able to unmount the volumes
-			if exitCode != 0 {
-				log.Printf("[INFO] Container: '%s' exited with non-null code '%d' -> removing it", containerID, exitCode)
-				removeOps := dc.RemoveContainerOptions{
-					ID:      containerID,
-					Force:   true,
-					Context: ctx, // 1 min timeout as well here
-				}
-				if errOnRemove := client.RemoveContainer(removeOps); errOnRemove != nil {
-					// if the removal is already in progress, this error can be ignored
-					log.Printf("[INFO] Error '%s' on removal of Container: '%s'", errOnRemove, containerID)
-				}
+			// if exitCode != 0 {
+			log.Printf("[INFO] Removing container: '%s'", containerID)
+			removeOps := dc.RemoveContainerOptions{
+				ID:      containerID,
+				Force:   true,
+				Context: ctx, // 1 min timeout as well here
 			}
+			if errOnRemove := client.RemoveContainer(removeOps); errOnRemove != nil {
+				// if the removal is already in progress, this error can be ignored
+				log.Printf("[INFO] Error '%s' on removal of Container: '%s'", errOnRemove, containerID)
+			}
+			// }
 		}
 	}
 
@@ -212,6 +241,236 @@ func resourceDockerServiceDelete(d *schema.ResourceData, meta interface{}) error
 ////////////
 // Helpers
 ////////////
+func waitOnService(ctx context.Context, client *dc.Client, serviceID string) error {
+	// taskFilter := filters.NewArgs()
+	// taskFilter.Add("service", serviceID)
+	// taskFilter.Add("_up-to-date", "true")
+	// return client.TaskList(ctx, types.TaskListOptions{Filters: taskFilter})
+
+	sigint := make(chan os.Signal, 1)
+	signal.Notify(sigint, os.Interrupt)
+	defer signal.Stop(sigint)
+
+	filter := make(map[string][]string)
+	filter["service"] = []string{serviceID}
+	filter["desired-state"] = []string{"running"}
+
+	getUpToDateTasks := func() ([]swarm.Task, error) {
+		return client.ListTasks(dc.ListTasksOptions{
+			Filters: filter,
+			Context: ctx,
+		})
+	}
+
+	var (
+		updater     progressUpdater
+		converged   bool
+		convergedAt time.Time
+		monitor     = 5 * time.Second
+		rollback    bool
+	)
+
+	for {
+		// service, _, err := client.ServiceInspectWithRaw(ctx, serviceID, types.ServiceInspectOptions{})
+		service, err := client.InspectService(serviceID)
+		if err != nil {
+			return err
+		}
+
+		if service.Spec.UpdateConfig != nil && service.Spec.UpdateConfig.Monitor != 0 {
+			monitor = service.Spec.UpdateConfig.Monitor
+		}
+
+		if updater == nil {
+			updater = &replicatedProgressUpdater{}
+		}
+
+		if service.UpdateStatus != nil {
+			switch service.UpdateStatus.State {
+			case swarm.UpdateStateUpdating:
+				rollback = false
+			case swarm.UpdateStateCompleted:
+				if !converged {
+					return nil
+				}
+			case swarm.UpdateStatePaused:
+				return fmt.Errorf("service update paused: %s", service.UpdateStatus.Message)
+			case swarm.UpdateStateRollbackStarted:
+				rollback = true
+			case swarm.UpdateStateRollbackPaused:
+				return fmt.Errorf("service rollback paused: %s", service.UpdateStatus.Message)
+			case swarm.UpdateStateRollbackCompleted:
+				if !converged {
+					return fmt.Errorf("service rolled back: %s", service.UpdateStatus.Message)
+				}
+			}
+		}
+
+		if converged && time.Since(convergedAt) >= monitor {
+			return nil
+		}
+
+		tasks, err := getUpToDateTasks()
+		if err != nil {
+			return err
+		}
+
+		activeNodes, err := getActiveNodes(ctx, client)
+		if err != nil {
+			return err
+		}
+
+		converged, err = updater.update(service, tasks, activeNodes, rollback)
+		if err != nil {
+			return err
+		}
+
+		if converged {
+			if convergedAt.IsZero() {
+				convergedAt = time.Now()
+				log.Printf("[INFO] converged at %v", convergedAt)
+			}
+			// wait := monitor - time.Since(convergedAt)
+			// if wait >= 0 {
+			// }
+		} else {
+			// if !convergedAt.IsZero() {
+			// }
+			convergedAt = time.Time{}
+		}
+
+		select {
+		case <-time.After(500 * time.Millisecond): // TODO configurable
+		case <-sigint:
+			if !converged {
+				log.Printf("[INFO] Operation continuing in background.")
+			}
+			return nil
+		}
+	}
+}
+
+func getActiveNodes(ctx context.Context, client *dc.Client) (map[string]struct{}, error) {
+	// nodes, err := client.NodeList(ctx, types.NodeListOptions{})
+	nodes, err := client.ListNodes(dc.ListNodesOptions{Context: ctx})
+	if err != nil {
+		return nil, err
+	}
+
+	activeNodes := make(map[string]struct{})
+	for _, n := range nodes {
+		if n.Status.State != swarm.NodeStateDown {
+			activeNodes[n.ID] = struct{}{}
+		}
+	}
+	log.Printf("[INFO] active nodes: %v", len(activeNodes))
+	return activeNodes, nil
+}
+
+type progressUpdater interface {
+	update(service *swarm.Service, tasks []swarm.Task, activeNodes map[string]struct{}, rollback bool) (bool, error)
+}
+
+type replicatedProgressUpdater struct {
+	// progressOut progress.Output
+
+	// used for mapping slots to a contiguous space
+	// this also causes progress bars to appear in order
+	slotMap map[int]int
+
+	initialized bool
+	done        bool
+}
+
+func (u *replicatedProgressUpdater) update(service *swarm.Service, tasks []swarm.Task, activeNodes map[string]struct{}, rollback bool) (bool, error) {
+	if service.Spec.Mode.Replicated == nil || service.Spec.Mode.Replicated.Replicas == nil {
+		return false, fmt.Errorf("no replica count")
+	}
+	replicas := *service.Spec.Mode.Replicated.Replicas
+
+	if !u.initialized {
+		u.slotMap = make(map[int]int)
+		u.initialized = true
+	}
+
+	tasksBySlot := u.tasksBySlot(tasks, activeNodes)
+
+	// If we had reached a converged state, check if we are still converged.
+	if u.done {
+		for _, task := range tasksBySlot {
+			if task.Status.State != swarm.TaskStateRunning {
+				u.done = false
+				break
+			}
+		}
+	}
+
+	running := uint64(0)
+
+	for _, task := range tasksBySlot {
+		mappedSlot := u.slotMap[task.Slot]
+		if mappedSlot == 0 {
+			mappedSlot = len(u.slotMap) + 1
+			u.slotMap[task.Slot] = mappedSlot
+		}
+
+		if !terminalState(task.DesiredState) && task.Status.State == swarm.TaskStateRunning {
+			running++
+			log.Printf("[INFO] got running replica: %v for task %v", running, task.ID)
+		}
+
+		// u.writeTaskProgress(task, mappedSlot, replicas, rollback) TODO
+	}
+
+	if !u.done {
+		// writeOverallProgress(u.progressOut, int(running), int(replicas), rollback)
+
+		if running == replicas {
+			log.Printf("[INFO] got all %v replicas up and running", running)
+			u.done = true
+		}
+	}
+
+	return running == replicas, nil
+}
+
+func (u *replicatedProgressUpdater) tasksBySlot(tasks []swarm.Task, activeNodes map[string]struct{}) map[int]swarm.Task {
+	// If there are multiple tasks with the same slot number, favor the one
+	// with the *lowest* desired state. This can happen in restart
+	// scenarios.
+	tasksBySlot := make(map[int]swarm.Task)
+	for _, task := range tasks {
+		if numberedStates[task.DesiredState] == 0 || numberedStates[task.Status.State] == 0 {
+			continue
+		}
+		if existingTask, ok := tasksBySlot[task.Slot]; ok {
+			if numberedStates[existingTask.DesiredState] < numberedStates[task.DesiredState] {
+				continue
+			}
+			// If the desired states match, observed state breaks
+			// ties. This can happen with the "start first" service
+			// update mode.
+			if numberedStates[existingTask.DesiredState] == numberedStates[task.DesiredState] &&
+				numberedStates[existingTask.Status.State] <= numberedStates[task.Status.State] {
+				continue
+			}
+		}
+		if task.NodeID != "" {
+			if _, nodeActive := activeNodes[task.NodeID]; !nodeActive {
+				continue
+			}
+		}
+		tasksBySlot[task.Slot] = task
+	}
+
+	return tasksBySlot
+}
+
+func terminalState(state swarm.TaskState) bool {
+	return numberedStates[state] > numberedStates[swarm.TaskStateRunning]
+}
+
+//////////
 func deleteService(serviceID string, client *dc.Client) error {
 	removeOpts := dc.RemoveServiceOptions{
 		ID: serviceID,
@@ -416,6 +675,7 @@ func createServiceSpec(d *schema.ResourceData) (swarm.ServiceSpec, error) {
 	// == start TaskTemplate Spec
 	placement := swarm.Placement{}
 	if v, ok := d.GetOk("constraints"); ok {
+		// placement.Preferences TODO
 		placement.Constraints = stringSetToStringSlice(v.(*schema.Set))
 	}
 
