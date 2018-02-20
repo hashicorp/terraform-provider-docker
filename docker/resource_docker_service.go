@@ -351,6 +351,23 @@ func resourceDockerService() *schema.Resource {
 				Set:      schema.HashString,
 			},
 
+			"placement_platform": &schema.Schema{
+				Type:     schema.TypeSet,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"architecture": &schema.Schema{
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"os": &schema.Schema{
+							Type:     schema.TypeString,
+							Required: true,
+						},
+					},
+				},
+			},
+
 			"logging": &schema.Schema{
 				Type:     schema.TypeList,
 				MaxItems: 1,

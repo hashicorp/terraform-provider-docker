@@ -682,6 +682,10 @@ func createServiceSpec(d *schema.ResourceData) (swarm.ServiceSpec, error) {
 		placement.Preferences = stringSetToPlacementPrefs(v.(*schema.Set))
 	}
 
+	if v, ok := d.GetOk("placement_platform"); ok {
+		placement.Platforms = mapSetToPlacementPlatforms(v.(*schema.Set))
+	}
+
 	serviceSpec.TaskTemplate.Placement = &placement
 
 	if v, ok := d.GetOk("logging"); ok {
@@ -956,5 +960,22 @@ func stringSetToPlacementPrefs(stringSet *schema.Set) []swarm.PlacementPreferenc
 			},
 		})
 	}
+	return ret
+}
+
+func mapSetToPlacementPlatforms(stringSet *schema.Set) []swarm.Platform {
+	ret := []swarm.Platform{}
+	if stringSet == nil {
+		return ret
+	}
+
+	for _, rawPlatform := range stringSet.List() {
+		rawPlatform := rawPlatform.(map[string]interface{})
+		ret = append(ret, swarm.Platform{
+			Architecture: rawPlatform["architecture"].(string),
+			OS:           rawPlatform["os"].(string),
+		})
+	}
+
 	return ret
 }

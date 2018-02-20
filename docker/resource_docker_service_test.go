@@ -147,6 +147,11 @@ func TestAccDockerService_full(t *testing.T) {
 						"spread=node.role.manager"
 					]
 
+					placement_platform {
+						architecture = "amd64"
+						os				   = "darwin"
+					}
+
 					mounts = [
 						{
 							source = "${docker_volume.foo.name}"
