@@ -142,6 +142,10 @@ func TestAccDockerService_full(t *testing.T) {
 					constraints = [
 						"node.role==manager"
 					]
+					
+					placement_prefs = [
+						"spread=node.role.manager"
+					]
 
 					mounts = [
 						{

@@ -675,8 +675,11 @@ func createServiceSpec(d *schema.ResourceData) (swarm.ServiceSpec, error) {
 	// == start TaskTemplate Spec
 	placement := swarm.Placement{}
 	if v, ok := d.GetOk("constraints"); ok {
-		// placement.Preferences TODO
 		placement.Constraints = stringSetToStringSlice(v.(*schema.Set))
+	}
+
+	if v, ok := d.GetOk("placement_prefs"); ok {
+		placement.Preferences = stringSetToPlacementPrefs(v.(*schema.Set))
 	}
 
 	serviceSpec.TaskTemplate.Placement = &placement
@@ -939,4 +942,19 @@ func areAtLeastNContainersUp(serviceName string, image string, serviceID string,
 
 	log.Printf("[INFO] For service '%s' and image '%s' desired '%d' replica(s) with configIDs: '%v' and secretIDs: %v are up!", serviceName, image, n, configIDs, secretIDs)
 	return nil
+}
+
+func stringSetToPlacementPrefs(stringSet *schema.Set) []swarm.PlacementPreference {
+	ret := []swarm.PlacementPreference{}
+	if stringSet == nil {
+		return ret
+	}
+	for _, envVal := range stringSet.List() {
+		ret = append(ret, swarm.PlacementPreference{
+			Spread: &swarm.SpreadOver{
+				SpreadDescriptor: envVal.(string),
+			},
+		})
+	}
+	return ret
 }

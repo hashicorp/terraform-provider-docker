@@ -344,6 +344,13 @@ func resourceDockerService() *schema.Resource {
 				Set:      schema.HashString,
 			},
 
+			"placement_prefs": &schema.Schema{
+				Type:     schema.TypeSet,
+				Optional: true,
+				Elem:     &schema.Schema{Type: schema.TypeString},
+				Set:      schema.HashString,
+			},
+
 			"logging": &schema.Schema{
 				Type:     schema.TypeList,
 				MaxItems: 1,
