@@ -116,7 +116,9 @@ The following arguments are supported:
 * `ports` - (Optional, block) See [Ports](#ports) below for details.
 * `update_config` - (Optional, block) See [UpdateConfig](#update-rollback-config) below for details.
 * `rollback_config` - (Optional, block) See [RolbackConfig](#update-rollback-config) below for details.
-* `constraints` - (Optional, set of strings) A set of constraints, e.g. `node=manager`.
+* `constraints` - (Optional, set of strings) A set of constraints, e.g. `node.role==manager`.
+* `placement_prefs` - (Optional, set of strings) A set of placement preferences, e.g. `spread=node.role.manager`. Currently only `SpreadDescriptors` are supported and they are provided in order from highest to lowest precendence.
+* `placement_platform` - (Optional, block) See [Placement Platform](#placement_platform) below for details.
 * `logging` - (Optional, block) See [Logging](#logging) below for details.
 * `healthcheck` - (Optional, block) See [Healthcheck](#healthcheck) below for details.
 
@@ -195,6 +197,14 @@ the following:
 * `monitor` - (Optional, int) Duration after each task update to monitor for failure (ns|us|ms|s|m|h)
 * `max_failure_ratio` - (Optional, int) The failure rate to tolerate during an update.
 * `order` - (Optional, int) Update order either 'stop-first' or 'start-first'.
+
+<a id="placement_platform"></a>
+### Placement Platform
+
+`placement_platform` is a block within the configuration that can be repeated only **once** to specify the architecture the service can run on. The `placement_platform` block supports the following:
+
+* `architecture` - (Required, string), the hardware architecture, e.g. `x86_64`
+* `os` - (Required, string) the operation system, e.g. `linux`
 
 <a id="logging"></a>
 ### Logging
