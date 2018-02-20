@@ -288,6 +288,110 @@ func TestAccDockerService_full(t *testing.T) {
 	})
 }
 
+func TestAccDockerService_updateNetwork(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:  func() { testAccPreCheck(t) },
+		Providers: testAccProviders,
+		Steps: []resource.TestStep{
+			resource.TestStep{
+				Config: `
+				resource "docker_network" "test_network" {
+					name   = "testNetwork"
+					driver = "overlay"
+				}
+
+				resource "docker_network" "test_network2" {
+					name   = "testNetwork2"
+					driver = "overlay"
+				}
+
+				resource "docker_service" "foo" {
+					name     = "service-foo"
+					image    = "stovogel/friendlyhello:part2"
+					replicas = 2
+
+					networks = ["${docker_network.test_network.name}"]
+					network_mode = "vip"
+				}
+				`,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
+					resource.TestCheckResourceAttr("docker_service.foo", "image", "stovogel/friendlyhello:part2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "networks.#", "1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "networks.3251854989", "testNetwork"),
+					resource.TestCheckResourceAttr("docker_service.foo", "network_mode", "vip"),
+				),
+			},
+			resource.TestStep{
+				Config: `
+				resource "docker_network" "test_network" {
+					name   = "testNetwork"
+					driver = "overlay"
+				}
+
+				resource "docker_network" "test_network2" {
+					name   = "testNetwork2"
+					driver = "overlay"
+				}
+
+				resource "docker_service" "foo" {
+					name     = "service-foo"
+					image    = "stovogel/friendlyhello:part2"
+					replicas = 2
+
+					networks = ["${docker_network.test_network2.name}"]
+					network_mode = "vip"
+				}
+				`,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
+					resource.TestCheckResourceAttr("docker_service.foo", "image", "stovogel/friendlyhello:part2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "networks.#", "1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "networks.2300416718", "testNetwork2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "network_mode", "vip"),
+				),
+			},
+			resource.TestStep{
+				Config: `
+				resource "docker_network" "test_network" {
+					name   = "testNetwork"
+					driver = "overlay"
+				}
+
+				resource "docker_network" "test_network2" {
+					name   = "testNetwork2"
+					driver = "overlay"
+				}
+
+				resource "docker_service" "foo" {
+					name     = "service-foo"
+					image    = "stovogel/friendlyhello:part2"
+					replicas = 2
+
+					networks = [
+						"${docker_network.test_network.name}",
+						"${docker_network.test_network2.name}"
+					]
+					network_mode = "vip"
+				}
+				`,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
+					resource.TestCheckResourceAttr("docker_service.foo", "image", "stovogel/friendlyhello:part2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "networks.#", "2"),
+					// resource.TestCheckResourceAttr("docker_service.foo", "networks.2300416718", "testNetwork2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "network_mode", "vip"),
+				),
+			},
+		},
+	})
+}
 func TestAccDockerService_updateHealthcheck(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
