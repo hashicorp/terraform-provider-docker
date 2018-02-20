@@ -602,6 +602,86 @@ func TestAccDockerService_updateHosts(t *testing.T) {
 		},
 	})
 }
+func TestAccDockerService_updateLogging(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:  func() { testAccPreCheck(t) },
+		Providers: testAccProviders,
+		Steps: []resource.TestStep{
+			resource.TestStep{
+				Config: `
+				resource "docker_service" "foo" {
+					name     = "service-foo"
+					image    = "stovogel/friendlyhello:part2"
+					replicas = 2
+
+					logging {
+						driver_name = "json-file"
+					
+						options {
+							max-size = "10m"
+							max-file = "3"
+						}
+					}
+					
+				}
+				`,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
+					resource.TestCheckResourceAttr("docker_service.foo", "image", "stovogel/friendlyhello:part2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "logging.0.driver_name", "json-file"),
+					resource.TestCheckResourceAttr("docker_service.foo", "logging.0.options.%", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "logging.0.options.max-size", "10m"),
+					resource.TestCheckResourceAttr("docker_service.foo", "logging.0.options.max-file", "3"),
+				),
+			},
+			resource.TestStep{
+				Config: `
+				resource "docker_service" "foo" {
+					name     = "service-foo"
+					image    = "stovogel/friendlyhello:part2"
+					replicas = 2
+
+					logging {
+						driver_name = "json-file"
+					
+						options {
+							max-size = "15m"
+							max-file = "5"
+						}
+					}
+				}
+				`,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
+					resource.TestCheckResourceAttr("docker_service.foo", "image", "stovogel/friendlyhello:part2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "logging.0.driver_name", "json-file"),
+					resource.TestCheckResourceAttr("docker_service.foo", "logging.0.options.%", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "logging.0.options.max-size", "15m"),
+					resource.TestCheckResourceAttr("docker_service.foo", "logging.0.options.max-file", "5"),
+				),
+			},
+			resource.TestStep{
+				Config: `
+				resource "docker_service" "foo" {
+					name     = "service-foo"
+					image    = "stovogel/friendlyhello:part2"
+					replicas = 2
+				}
+				`,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
+					resource.TestCheckResourceAttr("docker_service.foo", "image", "stovogel/friendlyhello:part2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
+				),
+			},
+		},
+	})
+}
 
 func TestAccDockerService_updateHealthcheck(t *testing.T) {
 	resource.Test(t, resource.TestCase{
