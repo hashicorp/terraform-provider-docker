@@ -121,6 +121,7 @@ The following arguments are supported:
 * `placement_platform` - (Optional, block) See [Placement Platform](#placement_platform) below for details.
 * `logging` - (Optional, block) See [Logging](#logging) below for details.
 * `healthcheck` - (Optional, block) See [Healthcheck](#healthcheck) below for details.
+* `dns_config` - (Optional, block) See [DNS Config](#dnsconfig) below for details.
 
 <a id="auth"></a>
 ### Auth
@@ -224,7 +225,7 @@ options {
 <a id="healthcheck"></a>
 ### Healthcheck
 
-`logging` is a block within the configuration that can be repeated only **once** to specify the extra logging configuration for the containers of the service. The `logging` block supports the following:
+`healthcheck` is a block within the configuration that can be repeated only **once** to specify the extra healthcheck configuration for the containers of the service. The `healthcheck` block supports the following:
 
 * `test` - (Required, list of strings) Command to run to check health. For example, to run `curl -f http://localhost/health` set the
     command to be `["CMD", "curl", "-f", "http://localhost/health"]`.
@@ -232,6 +233,15 @@ options {
 * `timeout` - (Optional, string) Maximum time to allow one check to run (ms|s|m|h). Default 3s.
 * `start_period` - (Optional, string) Start period for the container to initialize before counting retries towards unstable (ms|s|m|h). Default 2s.
 * `retries` - (Optional, int) Consecutive failures needed to report unhealthy. Default 1.
+
+<a id="dnsconfig"></a>
+### DNS Config
+
+`dnsconfig` is a block within the configuration that can be repeated only **once** to specify the extra DNS configuration for the containers of the service. The `dnsconfig` block supports the following:
+
+* `nameservers` - (Required, list of strings) The IP addresses of the name servers, for example `8.8.8.8`
+* `search` - (Optional, list of strings)A search list for host-name lookup.
+* `options` - (Optional, list of strings) A list of internal resolver variables to be modified, for example `debug`, `ndots:3`
 
 
 ## Attributes Reference

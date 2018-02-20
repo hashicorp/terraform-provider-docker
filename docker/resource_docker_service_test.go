@@ -215,6 +215,12 @@ func TestAccDockerService_full(t *testing.T) {
 						timeout  = "2s"
 						retries  = 4
 					}
+
+					dns_config {
+						nameservers = ["8.8.8.8"]
+						search = ["example.org"]
+						options = ["timeout:3"]
+					}
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
@@ -276,6 +282,11 @@ func TestAccDockerService_full(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.interval", "5s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.timeout", "2s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.retries", "4"),
+					resource.TestCheckResourceAttr("docker_service.foo", "dns_config.#", "1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "dns_config.0.nameservers.0", "8.8.8.8"),
+					resource.TestCheckResourceAttr("docker_service.foo", "dns_config.0.search.0", "example.org"),
+					resource.TestCheckResourceAttr("docker_service.foo", "dns_config.0.options.0", "timeout:3"),
+
 					resource.ComposeTestCheckFunc(testCheckDockerServiceHasPrefix("http://localhost:8080", "123")),
 				),
 			},

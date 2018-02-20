@@ -723,6 +723,25 @@ func createServiceSpec(d *schema.ResourceData) (swarm.ServiceSpec, error) {
 			}
 		}
 	}
+
+	if v, ok := d.GetOk("dns_config"); ok {
+		containerSpec.DNSConfig = &swarm.DNSConfig{}
+		if len(v.([]interface{})) > 0 {
+			for _, rawDNSConfig := range v.([]interface{}) {
+				rawDNSConfig := rawDNSConfig.(map[string]interface{})
+				if nameservers, ok := rawDNSConfig["nameservers"]; ok {
+					containerSpec.DNSConfig.Nameservers = stringListToStringSlice(nameservers.([]interface{}))
+				}
+				if search, ok := rawDNSConfig["search"]; ok {
+					containerSpec.DNSConfig.Search = stringListToStringSlice(search.([]interface{}))
+				}
+				if options, ok := rawDNSConfig["options"]; ok {
+					containerSpec.DNSConfig.Options = stringListToStringSlice(options.([]interface{}))
+				}
+			}
+		}
+	}
+
 	// == end TaskTemplate Spec
 
 	return serviceSpec, nil
