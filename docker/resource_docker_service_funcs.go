@@ -537,7 +537,7 @@ func createServiceSpec(d *schema.ResourceData) (swarm.ServiceSpec, error) {
 		containerSpec.Env = stringSetToStringSlice(v.(*schema.Set))
 	}
 
-	if v, ok := d.GetOk("host"); ok {
+	if v, ok := d.GetOk("hosts"); ok {
 		containerSpec.Hosts = extraHostsSetToDockerExtraHosts(v.(*schema.Set))
 	}
 

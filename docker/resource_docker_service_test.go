@@ -134,7 +134,7 @@ func TestAccDockerService_full(t *testing.T) {
 					networks = ["${docker_network.test_network.name}"]
 					network_mode = "vip"
 
-					host {
+					hosts {
 						host = "testhost"
 						ip = "10.0.1.0"
 					}
@@ -146,11 +146,6 @@ func TestAccDockerService_full(t *testing.T) {
 					placement_prefs = [
 						"spread=node.role.manager"
 					]
-
-					placement_platform {
-						architecture = "amd64"
-						os				   = "darwin"
-					}
 
 					mounts = [
 						{
@@ -231,9 +226,9 @@ func TestAccDockerService_full(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_service.foo", "networks.#", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "networks.3251854989", "testNetwork"),
 					resource.TestCheckResourceAttr("docker_service.foo", "network_mode", "vip"),
-					resource.TestCheckResourceAttr("docker_service.foo", "host.#", "1"),
-					resource.TestCheckResourceAttr("docker_service.foo", "host.1878413705.host", "testhost"),
-					resource.TestCheckResourceAttr("docker_service.foo", "host.1878413705.ip", "10.0.1.0"),
+					resource.TestCheckResourceAttr("docker_service.foo", "hosts.#", "1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "hosts.1878413705.host", "testhost"),
+					resource.TestCheckResourceAttr("docker_service.foo", "hosts.1878413705.ip", "10.0.1.0"),
 					resource.TestCheckResourceAttr("docker_service.foo", "mounts.#", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "mounts.3510941185.bind_propagation", ""),
 					resource.TestCheckResourceAttr("docker_service.foo", "mounts.3510941185.consistency", "default"),
@@ -288,7 +283,7 @@ func TestAccDockerService_full(t *testing.T) {
 	})
 }
 
-func TestAccDockerService_updateNetwork(t *testing.T) {
+func TestAccDockerService_updateNetworks(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
 		Providers: testAccProviders,
@@ -385,13 +380,229 @@ func TestAccDockerService_updateNetwork(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "stovogel/friendlyhello:part2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "networks.#", "2"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "networks.2300416718", "testNetwork2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "network_mode", "vip"),
 				),
 			},
 		},
 	})
 }
+func TestAccDockerService_updateMounts(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:  func() { testAccPreCheck(t) },
+		Providers: testAccProviders,
+		Steps: []resource.TestStep{
+			resource.TestStep{
+				Config: `
+				resource "docker_volume" "foo" {
+					name = "testVolume"
+				}
+
+				resource "docker_volume" "foo2" {
+					name = "testVolume"
+				}
+
+				resource "docker_service" "foo" {
+					name     = "service-foo"
+					image    = "stovogel/friendlyhello:part2"
+					replicas = 2
+
+					mounts = [
+						{
+							source = "${docker_volume.foo.name}"
+							target = "/mount/test"
+							type   = "volume"
+							consistency = "default"
+							read_only = true
+							volume_labels {
+								env = "dev"
+								terraform = "true"
+							}
+						}
+					]
+					
+				}
+				`,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
+					resource.TestCheckResourceAttr("docker_service.foo", "image", "stovogel/friendlyhello:part2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mounts.#", "1"),
+				),
+			},
+			resource.TestStep{
+				Config: `
+				resource "docker_volume" "foo" {
+					name = "testVolume"
+				}
+
+				resource "docker_volume" "foo2" {
+					name = "testVolume"
+				}
+
+				resource "docker_service" "foo" {
+					name     = "service-foo"
+					image    = "stovogel/friendlyhello:part2"
+					replicas = 2
+
+					mounts = [
+						{
+							source = "${docker_volume.foo2.name}"
+							target = "/mount/test"
+							type   = "volume"
+							consistency = "default"
+							read_only = true
+							volume_labels {
+								env = "dev"
+								terraform = "true"
+							}
+						}
+					]
+				}
+				`,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
+					resource.TestCheckResourceAttr("docker_service.foo", "image", "stovogel/friendlyhello:part2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mounts.#", "1"),
+				),
+			},
+			resource.TestStep{
+				Config: `
+				resource "docker_volume" "foo" {
+					name = "testVolume"
+				}
+
+				resource "docker_volume" "foo2" {
+					name = "testVolume"
+				}
+
+				resource "docker_service" "foo" {
+					name     = "service-foo"
+					image    = "stovogel/friendlyhello:part2"
+					replicas = 2
+
+					mounts = [
+						{
+							source = "${docker_volume.foo.name}"
+							target = "/mount/test"
+							type   = "volume"
+							consistency = "default"
+							read_only = true
+							volume_labels {
+								env = "dev"
+								terraform = "true"
+							}
+						},
+						{
+							source = "${docker_volume.foo2.name}"
+							target = "/mount/test2"
+							type   = "volume"
+							consistency = "default"
+							read_only = true
+							volume_labels {
+								env = "dev"
+								terraform = "true"
+							}
+						}
+					]
+				}
+				`,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
+					resource.TestCheckResourceAttr("docker_service.foo", "image", "stovogel/friendlyhello:part2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mounts.#", "2"),
+				),
+			},
+		},
+	})
+}
+func TestAccDockerService_updateHosts(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:  func() { testAccPreCheck(t) },
+		Providers: testAccProviders,
+		Steps: []resource.TestStep{
+			resource.TestStep{
+				Config: `
+				resource "docker_service" "foo" {
+					name     = "service-foo"
+					image    = "stovogel/friendlyhello:part2"
+					replicas = 2
+
+					hosts = [
+						{
+							host = "testhost"
+							ip = "10.0.1.0"
+						}
+					]
+					
+				}
+				`,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
+					resource.TestCheckResourceAttr("docker_service.foo", "image", "stovogel/friendlyhello:part2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "hosts.#", "1"),
+				),
+			},
+			resource.TestStep{
+				Config: `
+				resource "docker_service" "foo" {
+					name     = "service-foo"
+					image    = "stovogel/friendlyhello:part2"
+					replicas = 2
+
+					hosts = [
+						{
+							host = "testhost2"
+							ip = "10.0.2.2"
+						}
+					]
+				}
+				`,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
+					resource.TestCheckResourceAttr("docker_service.foo", "image", "stovogel/friendlyhello:part2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "hosts.#", "1"),
+				),
+			},
+			resource.TestStep{
+				Config: `
+				resource "docker_service" "foo" {
+					name     = "service-foo"
+					image    = "stovogel/friendlyhello:part2"
+					replicas = 2
+
+					hosts = [
+						{
+							host = "testhost"
+							ip = "10.0.1.0"
+						},
+						{
+							host = "testhost2"
+							ip = "10.0.2.2"
+						}
+					]
+				}
+				`,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
+					resource.TestCheckResourceAttr("docker_service.foo", "image", "stovogel/friendlyhello:part2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "hosts.#", "2"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccDockerService_updateHealthcheck(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
