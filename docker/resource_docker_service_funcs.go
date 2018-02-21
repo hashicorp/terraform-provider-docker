@@ -524,6 +524,11 @@ func createServiceSpec(d *schema.ResourceData) (swarm.ServiceSpec, error) {
 		containerSpec.Hostname = v.(string)
 	}
 
+	if v, ok := d.GetOk("stop_grace_period"); ok {
+		parsed, _ := time.ParseDuration(v.(string))
+		containerSpec.StopGracePeriod = &parsed
+	}
+
 	if v, ok := d.GetOk("command"); ok {
 		containerSpec.Command = stringListToStringSlice(v.([]interface{}))
 		for _, v := range containerSpec.Command {

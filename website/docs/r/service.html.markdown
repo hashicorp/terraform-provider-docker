@@ -107,6 +107,7 @@ The following arguments are supported:
     command to be `["/usr/bin/myprogram", "-f", "baz.conf"]`.
 * `env` - (Optional, set of strings) Environment variables to set.
 * `host` - (Optional, list of strings) Each host is a string with the ip, the cononical hostname and its aliase serparated with a whitespace: `IP_address canonical_hostname [aliases...]` e.g. `10.10.10.10 host1`. 
+* `stop_grace_period` - (Optional, string) Amount of time to wait for the container to terminate before forcefully killing it (ns|us|ms|s|m|h), e.g `5s`.
 * `network_mode` - (Optional, string) Network mode of the containers of the service (vip|dnsrr).
 * `networks` - (Optional, set of strings) Id of the networks in which the
   container is.

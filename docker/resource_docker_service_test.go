@@ -139,6 +139,8 @@ func TestAccDockerService_full(t *testing.T) {
 						ip = "10.0.1.0"
 					}
 
+					stop_grace_period = "3s"
+
 					constraints = [
 						"node.role==manager"
 					]
@@ -235,6 +237,7 @@ func TestAccDockerService_full(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_service.foo", "hosts.#", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "hosts.1878413705.host", "testhost"),
 					resource.TestCheckResourceAttr("docker_service.foo", "hosts.1878413705.ip", "10.0.1.0"),
+					resource.TestCheckResourceAttr("docker_service.foo", "stop_grace_period", "3s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "mounts.#", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "mounts.3510941185.bind_propagation", ""),
 					resource.TestCheckResourceAttr("docker_service.foo", "mounts.3510941185.consistency", "default"),
@@ -2096,7 +2099,6 @@ func TestAccDockerService_updateConfigReplicasImageAndHealth(t *testing.T) {
 		},
 	})
 }
-
 func TestAccDockerService_updateConfigForMultipleServices(t *testing.T) {
 	t.Skip("Skipping for travis ATM")
 	resource.Test(t, resource.TestCase{
@@ -2510,7 +2512,6 @@ func TestAccDockerService_updateConfigAndDecreaseReplicas(t *testing.T) {
 		},
 	})
 }
-
 func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseReplicas(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
