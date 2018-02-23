@@ -317,7 +317,7 @@ func resourceDockerService() *schema.Resource {
 							Description:  "Action on rollback failure: pause | continue | rollback",
 							Optional:     true,
 							Default:      "pause",
-							ValidateFunc: validateStringMatchesPattern("(pause|continue|rollback)"),
+							ValidateFunc: validateStringMatchesPattern("(pause|continue)"),
 						},
 						"monitor": &schema.Schema{
 							Type:         schema.TypeString,
