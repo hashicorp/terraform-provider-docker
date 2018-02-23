@@ -89,12 +89,6 @@ func resourceDockerServiceCreate(d *schema.ResourceData, meta interface{}) error
 		return err
 	}
 
-	// configIDs := extractSetProperty(d, "configs", "config_id")
-	// secretIDs := extractSetProperty(d, "secrets", "secret_id")
-	// n := d.Get("replicas")
-	// if err := areAtLeastNContainersUp(d.Get("name").(string), d.Get("image").(string), service.ID, configIDs, secretIDs, n.(int), client); err != nil {
-	// 	return err
-	// }
 	if err := waitOnService(context.Background(), client, service.ID); err != nil {
 		return err
 	}
@@ -153,18 +147,21 @@ func resourceDockerServiceUpdate(d *schema.ResourceData, meta interface{}) error
 		updateOpts.Auth = fromRegistryAuth(d.Get("image").(string), meta.(*ProviderConfig).AuthConfigs.Configs)
 	}
 
+	if v, ok := d.GetOk("update_config"); ok {
+		updateOpts.UpdateConfig, _ = createUpdateOrRollbackConfig(v.([]interface{}))
+	}
+
+	if v, ok := d.GetOk("rollback_config"); ok {
+		updateOpts.RollbackConfig, _ = createUpdateOrRollbackConfig(v.([]interface{}))
+	}
+
 	err = client.UpdateService(d.Id(), updateOpts)
 	if err != nil {
 		return err
 	}
 
-	// configIDs := extractSetProperty(d, "configs", "config_id")
-	// secretIDs := extractSetProperty(d, "secrets", "secret_id")
-	// n := d.Get("replicas")
-	// if err := areAtLeastNContainersUp(d.Get("name").(string), d.Get("image").(string), d.Id(), configIDs, secretIDs, n.(int), client); err != nil {
-	// 	return err
-	// }
 	if err := waitOnService(context.Background(), client, service.ID); err != nil {
+		log.Printf("[INFO] error on update --> %v", err)
 		return err
 	}
 
@@ -201,12 +198,11 @@ func resourceDockerServiceDelete(d *schema.ResourceData, meta interface{}) error
 	for _, containerID := range serviceContainerIds {
 		log.Printf("[INFO] Waiting for container: '%s' to exit: max 1 minute", containerID)
 		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-		defer cancel() // release resources if operation completes before timeout elapses
+		defer cancel()
 		if exitCode, errOnExit := client.WaitContainerWithContext(containerID, ctx); errOnExit == nil {
 			log.Printf("[INFO] Container: '%s' exited with code '%d'", containerID, exitCode)
 			select {
 			case <-ctx.Done():
-				// ctx is cancelled, kill the container
 				log.Printf("[INFO] Container: '%s' shutdown was canceled. Killing it now", containerID)
 				killOps := dc.KillContainerOptions{
 					Signal:  dc.SIGKILL,
@@ -219,18 +215,16 @@ func resourceDockerServiceDelete(d *schema.ResourceData, meta interface{}) error
 				// ctx is not canceled, continue with removal
 			}
 			// Remove the container if it did not exit properly to be able to unmount the volumes
-			// if exitCode != 0 {
 			log.Printf("[INFO] Removing container: '%s'", containerID)
 			removeOps := dc.RemoveContainerOptions{
 				ID:      containerID,
 				Force:   true,
-				Context: ctx, // 1 min timeout as well here
+				Context: ctx,
 			}
 			if errOnRemove := client.RemoveContainer(removeOps); errOnRemove != nil {
 				// if the removal is already in progress, this error can be ignored
 				log.Printf("[INFO] Error '%s' on removal of Container: '%s'", errOnRemove, containerID)
 			}
-			// }
 		}
 	}
 
@@ -242,11 +236,6 @@ func resourceDockerServiceDelete(d *schema.ResourceData, meta interface{}) error
 // Helpers
 ////////////
 func waitOnService(ctx context.Context, client *dc.Client, serviceID string) error {
-	// taskFilter := filters.NewArgs()
-	// taskFilter.Add("service", serviceID)
-	// taskFilter.Add("_up-to-date", "true")
-	// return client.TaskList(ctx, types.TaskListOptions{Filters: taskFilter})
-
 	sigint := make(chan os.Signal, 1)
 	signal.Notify(sigint, os.Interrupt)
 	defer signal.Stop(sigint)
@@ -271,7 +260,6 @@ func waitOnService(ctx context.Context, client *dc.Client, serviceID string) err
 	)
 
 	for {
-		// service, _, err := client.ServiceInspectWithRaw(ctx, serviceID, types.ServiceInspectOptions{})
 		service, err := client.InspectService(serviceID)
 		if err != nil {
 			return err
@@ -307,6 +295,13 @@ func waitOnService(ctx context.Context, client *dc.Client, serviceID string) err
 		}
 
 		if converged && time.Since(convergedAt) >= monitor {
+			if service.UpdateStatus != nil {
+				if service.UpdateStatus.State == swarm.UpdateStateRollbackCompleted {
+					return fmt.Errorf("service rollback completed at %v", convergedAt)
+				}
+				log.Printf("[INFO] return after update with status: %v", service.UpdateStatus.State)
+			}
+			log.Printf("[INFO] return after converged")
 			return nil
 		}
 
@@ -831,145 +826,6 @@ func fromRegistryAuth(image string, configs map[string]dc.AuthConfiguration) dc.
 	}
 
 	return dc.AuthConfiguration{}
-}
-
-func getAmountOfTasksWithImageConfigAndSecret(tasks []swarm.Task, image string, configIDs []string, secretIDs []string) int {
-	amount := 0
-	for _, task := range tasks {
-		// 1: check for images updates
-		if task.Spec.ContainerSpec.Image == image &&
-			isConfigIDPresent(task.Spec.ContainerSpec.Configs, configIDs) &&
-			isSecretIDPresent(task.Spec.ContainerSpec.Secrets, secretIDs) {
-			// 2: check for config and secret updates/additions
-			amount++
-		}
-	}
-	return amount
-}
-
-func isConfigIDPresent(configs []*swarm.ConfigReference, configIDs []string) bool {
-	if len(configs) == 0 || len(configIDs) == 0 {
-		log.Printf("[INFO] NO configID presence to perform") // TODO
-		return true
-	}
-
-	for _, config := range configs {
-		for _, configID := range configIDs {
-			if (*config).ConfigID == configID {
-				log.Printf("[INFO] configID '%s is present", configID)
-				return true
-			}
-		}
-	}
-	return false
-}
-
-func isSecretIDPresent(secrets []*swarm.SecretReference, secretIDs []string) bool {
-	if len(secrets) == 0 || len(secretIDs) == 0 {
-		log.Printf("[INFO] NO secretID presence to perform")
-		return true
-	}
-
-	for _, secret := range secrets {
-		for _, secretID := range secretIDs {
-			if (*secret).SecretID == secretID {
-				log.Printf("[INFO] secretID '%s is present", secretID)
-				return true
-			}
-		}
-	}
-	return false
-}
-
-func extractSetProperty(d *schema.ResourceData, setKey string, key string) []string {
-	properties := make([]string, 0)
-	if givenSet, ok := d.GetOk(setKey); ok {
-		for _, rawSet := range givenSet.(*schema.Set).List() {
-			rawSet := rawSet.(map[string]interface{})
-			if value, ok := rawSet[key]; ok {
-				log.Printf("[INFO] Found propery '%s' in set '%s'", key, setKey)
-				properties = append(properties, value.(string))
-			}
-		}
-	}
-	return properties
-}
-
-func areAtLeastNContainersUp(serviceName string, image string, serviceID string, configIDs []string, secretIDs []string, n int, client *dc.Client) error {
-	// config
-	loops := 240
-	sleepTime := 1000 * time.Millisecond
-	maxErrorCount := 3
-
-	// == 1: get at least n tasks for the given service name
-	taskIDs := make([]string, 0)
-	filter := make(map[string][]string)
-	filter["service"] = []string{serviceName}
-	filter["desired-state"] = []string{"running"}
-
-	for i := 1; i <= loops; i++ {
-		tasks, err := client.ListTasks(dc.ListTasksOptions{
-			Filters: filter,
-		})
-		if err != nil {
-			return err
-		}
-		amountOfTasksWithImageConfigAndSecret := getAmountOfTasksWithImageConfigAndSecret(tasks, image, configIDs, secretIDs)
-		if amountOfTasksWithImageConfigAndSecret == n {
-			for _, task := range tasks {
-				taskIDs = append(taskIDs, task.ID)
-			}
-			log.Printf("[INFO] Got at least %d running task(s) for service '%s' and image '%s' after %d seconds", n, serviceName, image, i)
-			break
-		}
-		log.Printf("[INFO] Service '%s' task loop: %02d/%d for amount of registered tasks %02d/%d", serviceName, i, loops, amountOfTasksWithImageConfigAndSecret, n)
-		time.Sleep(sleepTime)
-	}
-
-	// no running task found -> deleting service
-	if len(taskIDs) == 0 {
-		log.Printf("[INFO] Found no running task for service '%s' after %d seconds", serviceName, loops)
-		deleteService(serviceID, client)
-		return fmt.Errorf("[INFO] Deleted service '%s' due to no task registration", serviceName)
-	}
-
-	// == 2: inspect that n tasks are up
-	for _, taskID := range taskIDs {
-		errorCount := 0
-		for i := 1; i <= loops; i++ {
-			task, err := client.InspectTask(taskID)
-			// handle special case of decreasing amount of replicas
-			// then the taskID may not exist any more at this point
-			if err != nil {
-				if strings.Contains(err.Error(), "No such task") {
-					log.Printf("[INFO] No such task for taskID '%s'. Going to next one", taskID)
-					break // go to next task
-				}
-				return err // all other errors should be reported
-			}
-			log.Printf("[INFO] Inspecting task with ID '%s' in loop %02d/%d to be in state: [%s]->[%s]", taskID, i, loops, task.Status.State, task.DesiredState)
-			if task.DesiredState == task.Status.State {
-				log.Printf("[INFO] Task '%s' containerID '%s' is in desired state '%s'", taskID, task.Status.ContainerStatus.ContainerID, task.DesiredState)
-				break // success here, next task
-			}
-
-			if task.Status.State == swarm.TaskStateFailed ||
-				task.Status.State == swarm.TaskStateRejected ||
-				task.Status.State == swarm.TaskStateShutdown {
-				errorCount++
-				log.Printf("[INFO] Task '%s' containerID '%s' is in error state '%s' for %d/%d", taskID, task.Status.ContainerStatus.ContainerID, task.Status.State, errorCount, maxErrorCount)
-				if errorCount >= maxErrorCount {
-					log.Printf("[INFO] Task '%s' for service '%s' in state '%s' after %d errors. Deleting service!", taskID, serviceName, task.Status.State, maxErrorCount)
-					deleteService(serviceID, client)
-					return fmt.Errorf("[INFO] Deleted service '%s' due to not all tasks were up", serviceName)
-				}
-			}
-			time.Sleep(sleepTime) // sleep between inspecting tasks
-		}
-	}
-
-	log.Printf("[INFO] For service '%s' and image '%s' desired '%d' replica(s) with configIDs: '%v' and secretIDs: %v are up!", serviceName, image, n, configIDs, secretIDs)
-	return nil
 }
 
 func stringSetToPlacementPrefs(stringSet *schema.Set) []swarm.PlacementPreference {
