@@ -14,7 +14,7 @@ openssl req \
 ## Create auth
 mkdir -p scripts/testing/auth
 # Start registry
-docker run --entrypoint htpasswd registry:2 -Bbn testuser testpwd > scripts/testing/auth/htpasswd
+docker run --rm --entrypoint htpasswd registry:2 -Bbn testuser testpwd > scripts/testing/auth/htpasswd
 docker run -d -p 5000:5000 --rm --name private_registry \
   -v "$(pwd)"/scripts/testing/auth:/auth \
   -e "REGISTRY_AUTH=htpasswd" \
