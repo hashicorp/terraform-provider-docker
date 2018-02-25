@@ -41,7 +41,7 @@ func TestAccDockerConfig_basicUpdateable(t *testing.T) {
 			resource.TestStep{
 				Config: `
 				resource "docker_config" "foo" {
-					name 			 = "foo-${replace(timestamp(),":", ".")}"
+					name 			 = "myconfig-${replace(timestamp(),":", ".")}"
 					data 			 = "Ymxhc2RzYmxhYmxhMTI0ZHNkd2VzZA=="
 					updateable = true
 
