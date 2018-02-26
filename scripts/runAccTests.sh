@@ -21,7 +21,7 @@ run() {
   TF_ACC=1 go test ./docker -v -timeout 120m
   
   # for a single test
-  #TF_LOG=INFO TF_ACC=1 go test -v github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerService_updateConfigAndDecreaseReplicas$ -timeout 360s
+  #TF_LOG=INFO TF_ACC=1 go test -v github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerService_basic$ -timeout 360s
   # keep the return for the scripts to fail and clean properly
   return $?
 }
@@ -37,10 +37,10 @@ cleanup() {
   # Is fixed in v18.02 https://github.com/moby/moby/issues/35933#issuecomment-366149721
   for c in $(docker container ls --filter=name=service- -aq); do docker rm -f $c; done
   echo "### removed stopped containers ###"
-  for c in $(docker config ls --filter=name=myconfig- -q); do docker config rm $c; done
-  for s in $(docker secret ls --filter=name=mysecret- -q); do docker secret rm $s; done
+  for c in $(docker config ls --filter=name=myconfig -q); do docker config rm $c; done
+  for s in $(docker secret ls --filter=name=mysecret -q); do docker secret rm $s; done
   echo "### configs and secrets ###"
-  docker rmi -f $(docker images -aq 127.0.0.1:5000/my-private-service)
+  for i in $(docker images -aq 127.0.0.1:5000/my-private-service); do docker rmi -f $i; done
   echo "### removed my-private-service images ###"
 }
 
