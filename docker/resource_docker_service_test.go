@@ -432,7 +432,7 @@ func TestAccDockerService_updateFailsAndRollback(t *testing.T) {
 					}
 				}
 				`,
-				ExpectError: regexp.MustCompile(`.*service rolled back.*`),
+				ExpectError: regexp.MustCompile(`.*rollback completed.*`),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-up-rollback"),
