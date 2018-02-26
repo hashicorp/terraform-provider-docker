@@ -155,12 +155,11 @@ func resourceDockerServiceUpdate(d *schema.ResourceData, meta interface{}) error
 		updateOpts.RollbackConfig, _ = createUpdateOrRollbackConfig(v.([]interface{}))
 	}
 
-	err = client.UpdateService(d.Id(), updateOpts)
-	if err != nil {
+	if err = client.UpdateService(d.Id(), updateOpts); err != nil {
 		return err
 	}
 
-	if err := waitOnService(context.Background(), client, service.ID); err != nil {
+	if err = waitOnService(context.Background(), client, service.ID); err != nil {
 		log.Printf("[INFO] error on update --> %v", err)
 		return err
 	}
