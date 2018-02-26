@@ -57,6 +57,11 @@ func resourceDockerServiceExists(d *schema.ResourceData, meta interface{}) (bool
 	return true, nil
 }
 
+type convergeConfig struct {
+	interval time.Duration
+	monitor  time.Duration
+}
+
 func resourceDockerServiceCreate(d *schema.ResourceData, meta interface{}) error {
 	var err error
 	client := meta.(*ProviderConfig).DockerClient
@@ -89,8 +94,22 @@ func resourceDockerServiceCreate(d *schema.ResourceData, meta interface{}) error
 		return err
 	}
 
-	if err := waitOnService(context.Background(), client, service.ID); err != nil {
-		return err
+	if v, ok := d.GetOk("converge_config"); ok {
+		plainConvergeConfig := &convergeConfig{}
+		if len(v.([]interface{})) > 0 {
+			for _, rawConvergeConfig := range v.([]interface{}) {
+				rawConvergeConfig := rawConvergeConfig.(map[string]interface{})
+				if interval, ok := rawConvergeConfig["interval"]; ok {
+					plainConvergeConfig.interval, _ = time.ParseDuration(interval.(string))
+				}
+				if monitor, ok := rawConvergeConfig["monitor"]; ok {
+					plainConvergeConfig.monitor, _ = time.ParseDuration(monitor.(string))
+				}
+			}
+		}
+		if err := waitOnService(context.Background(), client, plainConvergeConfig, service.ID); err != nil {
+			return err
+		}
 	}
 
 	d.SetId(service.ID)
@@ -159,9 +178,23 @@ func resourceDockerServiceUpdate(d *schema.ResourceData, meta interface{}) error
 		return err
 	}
 
-	if err = waitOnService(context.Background(), client, service.ID); err != nil {
-		log.Printf("[INFO] error on update --> %v", err)
-		return err
+	if v, ok := d.GetOk("converge_config"); ok {
+		plainConvergeConfig := &convergeConfig{}
+		if len(v.([]interface{})) > 0 {
+			for _, rawConvergeConfig := range v.([]interface{}) {
+				rawConvergeConfig := rawConvergeConfig.(map[string]interface{})
+				if interval, ok := rawConvergeConfig["interval"]; ok {
+					plainConvergeConfig.interval, _ = time.ParseDuration(interval.(string))
+				}
+				if monitor, ok := rawConvergeConfig["monitor"]; ok {
+					plainConvergeConfig.monitor, _ = time.ParseDuration(monitor.(string))
+				}
+			}
+		}
+		if err := waitOnService(context.Background(), client, plainConvergeConfig, service.ID); err != nil {
+			log.Printf("[INFO] error on update --> %v", err)
+			return err
+		}
 	}
 
 	return resourceDockerServiceRead(d, meta)
@@ -172,19 +205,21 @@ func resourceDockerServiceDelete(d *schema.ResourceData, meta interface{}) error
 
 	// == 1: get containerIDs of the running service
 	serviceContainerIds := make([]string, 0)
-	filter := make(map[string][]string)
-	filter["service"] = []string{d.Get("name").(string)}
-	tasks, err := client.ListTasks(dc.ListTasksOptions{
-		Filters: filter,
-	})
-	if err != nil {
-		return err
-	}
-	for i := 0; i < len(tasks); i++ {
-		task, _ := client.InspectTask(tasks[i].ID)
-		log.Printf("[INFO] Inspecting container '%s' and state '%s' for shutdown", task.Status.ContainerStatus.ContainerID, task.Status.State)
-		if strings.TrimSpace(task.Status.ContainerStatus.ContainerID) != "" && task.Status.State != swarm.TaskStateShutdown {
-			serviceContainerIds = append(serviceContainerIds, task.Status.ContainerStatus.ContainerID)
+	if _, ok := d.GetOk("stop_grace_period"); ok {
+		filter := make(map[string][]string)
+		filter["service"] = []string{d.Get("name").(string)}
+		tasks, err := client.ListTasks(dc.ListTasksOptions{
+			Filters: filter,
+		})
+		if err != nil {
+			return err
+		}
+		for i := 0; i < len(tasks); i++ {
+			task, _ := client.InspectTask(tasks[i].ID)
+			log.Printf("[INFO] Inspecting container '%s' and state '%s' for shutdown", task.Status.ContainerStatus.ContainerID, task.Status.State)
+			if strings.TrimSpace(task.Status.ContainerStatus.ContainerID) != "" && task.Status.State != swarm.TaskStateShutdown {
+				serviceContainerIds = append(serviceContainerIds, task.Status.ContainerStatus.ContainerID)
+			}
 		}
 	}
 
@@ -194,35 +229,38 @@ func resourceDockerServiceDelete(d *schema.ResourceData, meta interface{}) error
 	}
 
 	// == 3: wait until all containers of the service are down to be able to unmount the associated volumes
-	for _, containerID := range serviceContainerIds {
-		log.Printf("[INFO] Waiting for container: '%s' to exit: max 1 minute", containerID)
-		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-		defer cancel()
-		if exitCode, errOnExit := client.WaitContainerWithContext(containerID, ctx); errOnExit == nil {
-			log.Printf("[INFO] Container: '%s' exited with code '%d'", containerID, exitCode)
-			select {
-			case <-ctx.Done():
-				log.Printf("[INFO] Container: '%s' shutdown was canceled. Killing it now", containerID)
-				killOps := dc.KillContainerOptions{
-					Signal:  dc.SIGKILL,
+	if v, ok := d.GetOk("stop_grace_period"); ok {
+		stopGracePeriod, _ := time.ParseDuration(v.(string))
+		for _, containerID := range serviceContainerIds {
+			log.Printf("[INFO] Waiting for container: '%s' to exit: max %v", containerID, stopGracePeriod)
+			ctx, cancel := context.WithTimeout(context.Background(), stopGracePeriod)
+			defer cancel()
+			if exitCode, errOnExit := client.WaitContainerWithContext(containerID, ctx); errOnExit == nil {
+				log.Printf("[INFO] Container: '%s' exited with code '%d'", containerID, exitCode)
+				select {
+				case <-ctx.Done():
+					log.Printf("[INFO] Container: '%s' shutdown was canceled. Killing it now", containerID)
+					killOps := dc.KillContainerOptions{
+						Signal:  dc.SIGKILL,
+						Context: ctx,
+					}
+					if errOnKill := client.KillContainer(killOps); errOnKill != nil {
+						log.Printf("[INFO] Container: '%s' killing errord with '%s'", containerID, errOnKill)
+					}
+				default:
+					// ctx is not canceled, continue with removal TODO does it work properly?
+				}
+				// Remove the container if it did not exit properly to be able to unmount the volumes
+				log.Printf("[INFO] Removing container: '%s'", containerID)
+				removeOps := dc.RemoveContainerOptions{
+					ID:      containerID,
+					Force:   true,
 					Context: ctx,
 				}
-				if errOnKill := client.KillContainer(killOps); errOnKill != nil {
-					log.Printf("[INFO] Container: '%s' killing errord with '%s'", containerID, errOnKill)
+				if errOnRemove := client.RemoveContainer(removeOps); errOnRemove != nil {
+					// if the removal is already in progress, this error can be ignored
+					log.Printf("[INFO] Error '%s' on removal of Container: '%s'", errOnRemove, containerID)
 				}
-			default:
-				// ctx is not canceled, continue with removal
-			}
-			// Remove the container if it did not exit properly to be able to unmount the volumes
-			log.Printf("[INFO] Removing container: '%s'", containerID)
-			removeOps := dc.RemoveContainerOptions{
-				ID:      containerID,
-				Force:   true,
-				Context: ctx,
-			}
-			if errOnRemove := client.RemoveContainer(removeOps); errOnRemove != nil {
-				// if the removal is already in progress, this error can be ignored
-				log.Printf("[INFO] Error '%s' on removal of Container: '%s'", errOnRemove, containerID)
 			}
 		}
 	}
@@ -234,7 +272,7 @@ func resourceDockerServiceDelete(d *schema.ResourceData, meta interface{}) error
 ////////////
 // Helpers
 ////////////
-func waitOnService(ctx context.Context, client *dc.Client, serviceID string) error {
+func waitOnService(ctx context.Context, client *dc.Client, plainConvergeConfig *convergeConfig, serviceID string) error {
 	sigint := make(chan os.Signal, 1)
 	signal.Notify(sigint, os.Interrupt)
 	defer signal.Stop(sigint)
@@ -254,7 +292,7 @@ func waitOnService(ctx context.Context, client *dc.Client, serviceID string) err
 		updater     progressUpdater
 		converged   bool
 		convergedAt time.Time
-		monitor     = 5 * time.Second
+		monitor     = plainConvergeConfig.monitor
 		rollback    bool
 	)
 
@@ -334,7 +372,7 @@ func waitOnService(ctx context.Context, client *dc.Client, serviceID string) err
 		}
 
 		select {
-		case <-time.After(500 * time.Millisecond): // TODO configurable
+		case <-time.After(plainConvergeConfig.interval):
 		case <-sigint:
 			if !converged {
 				log.Printf("[INFO] Operation continuing in background.")

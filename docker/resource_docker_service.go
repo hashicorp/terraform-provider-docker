@@ -66,7 +66,6 @@ func resourceDockerService() *schema.Resource {
 				Type:         schema.TypeString,
 				Description:  "Amount of time to wait for the container to terminate before forcefully killing it (ns|us|ms|s|m|h)",
 				Optional:     true,
-				Default:      "10s",
 				ValidateFunc: validateDurationGeq0(),
 			},
 			"command": &schema.Schema{
@@ -454,6 +453,28 @@ func resourceDockerService() *schema.Resource {
 							Type:     schema.TypeList,
 							Optional: true,
 							Elem:     &schema.Schema{Type: schema.TypeString},
+						},
+					},
+				},
+			},
+
+			"converge_config": &schema.Schema{
+				Type:     schema.TypeList,
+				MaxItems: 1,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"interval": &schema.Schema{
+							Type:         schema.TypeString,
+							Optional:     true,
+							Default:      "500ms",
+							ValidateFunc: validateDurationGeq0(),
+						},
+						"monitor": &schema.Schema{
+							Type:         schema.TypeString,
+							Optional:     true,
+							Default:      "5s",
+							ValidateFunc: validateDurationGeq0(),
 						},
 					},
 				},

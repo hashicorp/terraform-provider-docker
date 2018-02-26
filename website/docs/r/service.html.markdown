@@ -8,7 +8,11 @@ description: |-
 
 # docker\_service
 
-Manages the lifecycle of a Docker service.
+Manages the lifecycle of a Docker service. By default the creation, update and delete of a service are detached.
+
+With the [Converge Config](#convergeconfig) the behaviour of the `docker cli` will be imitated to guarantee that
+e.g. all tasks of a service are running or succesfully updated or to inform `terraform` that a service could not
+be updated and was succesfully rolled back.
 
 ## Example Usage
 
@@ -107,7 +111,7 @@ The following arguments are supported:
     command to be `["/usr/bin/myprogram", "-f", "baz.conf"]`.
 * `env` - (Optional, set of strings) Environment variables to set.
 * `host` - (Optional, list of strings) Each host is a string with the ip, the cononical hostname and its aliase serparated with a whitespace: `IP_address canonical_hostname [aliases...]` e.g. `10.10.10.10 host1`. 
-* `stop_grace_period` - (Optional, string) Amount of time to wait for the container to terminate before forcefully killing it (ns|us|ms|s|m|h), e.g `5s`.
+* `stop_grace_period` - (Optional, string) Amount of time to wait for the container to terminate before forcefully killing it (ns|us|ms|s|m|h), e.g `5s`. This setting also ensures that all containers of a service are shut down successfully.
 * `network_mode` - (Optional, string) Network mode of the containers of the service (vip|dnsrr).
 * `networks` - (Optional, set of strings) Id of the networks in which the
   container is.
@@ -123,6 +127,7 @@ The following arguments are supported:
 * `logging` - (Optional, block) See [Logging](#logging) below for details.
 * `healthcheck` - (Optional, block) See [Healthcheck](#healthcheck) below for details.
 * `dns_config` - (Optional, block) See [DNS Config](#dnsconfig) below for details.
+* `converge_config` - (Optional, block) See [Converge Config](#convergeconfig) below for details.
 
 <a id="auth"></a>
 ### Auth
@@ -238,11 +243,24 @@ options {
 <a id="dnsconfig"></a>
 ### DNS Config
 
-`dnsconfig` is a block within the configuration that can be repeated only **once** to specify the extra DNS configuration for the containers of the service. The `dnsconfig` block supports the following:
+`dns_config` is a block within the configuration that can be repeated only **once** to specify the extra DNS configuration for the containers of the service. The `dns_config` block supports the following:
 
 * `nameservers` - (Required, list of strings) The IP addresses of the name servers, for example `8.8.8.8`
 * `search` - (Optional, list of strings)A search list for host-name lookup.
 * `options` - (Optional, list of strings) A list of internal resolver variables to be modified, for example `debug`, `ndots:3`
+
+<a id="convergeconfig"></a>
+### Converge Config
+
+`converge_config` is a block within the configuration that can be repeated only **once** to specify the extra Converging configuration for the containers of the service. This is the same behaviour like the `docker cli`. By adding this configuration it is monitored with the
+given interval that e.g. all tasks/replicas of a service are up and healthy
+
+The `converge_config` block supports the following:
+
+* `interval` - (Optional, string) Time between each the check to check docker endpoint (ms|s|m|h). For example, to check if
+all task are up when a service is created, or to check if all task are successfully updated on an update. Default 500ms.
+* `monitor` - (Optional, string) Maximum time to allow one check to run (ms|s|m|h). Default 5s. This setting is only applied
+if no [UpdateConfig](#update-rollback-config) is set. Otherwise the `monitor` setting of the Update Config is used.
 
 
 ## Attributes Reference

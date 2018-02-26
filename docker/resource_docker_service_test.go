@@ -135,7 +135,7 @@ func TestAccDockerService_full(t *testing.T) {
 						ip = "10.0.1.0"
 					}
 
-					stop_grace_period = "3s"
+					stop_grace_period = "5s"
 
 					constraints = [
 						"node.role==manager"
@@ -219,6 +219,11 @@ func TestAccDockerService_full(t *testing.T) {
 						search = ["example.org"]
 						options = ["timeout:3"]
 					}
+					
+					converge_config {
+						interval = "500ms"
+						monitor  = "10s"
+					}
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
@@ -233,7 +238,7 @@ func TestAccDockerService_full(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_service.foo", "hosts.#", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "hosts.1878413705.host", "testhost"),
 					resource.TestCheckResourceAttr("docker_service.foo", "hosts.1878413705.ip", "10.0.1.0"),
-					resource.TestCheckResourceAttr("docker_service.foo", "stop_grace_period", "3s"),
+					resource.TestCheckResourceAttr("docker_service.foo", "stop_grace_period", "5s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "mounts.#", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "mounts.3510941185.bind_propagation", ""),
 					resource.TestCheckResourceAttr("docker_service.foo", "mounts.3510941185.consistency", "default"),
@@ -346,6 +351,13 @@ func TestAccDockerService_updateFailsAndRollback(t *testing.T) {
 						timeout  = "500ms"
 						retries  = 2
 					}
+
+					converge_config {
+						interval = "500ms"
+						monitor  = "10s"
+					}
+
+					stop_grace_period = "30s"
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
@@ -430,6 +442,13 @@ func TestAccDockerService_updateFailsAndRollback(t *testing.T) {
 						timeout  = "500ms"
 						retries  = 2
 					}
+
+					converge_config {
+						interval = "500ms"
+						monitor  = "10s"
+					}
+
+					stop_grace_period = "30s"
 				}
 				`,
 				ExpectError: regexp.MustCompile(`.*rollback completed.*`),
@@ -490,6 +509,13 @@ func TestAccDockerService_updateNetworks(t *testing.T) {
 
 					networks = ["${docker_network.test_network.name}"]
 					network_mode = "vip"
+
+					converge_config {
+						interval = "500ms"
+						monitor  = "10s"
+					}
+
+					stop_grace_period = "30s"
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
@@ -521,6 +547,13 @@ func TestAccDockerService_updateNetworks(t *testing.T) {
 
 					networks = ["${docker_network.test_network2.name}"]
 					network_mode = "vip"
+
+					converge_config {
+						interval = "500ms"
+						monitor  = "10s"
+					}
+
+					stop_grace_period = "30s"
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
@@ -555,6 +588,13 @@ func TestAccDockerService_updateNetworks(t *testing.T) {
 						"${docker_network.test_network2.name}"
 					]
 					network_mode = "vip"
+
+					converge_config {
+						interval = "500ms"
+						monitor  = "10s"
+					}
+
+					stop_grace_period = "30s"
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
@@ -602,6 +642,13 @@ func TestAccDockerService_updateMounts(t *testing.T) {
 							}
 						}
 					]
+
+					converge_config {
+						interval = "500ms"
+						monitor  = "10s"
+					}
+
+					stop_grace_period = "30s"
 					
 				}
 				`,
@@ -641,6 +688,13 @@ func TestAccDockerService_updateMounts(t *testing.T) {
 							}
 						}
 					]
+
+					converge_config {
+						interval = "500ms"
+						monitor  = "10s"
+					}
+
+					stop_grace_period = "30s"
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
@@ -690,6 +744,13 @@ func TestAccDockerService_updateMounts(t *testing.T) {
 							}
 						}
 					]
+
+					converge_config {
+						interval = "500ms"
+						monitor  = "10s"
+					}
+
+					stop_grace_period = "30s"
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
@@ -721,7 +782,13 @@ func TestAccDockerService_updateHosts(t *testing.T) {
 							ip = "10.0.1.0"
 						}
 					]
+
+					converge_config {
+						interval = "500ms"
+						monitor  = "10s"
+					}
 					
+					stop_grace_period = "30s"
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
@@ -745,6 +812,13 @@ func TestAccDockerService_updateHosts(t *testing.T) {
 							ip = "10.0.2.2"
 						}
 					]
+
+					converge_config {
+						interval = "500ms"
+						monitor  = "10s"
+					}
+
+					stop_grace_period = "30s"
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
@@ -772,6 +846,13 @@ func TestAccDockerService_updateHosts(t *testing.T) {
 							ip = "10.0.2.2"
 						}
 					]
+
+					converge_config {
+						interval = "500ms"
+						monitor  = "10s"
+					}
+
+					stop_grace_period = "30s"
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
@@ -805,7 +886,13 @@ func TestAccDockerService_updateLogging(t *testing.T) {
 							max-file = "3"
 						}
 					}
-					
+
+					converge_config {
+						interval = "500ms"
+						monitor  = "10s"
+					}
+
+					stop_grace_period = "30s"
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
@@ -834,6 +921,13 @@ func TestAccDockerService_updateLogging(t *testing.T) {
 							max-file = "5"
 						}
 					}
+
+					converge_config {
+						interval = "500ms"
+						monitor  = "10s"
+					}
+
+					stop_grace_period = "30s"
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
@@ -853,6 +947,13 @@ func TestAccDockerService_updateLogging(t *testing.T) {
 					name     = "service-up-logging"
 					image    = "stovogel/friendlyhello:part2"
 					replicas = 2
+
+					converge_config {
+						interval = "500ms"
+						monitor  = "10s"
+					}
+
+					stop_grace_period = "30s"
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
@@ -911,6 +1012,13 @@ func TestAccDockerService_updateHealthcheck(t *testing.T) {
 						timeout  = "500ms"
 						retries  = 4
 					}
+
+					converge_config {
+						interval = "500ms"
+						monitor  = "10s"
+					}
+
+					stop_grace_period = "30s"
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
@@ -980,6 +1088,13 @@ func TestAccDockerService_updateHealthcheck(t *testing.T) {
 						timeout  = "800ms"
 						retries  = 2
 					}
+
+					converge_config {
+						interval = "500ms"
+						monitor  = "10s"
+					}
+
+					stop_grace_period = "30s"
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
@@ -1054,6 +1169,13 @@ func TestAccDockerService_updateIncreaseReplicas(t *testing.T) {
 						timeout  = "500ms"
 						retries  = 4
 					}
+
+					converge_config {
+						interval = "500ms"
+						monitor  = "10s"
+					}
+
+					stop_grace_period = "30s"
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
@@ -1119,6 +1241,13 @@ func TestAccDockerService_updateIncreaseReplicas(t *testing.T) {
 						timeout  = "500ms"
 						retries  = 4
 					}
+
+					converge_config {
+						interval = "500ms"
+						monitor  = "10s"
+					}
+
+					stop_grace_period = "30s"
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
@@ -1192,6 +1321,13 @@ func TestAccDockerService_updateDecreaseReplicas(t *testing.T) {
 						timeout  = "500ms"
 						retries  = 4
 					}
+
+					converge_config {
+						interval = "500ms"
+						monitor  = "10s"
+					}
+
+					stop_grace_period = "30s"
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
@@ -1257,6 +1393,13 @@ func TestAccDockerService_updateDecreaseReplicas(t *testing.T) {
 						timeout  = "500ms"
 						retries  = 4
 					}
+
+					converge_config {
+						interval = "500ms"
+						monitor  = "10s"
+					}
+
+					stop_grace_period = "30s"
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
@@ -1331,6 +1474,13 @@ func TestAccDockerService_updateImage(t *testing.T) {
 						timeout  = "500ms"
 						retries  = 2
 					}
+
+					converge_config {
+						interval = "500ms"
+						monitor  = "10s"
+					}
+
+					stop_grace_period = "30s"
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
@@ -1396,6 +1546,13 @@ func TestAccDockerService_updateImage(t *testing.T) {
 						timeout  = "500ms"
 						retries  = 2
 					}
+
+					converge_config {
+						interval = "500ms"
+						monitor  = "10s"
+					}
+
+					stop_grace_period = "30s"
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
@@ -1475,6 +1632,13 @@ func TestAccDockerService_updateConfig(t *testing.T) {
 						timeout  = "500ms"
 						retries  = 4
 					}
+
+					converge_config {
+						interval = "500ms"
+						monitor  = "10s"
+					}
+
+					stop_grace_period = "30s"
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
@@ -1545,6 +1709,13 @@ func TestAccDockerService_updateConfig(t *testing.T) {
 						timeout  = "500ms"
 						retries  = 4
 					}
+
+					converge_config {
+						interval = "500ms"
+						monitor  = "10s"
+					}
+
+					stop_grace_period = "30s"
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
@@ -1641,6 +1812,13 @@ func TestAccDockerService_updateConfigAndSecret(t *testing.T) {
 						timeout  = "500ms"
 						retries  = 4
 					}
+
+					converge_config {
+						interval = "500ms"
+						monitor  = "10s"
+					}
+
+					stop_grace_period = "30s"
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
@@ -1731,6 +1909,13 @@ func TestAccDockerService_updateConfigAndSecret(t *testing.T) {
 						timeout  = "500ms"
 						retries  = 4
 					}
+
+					converge_config {
+						interval = "500ms"
+						monitor  = "10s"
+					}
+
+					stop_grace_period = "30s"
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
@@ -1806,6 +1991,13 @@ func TestAccDockerService_updatePort(t *testing.T) {
 						timeout  = "500ms"
 						retries  = 2
 					}
+
+					converge_config {
+						interval = "500ms"
+						monitor  = "10s"
+					}
+
+					stop_grace_period = "30s"
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
@@ -1877,6 +2069,13 @@ func TestAccDockerService_updatePort(t *testing.T) {
 						timeout  = "500ms"
 						retries  = 2
 					}
+
+					converge_config {
+						interval = "500ms"
+						monitor  = "10s"
+					}
+
+					stop_grace_period = "30s"
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
@@ -1957,6 +2156,13 @@ func TestAccDockerService_updateConfigReplicasImageAndHealth(t *testing.T) {
 						timeout  = "500ms"
 						retries  = 2
 					}
+
+					converge_config {
+						interval = "500ms"
+						monitor  = "10s"
+					}
+
+					stop_grace_period = "30s"
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
@@ -2033,6 +2239,13 @@ func TestAccDockerService_updateConfigReplicasImageAndHealth(t *testing.T) {
 						timeout  = "800ms"
 						retries  = 4
 					}
+
+					converge_config {
+						interval = "500ms"
+						monitor  = "10s"
+					}
+
+					stop_grace_period = "30s"
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
@@ -2113,6 +2326,13 @@ func TestAccDockerService_updateConfigAndDecreaseReplicas(t *testing.T) {
 						timeout  = "500ms"
 						retries  = 4
 					}
+
+					converge_config {
+						interval = "500ms"
+						monitor  = "10s"
+					}
+
+					stop_grace_period = "30s"
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
@@ -2183,6 +2403,13 @@ func TestAccDockerService_updateConfigAndDecreaseReplicas(t *testing.T) {
 						timeout  = "500ms"
 						retries  = 4
 					}
+
+					converge_config {
+						interval = "500ms"
+						monitor  = "10s"
+					}
+
+					stop_grace_period = "30s"
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
@@ -2261,6 +2488,13 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 						timeout  = "500ms"
 						retries  = 2
 					}
+
+					converge_config {
+						interval = "500ms"
+						monitor  = "10s"
+					}
+
+					stop_grace_period = "30s"
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
@@ -2337,6 +2571,13 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 						timeout  = "800ms"
 						retries  = 4
 					}
+
+					converge_config {
+						interval = "500ms"
+						monitor  = "10s"
+					}
+
+					stop_grace_period = "30s"
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
@@ -2415,6 +2656,13 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 						timeout  = "800ms"
 						retries  = 4
 					}
+
+					converge_config {
+						interval = "500ms"
+						monitor  = "10s"
+					}
+
+					stop_grace_period = "30s"
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
