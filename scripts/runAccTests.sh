@@ -21,7 +21,7 @@ run() {
   TF_ACC=1 go test ./docker -v -timeout 120m
   
   # for a single test
-  #TF_LOG=INFO TF_ACC=1 go test -v github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerService_basic$ -timeout 360s
+  #TF_LOG=INFO TF_ACC=1 go test -v github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerService_updateConfigAndDecreaseReplicas$ -timeout 360s
   # keep the return for the scripts to fail and clean properly
   return $?
 }
@@ -34,14 +34,12 @@ cleanup() {
   rm -f scripts/testing/auth/htpasswd
   rm -f scripts/testing/certs/registry_auth.*
   echo "### removed auth and certs ###"
-  docker rm -f $(docker container ls --filter=name=service- -aq)
+  # Is fixed in v18.02 https://github.com/moby/moby/issues/35933#issuecomment-366149721
+  for c in $(docker container ls --filter=name=service- -aq); do docker rm -f $c; done
   echo "### removed stopped containers ###"
-  docker config rm $(docker config ls --filter=name=myconfig- -q)
-  docker secret rm $(docker secret ls --filter=name=mysecret- -q)
+  for c in $(docker config ls --filter=name=myconfig- -q); do docker config rm $c; done
+  for s in $(docker secret ls --filter=name=mysecret- -q); do docker secret rm $s; done
   echo "### configs and secrets ###"
-  
-  # fails due to https://github.com/moby/moby/issues/32620 because sometimes there a still running containers of 
-  # removed services
   docker rmi -f $(docker images -aq 127.0.0.1:5000/my-private-service)
   echo "### removed my-private-service images ###"
 }
@@ -49,5 +47,8 @@ cleanup() {
 ## main
 log "setup" && setup 
 log "run" && run && echo $?
-# travis fails from time to time there
-[ "$TRAVIS" != "true" ]; log "cleanup" && cleanup
+if [ $? -ne 0 ]; then
+  log "cleanup" && cleanup
+  exit 1
+fi
+log "cleanup" && cleanup
