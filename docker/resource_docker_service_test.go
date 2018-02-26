@@ -79,14 +79,14 @@ func TestAccDockerService_basic(t *testing.T) {
 			resource.TestStep{
 				Config: `
 				resource "docker_service" "foo" {
-					name     = "service-foo"
+					name     = "service-basic"
 					image    = "stovogel/friendlyhello:part2"
 					replicas = 2
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
-					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-basic"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "stovogel/friendlyhello:part2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
 				),
@@ -121,7 +121,7 @@ func TestAccDockerService_full(t *testing.T) {
 				}
 
 				resource "docker_service" "foo" {
-					name     = "service-foo"
+					name     = "service-full"
 					image    = "127.0.0.1:5000/my-private-service:v1"
 					replicas = 2
 					
@@ -223,7 +223,7 @@ func TestAccDockerService_full(t *testing.T) {
 				`,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
-					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-full"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/my-private-service:v1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "hostname", "myfooservice"),
@@ -305,7 +305,7 @@ func TestAccDockerService_updateFailsAndRollback(t *testing.T) {
 				}
 
 				resource "docker_service" "foo" {
-					name     = "service-foo"
+					name     = "service-up-rollback"
 					image    = "127.0.0.1:5000/my-private-service:v1"
 					replicas = 4
 					
@@ -350,7 +350,7 @@ func TestAccDockerService_updateFailsAndRollback(t *testing.T) {
 				`,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
-					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-up-rollback"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/my-private-service:v1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "4"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
@@ -389,7 +389,7 @@ func TestAccDockerService_updateFailsAndRollback(t *testing.T) {
 				}
 
 				resource "docker_service" "foo" {
-					name     = "service-foo"
+					name     = "service-up-rollback"
 					image    = "127.0.0.1:5000/my-private-service:v3"
 					replicas = 4
 					
@@ -432,10 +432,10 @@ func TestAccDockerService_updateFailsAndRollback(t *testing.T) {
 					}
 				}
 				`,
-				ExpectError: regexp.MustCompile(`.*service rollback completed.*`),
+				ExpectError: regexp.MustCompile(`.*service rolled back.*`),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
-					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-up-rollback"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/my-private-service:v1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "4"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
@@ -484,7 +484,7 @@ func TestAccDockerService_updateNetworks(t *testing.T) {
 				}
 
 				resource "docker_service" "foo" {
-					name     = "service-foo"
+					name     = "service-up-network"
 					image    = "stovogel/friendlyhello:part2"
 					replicas = 2
 
@@ -494,7 +494,7 @@ func TestAccDockerService_updateNetworks(t *testing.T) {
 				`,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
-					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-up-network"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "stovogel/friendlyhello:part2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "networks.#", "1"),
@@ -515,7 +515,7 @@ func TestAccDockerService_updateNetworks(t *testing.T) {
 				}
 
 				resource "docker_service" "foo" {
-					name     = "service-foo"
+					name     = "service-up-network"
 					image    = "stovogel/friendlyhello:part2"
 					replicas = 2
 
@@ -525,7 +525,7 @@ func TestAccDockerService_updateNetworks(t *testing.T) {
 				`,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
-					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-up-network"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "stovogel/friendlyhello:part2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "networks.#", "1"),
@@ -546,7 +546,7 @@ func TestAccDockerService_updateNetworks(t *testing.T) {
 				}
 
 				resource "docker_service" "foo" {
-					name     = "service-foo"
+					name     = "service-up-network"
 					image    = "stovogel/friendlyhello:part2"
 					replicas = 2
 
@@ -559,7 +559,7 @@ func TestAccDockerService_updateNetworks(t *testing.T) {
 				`,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
-					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-up-network"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "stovogel/friendlyhello:part2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "networks.#", "2"),
@@ -585,7 +585,7 @@ func TestAccDockerService_updateMounts(t *testing.T) {
 				}
 
 				resource "docker_service" "foo" {
-					name     = "service-foo"
+					name     = "service-up-mounts"
 					image    = "stovogel/friendlyhello:part2"
 					replicas = 2
 
@@ -607,7 +607,7 @@ func TestAccDockerService_updateMounts(t *testing.T) {
 				`,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
-					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-up-mounts"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "stovogel/friendlyhello:part2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "mounts.#", "1"),
@@ -624,7 +624,7 @@ func TestAccDockerService_updateMounts(t *testing.T) {
 				}
 
 				resource "docker_service" "foo" {
-					name     = "service-foo"
+					name     = "service-up-mounts"
 					image    = "stovogel/friendlyhello:part2"
 					replicas = 2
 
@@ -645,7 +645,7 @@ func TestAccDockerService_updateMounts(t *testing.T) {
 				`,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
-					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-up-mounts"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "stovogel/friendlyhello:part2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "mounts.#", "1"),
@@ -662,7 +662,7 @@ func TestAccDockerService_updateMounts(t *testing.T) {
 				}
 
 				resource "docker_service" "foo" {
-					name     = "service-foo"
+					name     = "service-up-mounts"
 					image    = "stovogel/friendlyhello:part2"
 					replicas = 2
 
@@ -694,7 +694,7 @@ func TestAccDockerService_updateMounts(t *testing.T) {
 				`,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
-					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-up-mounts"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "stovogel/friendlyhello:part2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "mounts.#", "2"),
@@ -711,7 +711,7 @@ func TestAccDockerService_updateHosts(t *testing.T) {
 			resource.TestStep{
 				Config: `
 				resource "docker_service" "foo" {
-					name     = "service-foo"
+					name     = "service-up-hosts"
 					image    = "stovogel/friendlyhello:part2"
 					replicas = 2
 
@@ -726,7 +726,7 @@ func TestAccDockerService_updateHosts(t *testing.T) {
 				`,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
-					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-up-hosts"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "stovogel/friendlyhello:part2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "hosts.#", "1"),
@@ -735,7 +735,7 @@ func TestAccDockerService_updateHosts(t *testing.T) {
 			resource.TestStep{
 				Config: `
 				resource "docker_service" "foo" {
-					name     = "service-foo"
+					name     = "service-up-hosts"
 					image    = "stovogel/friendlyhello:part2"
 					replicas = 2
 
@@ -749,7 +749,7 @@ func TestAccDockerService_updateHosts(t *testing.T) {
 				`,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
-					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-up-hosts"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "stovogel/friendlyhello:part2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "hosts.#", "1"),
@@ -758,7 +758,7 @@ func TestAccDockerService_updateHosts(t *testing.T) {
 			resource.TestStep{
 				Config: `
 				resource "docker_service" "foo" {
-					name     = "service-foo"
+					name     = "service-up-hosts"
 					image    = "stovogel/friendlyhello:part2"
 					replicas = 2
 
@@ -776,7 +776,7 @@ func TestAccDockerService_updateHosts(t *testing.T) {
 				`,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
-					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-up-hosts"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "stovogel/friendlyhello:part2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "hosts.#", "2"),
@@ -793,7 +793,7 @@ func TestAccDockerService_updateLogging(t *testing.T) {
 			resource.TestStep{
 				Config: `
 				resource "docker_service" "foo" {
-					name     = "service-foo"
+					name     = "service-up-logging"
 					image    = "stovogel/friendlyhello:part2"
 					replicas = 2
 
@@ -810,7 +810,7 @@ func TestAccDockerService_updateLogging(t *testing.T) {
 				`,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
-					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-up-logging"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "stovogel/friendlyhello:part2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "logging.0.driver_name", "json-file"),
@@ -822,7 +822,7 @@ func TestAccDockerService_updateLogging(t *testing.T) {
 			resource.TestStep{
 				Config: `
 				resource "docker_service" "foo" {
-					name     = "service-foo"
+					name     = "service-up-logging"
 					image    = "stovogel/friendlyhello:part2"
 					replicas = 2
 
@@ -838,7 +838,7 @@ func TestAccDockerService_updateLogging(t *testing.T) {
 				`,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
-					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-up-logging"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "stovogel/friendlyhello:part2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "logging.0.driver_name", "json-file"),
@@ -850,14 +850,14 @@ func TestAccDockerService_updateLogging(t *testing.T) {
 			resource.TestStep{
 				Config: `
 				resource "docker_service" "foo" {
-					name     = "service-foo"
+					name     = "service-up-logging"
 					image    = "stovogel/friendlyhello:part2"
 					replicas = 2
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
-					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-up-logging"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "stovogel/friendlyhello:part2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
 				),
@@ -879,7 +879,7 @@ func TestAccDockerService_updateHealthcheck(t *testing.T) {
 				}
 
 				resource "docker_service" "foo" {
-					name     = "service-foo"
+					name     = "service-up-healthcheck"
 					image    = "127.0.0.1:5000/my-private-service:v1"
 					replicas = 2
 					
@@ -915,7 +915,7 @@ func TestAccDockerService_updateHealthcheck(t *testing.T) {
 				`,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
-					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-up-healthcheck"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/my-private-service:v1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
@@ -948,7 +948,7 @@ func TestAccDockerService_updateHealthcheck(t *testing.T) {
 				}
 
 				resource "docker_service" "foo" {
-					name     = "service-foo"
+					name     = "service-up-healthcheck"
 					image    = "127.0.0.1:5000/my-private-service:v1"
 					replicas = 2
 					
@@ -984,7 +984,7 @@ func TestAccDockerService_updateHealthcheck(t *testing.T) {
 				`,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
-					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-up-healthcheck"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/my-private-service:v1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
@@ -1022,7 +1022,7 @@ func TestAccDockerService_updateIncreaseReplicas(t *testing.T) {
 				}
 
 				resource "docker_service" "foo" {
-					name     = "service-foo"
+					name     = "service-increase-replicas"
 					image    = "127.0.0.1:5000/my-private-service:v1"
 					replicas = 1
 					
@@ -1058,7 +1058,7 @@ func TestAccDockerService_updateIncreaseReplicas(t *testing.T) {
 				`,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
-					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-increase-replicas"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/my-private-service:v1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
@@ -1087,7 +1087,7 @@ func TestAccDockerService_updateIncreaseReplicas(t *testing.T) {
 				}
 
 				resource "docker_service" "foo" {
-					name     = "service-foo"
+					name     = "service-increase-replicas"
 					image    = "127.0.0.1:5000/my-private-service:v1"
 					replicas = 3
 					
@@ -1123,7 +1123,7 @@ func TestAccDockerService_updateIncreaseReplicas(t *testing.T) {
 				`,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
-					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-increase-replicas"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/my-private-service:v1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "3"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
@@ -1160,7 +1160,7 @@ func TestAccDockerService_updateDecreaseReplicas(t *testing.T) {
 				}
 
 				resource "docker_service" "foo" {
-					name     = "service-foo"
+					name     = "service-decrease-replicas"
 					image    = "127.0.0.1:5000/my-private-service:v1"
 					replicas = 5
 					
@@ -1196,7 +1196,7 @@ func TestAccDockerService_updateDecreaseReplicas(t *testing.T) {
 				`,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
-					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-decrease-replicas"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/my-private-service:v1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "5"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
@@ -1225,7 +1225,7 @@ func TestAccDockerService_updateDecreaseReplicas(t *testing.T) {
 				}
 
 				resource "docker_service" "foo" {
-					name     = "service-foo"
+					name     = "service-decrease-replicas"
 					image    = "127.0.0.1:5000/my-private-service:v1"
 					replicas = 1
 					
@@ -1261,7 +1261,7 @@ func TestAccDockerService_updateDecreaseReplicas(t *testing.T) {
 				`,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
-					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-decrease-replicas"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/my-private-service:v1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
@@ -1299,7 +1299,7 @@ func TestAccDockerService_updateImage(t *testing.T) {
 				}
 
 				resource "docker_service" "foo" {
-					name     = "service-foo"
+					name     = "service-up-image"
 					image    = "127.0.0.1:5000/my-private-service:v1"
 					replicas = 2
 
@@ -1335,7 +1335,7 @@ func TestAccDockerService_updateImage(t *testing.T) {
 				`,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
-					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-up-image"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/my-private-service:v1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
@@ -1364,7 +1364,7 @@ func TestAccDockerService_updateImage(t *testing.T) {
 				}
 
 				resource "docker_service" "foo" {
-					name     = "service-foo"
+					name     = "service-up-image"
 					image    = "127.0.0.1:5000/my-private-service:v2"
 					replicas = 2
 
@@ -1400,7 +1400,7 @@ func TestAccDockerService_updateImage(t *testing.T) {
 				`,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
-					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-up-image"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/my-private-service:v2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
@@ -1443,7 +1443,7 @@ func TestAccDockerService_updateConfig(t *testing.T) {
 				}
 
 				resource "docker_service" "foo" {
-					name     = "service-foo"
+					name     = "service-up-config"
 					image    = "127.0.0.1:5000/my-private-service:v1"
 					replicas = 2
 					
@@ -1479,7 +1479,7 @@ func TestAccDockerService_updateConfig(t *testing.T) {
 				`,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
-					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-up-config"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/my-private-service:v1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
@@ -1513,7 +1513,7 @@ func TestAccDockerService_updateConfig(t *testing.T) {
 				}
 
 				resource "docker_service" "foo" {
-					name     = "service-foo"
+					name     = "service-up-config"
 					image    = "127.0.0.1:5000/my-private-service:v1"
 					replicas = 2
 					
@@ -1549,7 +1549,7 @@ func TestAccDockerService_updateConfig(t *testing.T) {
 				`,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
-					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-up-config"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/my-private-service:v1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
@@ -1601,7 +1601,7 @@ func TestAccDockerService_updateConfigAndSecret(t *testing.T) {
 				}
 
 				resource "docker_service" "foo" {
-					name     = "service-foo"
+					name     = "service-up-config-secret"
 					image    = "127.0.0.1:5000/my-private-service:v1"
 					replicas = 2
 					
@@ -1645,7 +1645,7 @@ func TestAccDockerService_updateConfigAndSecret(t *testing.T) {
 				`,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
-					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-up-config-secret"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/my-private-service:v1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
@@ -1691,7 +1691,7 @@ func TestAccDockerService_updateConfigAndSecret(t *testing.T) {
 				}
 
 				resource "docker_service" "foo" {
-					name     = "service-foo"
+					name     = "service-up-config-secret"
 					image    = "127.0.0.1:5000/my-private-service:v1"
 					replicas = 2
 					
@@ -1735,7 +1735,7 @@ func TestAccDockerService_updateConfigAndSecret(t *testing.T) {
 				`,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
-					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-up-config-secret"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/my-private-service:v1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
@@ -1774,7 +1774,7 @@ func TestAccDockerService_updatePort(t *testing.T) {
 				}
 
 				resource "docker_service" "foo" {
-					name     = "service-foo"
+					name     = "service-up-port"
 					image    = "127.0.0.1:5000/my-private-service:v1"
 					replicas = 2
 
@@ -1810,7 +1810,7 @@ func TestAccDockerService_updatePort(t *testing.T) {
 				`,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
-					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-up-port"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/my-private-service:v1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
@@ -1839,7 +1839,7 @@ func TestAccDockerService_updatePort(t *testing.T) {
 				}
 
 				resource "docker_service" "foo" {
-					name     = "service-foo"
+					name     = "service-up-port"
 					image    = "127.0.0.1:5000/my-private-service:v1"
 					replicas = 4
 
@@ -1881,7 +1881,7 @@ func TestAccDockerService_updatePort(t *testing.T) {
 				`,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
-					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-up-port"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/my-private-service:v1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "4"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
@@ -1925,7 +1925,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealth(t *testing.T) {
 				}
 
 				resource "docker_service" "foo" {
-					name     = "service-foo"
+					name     = "service-up-crihc"
 					image    = "127.0.0.1:5000/my-private-service:v1"
 					replicas = 2
 
@@ -1961,7 +1961,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealth(t *testing.T) {
 				`,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
-					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-up-crihc"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/my-private-service:v1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
@@ -1995,7 +1995,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealth(t *testing.T) {
 				}
 
 				resource "docker_service" "foo" {
-					name     = "service-foo"
+					name     = "service-up-crihc"
 					image    = "127.0.0.1:5000/my-private-service:v2"
 					replicas = 4
 
@@ -2037,7 +2037,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealth(t *testing.T) {
 				`,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
-					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-up-crihc"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/my-private-service:v2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "4"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
@@ -2081,7 +2081,7 @@ func TestAccDockerService_updateConfigAndDecreaseReplicas(t *testing.T) {
 				}
 
 				resource "docker_service" "foo" {
-					name     = "service-foo"
+					name     = "service-up-config-dec-repl"
 					image    = "127.0.0.1:5000/my-private-service:v1"
 					replicas = 5
 					
@@ -2117,7 +2117,7 @@ func TestAccDockerService_updateConfigAndDecreaseReplicas(t *testing.T) {
 				`,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
-					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-up-config-dec-repl"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/my-private-service:v1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "5"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
@@ -2151,7 +2151,7 @@ func TestAccDockerService_updateConfigAndDecreaseReplicas(t *testing.T) {
 				}
 
 				resource "docker_service" "foo" {
-					name     = "service-foo"
+					name     = "service-up-config-dec-repl"
 					image    = "127.0.0.1:5000/my-private-service:v1"
 					replicas = 1
 					
@@ -2187,7 +2187,7 @@ func TestAccDockerService_updateConfigAndDecreaseReplicas(t *testing.T) {
 				`,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
-					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-up-config-dec-repl"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/my-private-service:v1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
@@ -2229,7 +2229,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 				}
 
 				resource "docker_service" "foo" {
-					name     = "service-foo"
+					name     = "service-up-crihiadr"
 					image    = "127.0.0.1:5000/my-private-service:v1"
 					replicas = 2
 
@@ -2265,7 +2265,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 				`,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
-					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-up-crihiadr"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/my-private-service:v1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
@@ -2299,7 +2299,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 				}
 
 				resource "docker_service" "foo" {
-					name     = "service-foo"
+					name     = "service-up-crihiadr"
 					image    = "127.0.0.1:5000/my-private-service:v2"
 					replicas = 6
 
@@ -2341,7 +2341,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 				`,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
-					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-up-crihiadr"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/my-private-service:v2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "6"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
@@ -2377,7 +2377,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 				}
 
 				resource "docker_service" "foo" {
-					name     = "service-foo"
+					name     = "service-up-crihiadr"
 					image    = "127.0.0.1:5000/my-private-service:v2"
 					replicas = 3
 
@@ -2419,7 +2419,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 				`,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
-					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-foo"),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "service-up-crihiadr"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/my-private-service:v2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "3"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
