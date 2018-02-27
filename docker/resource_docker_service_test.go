@@ -102,12 +102,12 @@ func TestAccDockerService_full(t *testing.T) {
 			resource.TestStep{
 				Config: `
 				resource "docker_network" "test_network" {
-					name   = "testNetwork"
+					name   = "tftest-network"
 					driver = "overlay"
 				}
 
-				resource "docker_volume" "foo" {
-					name = "testVolume"
+				resource "docker_volume" "test_volume" {
+					name = "tftest-volume"
 				}
 
 				resource "docker_config" "service_config" {
@@ -116,13 +116,13 @@ func TestAccDockerService_full(t *testing.T) {
 				}
 				
 				resource "docker_secret" "service_secret" {
-					name = "mysecret"
+					name = "tftest-mysecret"
 					data = "ewogICJrZXkiOiAiUVdFUlRZIgp9"
 				}
 
 				resource "docker_service" "foo" {
 					name     = "tftest-service-full"
-					image    = "127.0.0.1:5000/tf-test-service:v1"
+					image    = "127.0.0.1:5000/tftest-service:v1"
 					replicas = 2
 					
 					hostname = "myfooservice"
@@ -147,7 +147,7 @@ func TestAccDockerService_full(t *testing.T) {
 
 					mounts = [
 						{
-							source = "${docker_volume.foo.name}"
+							source = "${docker_volume.test_volume.name}"
 							target = "/mount/test"
 							type   = "volume"
 							consistency = "default"
@@ -229,11 +229,11 @@ func TestAccDockerService_full(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-full"),
-					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/tf-test-service:v1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/tftest-service:v1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "hostname", "myfooservice"),
 					resource.TestCheckResourceAttr("docker_service.foo", "networks.#", "1"),
-					resource.TestCheckResourceAttr("docker_service.foo", "networks.3251854989", "testNetwork"),
+					resource.TestCheckResourceAttr("docker_service.foo", "networks.2768978924", "tftest-network"),
 					resource.TestCheckResourceAttr("docker_service.foo", "network_mode", "vip"),
 					resource.TestCheckResourceAttr("docker_service.foo", "hosts.#", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "hosts.1878413705.host", "testhost"),
@@ -243,7 +243,7 @@ func TestAccDockerService_full(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_service.foo", "mounts.3510941185.bind_propagation", ""),
 					resource.TestCheckResourceAttr("docker_service.foo", "mounts.3510941185.consistency", "default"),
 					resource.TestCheckResourceAttr("docker_service.foo", "mounts.3510941185.read_only", "true"),
-					resource.TestCheckResourceAttr("docker_service.foo", "mounts.3510941185.source", "testVolume"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mounts.3510941185.source", "tftest-volume"),
 					resource.TestCheckResourceAttr("docker_service.foo", "mounts.3510941185.target", "/mount/test"),
 					resource.TestCheckResourceAttr("docker_service.foo", "mounts.3510941185.tmpfs_mode", "0"),
 					resource.TestCheckResourceAttr("docker_service.foo", "mounts.3510941185.type", "volume"),
@@ -270,7 +270,7 @@ func TestAccDockerService_full(t *testing.T) {
 					// resource.TestCheckResourceAttr("docker_service.foo", "configs.1255247167.config_name", "tftest-myconfig"),
 					// resource.TestCheckResourceAttr("docker_service.foo", "configs.1255247167.file_name", "/configs.json"),
 					resource.TestCheckResourceAttr("docker_service.foo", "secrets.#", "1"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "secrets.3229549426.config_name", "mysecret"),
+					// resource.TestCheckResourceAttr("docker_service.foo", "secrets.3229549426.config_name", "tftest-mysecret"),
 					// resource.TestCheckResourceAttr("docker_service.foo", "secrets.3229549426.file_name", "/secrets.json"),
 					resource.TestCheckResourceAttr("docker_service.foo", "ports.#", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "ports.4021806484.internal", "8080"),
@@ -311,7 +311,7 @@ func TestAccDockerService_updateFailsAndRollback(t *testing.T) {
 
 				resource "docker_service" "foo" {
 					name     = "tftest-service-up-rollback"
-					image    = "127.0.0.1:5000/tf-test-service:v1"
+					image    = "127.0.0.1:5000/tftest-service:v1"
 					replicas = 4
 					
 					update_config {
@@ -363,7 +363,7 @@ func TestAccDockerService_updateFailsAndRollback(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-rollback"),
-					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/tf-test-service:v1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/tftest-service:v1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "4"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "5s"),
@@ -402,7 +402,7 @@ func TestAccDockerService_updateFailsAndRollback(t *testing.T) {
 
 				resource "docker_service" "foo" {
 					name     = "tftest-service-up-rollback"
-					image    = "127.0.0.1:5000/tf-test-service:v3"
+					image    = "127.0.0.1:5000/tftest-service:v3"
 					replicas = 4
 					
 					update_config {
@@ -455,7 +455,7 @@ func TestAccDockerService_updateFailsAndRollback(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-rollback"),
-					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/tf-test-service:v1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/tftest-service:v1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "4"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "5s"),
@@ -493,12 +493,12 @@ func TestAccDockerService_updateNetworks(t *testing.T) {
 			resource.TestStep{
 				Config: `
 				resource "docker_network" "test_network" {
-					name   = "testNetwork"
+					name   = "tftest-network"
 					driver = "overlay"
 				}
 
 				resource "docker_network" "test_network2" {
-					name   = "testNetwork2"
+					name   = "tftest-network2"
 					driver = "overlay"
 				}
 
@@ -524,19 +524,19 @@ func TestAccDockerService_updateNetworks(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "stovogel/friendlyhello:part2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "networks.#", "1"),
-					resource.TestCheckResourceAttr("docker_service.foo", "networks.3251854989", "testNetwork"),
+					resource.TestCheckResourceAttr("docker_service.foo", "networks.2768978924", "tftest-network"),
 					resource.TestCheckResourceAttr("docker_service.foo", "network_mode", "vip"),
 				),
 			},
 			resource.TestStep{
 				Config: `
 				resource "docker_network" "test_network" {
-					name   = "testNetwork"
+					name   = "tftest-network"
 					driver = "overlay"
 				}
 
 				resource "docker_network" "test_network2" {
-					name   = "testNetwork2"
+					name   = "tftest-network2"
 					driver = "overlay"
 				}
 
@@ -562,19 +562,19 @@ func TestAccDockerService_updateNetworks(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "stovogel/friendlyhello:part2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "networks.#", "1"),
-					resource.TestCheckResourceAttr("docker_service.foo", "networks.2300416718", "testNetwork2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "networks.2300416718", "tftest-network2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "network_mode", "vip"),
 				),
 			},
 			resource.TestStep{
 				Config: `
 				resource "docker_network" "test_network" {
-					name   = "testNetwork"
+					name   = "tftest-network"
 					driver = "overlay"
 				}
 
 				resource "docker_network" "test_network2" {
-					name   = "testNetwork2"
+					name   = "tftest-network2"
 					driver = "overlay"
 				}
 
@@ -617,11 +617,11 @@ func TestAccDockerService_updateMounts(t *testing.T) {
 			resource.TestStep{
 				Config: `
 				resource "docker_volume" "foo" {
-					name = "testVolume"
+					name = "tftest-volume"
 				}
 
 				resource "docker_volume" "foo2" {
-					name = "testVolume"
+					name = "tftest-volume"
 				}
 
 				resource "docker_service" "foo" {
@@ -663,11 +663,11 @@ func TestAccDockerService_updateMounts(t *testing.T) {
 			resource.TestStep{
 				Config: `
 				resource "docker_volume" "foo" {
-					name = "testVolume"
+					name = "tftest-volume"
 				}
 
 				resource "docker_volume" "foo2" {
-					name = "testVolume"
+					name = "tftest-volume2"
 				}
 
 				resource "docker_service" "foo" {
@@ -708,11 +708,11 @@ func TestAccDockerService_updateMounts(t *testing.T) {
 			resource.TestStep{
 				Config: `
 				resource "docker_volume" "foo" {
-					name = "testVolume"
+					name = "tftest-volume"
 				}
 
 				resource "docker_volume" "foo2" {
-					name = "testVolume"
+					name = "tftest-volume2"
 				}
 
 				resource "docker_service" "foo" {
@@ -981,7 +981,7 @@ func TestAccDockerService_updateHealthcheck(t *testing.T) {
 
 				resource "docker_service" "foo" {
 					name     = "tftest-service-up-healthcheck"
-					image    = "127.0.0.1:5000/tf-test-service:v1"
+					image    = "127.0.0.1:5000/tftest-service:v1"
 					replicas = 2
 					
 					update_config {
@@ -1024,7 +1024,7 @@ func TestAccDockerService_updateHealthcheck(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-healthcheck"),
-					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/tf-test-service:v1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/tftest-service:v1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
@@ -1057,7 +1057,7 @@ func TestAccDockerService_updateHealthcheck(t *testing.T) {
 
 				resource "docker_service" "foo" {
 					name     = "tftest-service-up-healthcheck"
-					image    = "127.0.0.1:5000/tf-test-service:v1"
+					image    = "127.0.0.1:5000/tftest-service:v1"
 					replicas = 2
 					
 					update_config {
@@ -1100,7 +1100,7 @@ func TestAccDockerService_updateHealthcheck(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-healthcheck"),
-					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/tf-test-service:v1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/tftest-service:v1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
@@ -1138,7 +1138,7 @@ func TestAccDockerService_updateIncreaseReplicas(t *testing.T) {
 
 				resource "docker_service" "foo" {
 					name     = "tftest-service-increase-replicas"
-					image    = "127.0.0.1:5000/tf-test-service:v1"
+					image    = "127.0.0.1:5000/tftest-service:v1"
 					replicas = 1
 					
 					update_config {
@@ -1181,7 +1181,7 @@ func TestAccDockerService_updateIncreaseReplicas(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-increase-replicas"),
-					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/tf-test-service:v1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/tftest-service:v1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
@@ -1210,7 +1210,7 @@ func TestAccDockerService_updateIncreaseReplicas(t *testing.T) {
 
 				resource "docker_service" "foo" {
 					name     = "tftest-service-increase-replicas"
-					image    = "127.0.0.1:5000/tf-test-service:v1"
+					image    = "127.0.0.1:5000/tftest-service:v1"
 					replicas = 3
 					
 					update_config {
@@ -1253,7 +1253,7 @@ func TestAccDockerService_updateIncreaseReplicas(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-increase-replicas"),
-					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/tf-test-service:v1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/tftest-service:v1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "3"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
@@ -1290,7 +1290,7 @@ func TestAccDockerService_updateDecreaseReplicas(t *testing.T) {
 
 				resource "docker_service" "foo" {
 					name     = "tftest-service-decrease-replicas"
-					image    = "127.0.0.1:5000/tf-test-service:v1"
+					image    = "127.0.0.1:5000/tftest-service:v1"
 					replicas = 5
 					
 					update_config {
@@ -1333,7 +1333,7 @@ func TestAccDockerService_updateDecreaseReplicas(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-decrease-replicas"),
-					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/tf-test-service:v1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/tftest-service:v1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "5"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
@@ -1362,7 +1362,7 @@ func TestAccDockerService_updateDecreaseReplicas(t *testing.T) {
 
 				resource "docker_service" "foo" {
 					name     = "tftest-service-decrease-replicas"
-					image    = "127.0.0.1:5000/tf-test-service:v1"
+					image    = "127.0.0.1:5000/tftest-service:v1"
 					replicas = 1
 					
 					update_config {
@@ -1405,7 +1405,7 @@ func TestAccDockerService_updateDecreaseReplicas(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-decrease-replicas"),
-					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/tf-test-service:v1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/tftest-service:v1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
@@ -1443,7 +1443,7 @@ func TestAccDockerService_updateImage(t *testing.T) {
 
 				resource "docker_service" "foo" {
 					name     = "tftest-service-up-image"
-					image    = "127.0.0.1:5000/tf-test-service:v1"
+					image    = "127.0.0.1:5000/tftest-service:v1"
 					replicas = 2
 
 					update_config {
@@ -1486,7 +1486,7 @@ func TestAccDockerService_updateImage(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-image"),
-					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/tf-test-service:v1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/tftest-service:v1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
@@ -1515,7 +1515,7 @@ func TestAccDockerService_updateImage(t *testing.T) {
 
 				resource "docker_service" "foo" {
 					name     = "tftest-service-up-image"
-					image    = "127.0.0.1:5000/tf-test-service:v2"
+					image    = "127.0.0.1:5000/tftest-service:v2"
 					replicas = 2
 
 					update_config {
@@ -1558,7 +1558,7 @@ func TestAccDockerService_updateImage(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-image"),
-					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/tf-test-service:v2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/tftest-service:v2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
@@ -1601,7 +1601,7 @@ func TestAccDockerService_updateConfig(t *testing.T) {
 
 				resource "docker_service" "foo" {
 					name     = "tftest-service-up-config"
-					image    = "127.0.0.1:5000/tf-test-service:v1"
+					image    = "127.0.0.1:5000/tftest-service:v1"
 					replicas = 2
 					
 					update_config {
@@ -1644,7 +1644,7 @@ func TestAccDockerService_updateConfig(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-config"),
-					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/tf-test-service:v1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/tftest-service:v1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
@@ -1678,7 +1678,7 @@ func TestAccDockerService_updateConfig(t *testing.T) {
 
 				resource "docker_service" "foo" {
 					name     = "tftest-service-up-config"
-					image    = "127.0.0.1:5000/tf-test-service:v1"
+					image    = "127.0.0.1:5000/tftest-service:v1"
 					replicas = 2
 					
 					update_config {
@@ -1721,7 +1721,7 @@ func TestAccDockerService_updateConfig(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-config"),
-					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/tf-test-service:v1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/tftest-service:v1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
@@ -1762,7 +1762,7 @@ func TestAccDockerService_updateConfigAndSecret(t *testing.T) {
 				}
 
 				resource "docker_secret" "service_secret" {
-					name 			 = "tftest-mysecret-${replace(timestamp(),":", ".")}"
+					name 			 = "tftest-tftest-mysecret-${replace(timestamp(),":", ".")}"
 					data 			 = "ewogICJrZXkiOiAiUVdFUlRZIgp9"
 					updateable = true
 
@@ -1773,7 +1773,7 @@ func TestAccDockerService_updateConfigAndSecret(t *testing.T) {
 
 				resource "docker_service" "foo" {
 					name     = "tftest-service-up-config-secret"
-					image    = "127.0.0.1:5000/tf-test-service:v1"
+					image    = "127.0.0.1:5000/tftest-service:v1"
 					replicas = 2
 					
 					update_config {
@@ -1824,7 +1824,7 @@ func TestAccDockerService_updateConfigAndSecret(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-config-secret"),
-					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/tf-test-service:v1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/tftest-service:v1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
@@ -1859,7 +1859,7 @@ func TestAccDockerService_updateConfigAndSecret(t *testing.T) {
 				}
 
 				resource "docker_secret" "service_secret" {
-					name       = "tftest-mysecret-${replace(timestamp(),":", ".")}"
+					name       = "tftest-tftest-mysecret-${replace(timestamp(),":", ".")}"
 					data       = "ewogICJrZXkiOiAiUVdFUlRZIgp9" # UPDATED to YXCVB
 					updateable = true
 
@@ -1870,7 +1870,7 @@ func TestAccDockerService_updateConfigAndSecret(t *testing.T) {
 
 				resource "docker_service" "foo" {
 					name     = "tftest-service-up-config-secret"
-					image    = "127.0.0.1:5000/tf-test-service:v1"
+					image    = "127.0.0.1:5000/tftest-service:v1"
 					replicas = 2
 					
 					update_config {
@@ -1921,7 +1921,7 @@ func TestAccDockerService_updateConfigAndSecret(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-config-secret"),
-					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/tf-test-service:v1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/tftest-service:v1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
@@ -1960,7 +1960,7 @@ func TestAccDockerService_updatePort(t *testing.T) {
 
 				resource "docker_service" "foo" {
 					name     = "tftest-service-up-port"
-					image    = "127.0.0.1:5000/tf-test-service:v1"
+					image    = "127.0.0.1:5000/tftest-service:v1"
 					replicas = 2
 
 					update_config {
@@ -2003,7 +2003,7 @@ func TestAccDockerService_updatePort(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-port"),
-					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/tf-test-service:v1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/tftest-service:v1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
@@ -2032,7 +2032,7 @@ func TestAccDockerService_updatePort(t *testing.T) {
 
 				resource "docker_service" "foo" {
 					name     = "tftest-service-up-port"
-					image    = "127.0.0.1:5000/tf-test-service:v1"
+					image    = "127.0.0.1:5000/tftest-service:v1"
 					replicas = 4
 
 					update_config {
@@ -2081,7 +2081,7 @@ func TestAccDockerService_updatePort(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-port"),
-					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/tf-test-service:v1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/tftest-service:v1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "4"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
@@ -2125,7 +2125,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealth(t *testing.T) {
 
 				resource "docker_service" "foo" {
 					name     = "tftest-service-up-crihc"
-					image    = "127.0.0.1:5000/tf-test-service:v1"
+					image    = "127.0.0.1:5000/tftest-service:v1"
 					replicas = 2
 
 					update_config {
@@ -2168,7 +2168,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealth(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-crihc"),
-					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/tf-test-service:v1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/tftest-service:v1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
@@ -2202,7 +2202,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealth(t *testing.T) {
 
 				resource "docker_service" "foo" {
 					name     = "tftest-service-up-crihc"
-					image    = "127.0.0.1:5000/tf-test-service:v2"
+					image    = "127.0.0.1:5000/tftest-service:v2"
 					replicas = 4
 
 					update_config {
@@ -2251,7 +2251,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealth(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-crihc"),
-					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/tf-test-service:v2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/tftest-service:v2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "4"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
@@ -2295,7 +2295,7 @@ func TestAccDockerService_updateConfigAndDecreaseReplicas(t *testing.T) {
 
 				resource "docker_service" "foo" {
 					name     = "tftest-service-up-config-dec-repl"
-					image    = "127.0.0.1:5000/tf-test-service:v1"
+					image    = "127.0.0.1:5000/tftest-service:v1"
 					replicas = 5
 					
 					update_config {
@@ -2338,7 +2338,7 @@ func TestAccDockerService_updateConfigAndDecreaseReplicas(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-config-dec-repl"),
-					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/tf-test-service:v1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/tftest-service:v1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "5"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
@@ -2372,7 +2372,7 @@ func TestAccDockerService_updateConfigAndDecreaseReplicas(t *testing.T) {
 
 				resource "docker_service" "foo" {
 					name     = "tftest-service-up-config-dec-repl"
-					image    = "127.0.0.1:5000/tf-test-service:v1"
+					image    = "127.0.0.1:5000/tftest-service:v1"
 					replicas = 1
 					
 					update_config {
@@ -2415,7 +2415,7 @@ func TestAccDockerService_updateConfigAndDecreaseReplicas(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-config-dec-repl"),
-					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/tf-test-service:v1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/tftest-service:v1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
@@ -2457,7 +2457,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 
 				resource "docker_service" "foo" {
 					name     = "tftest-service-up-crihiadr"
-					image    = "127.0.0.1:5000/tf-test-service:v1"
+					image    = "127.0.0.1:5000/tftest-service:v1"
 					replicas = 2
 
 					update_config {
@@ -2500,7 +2500,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-crihiadr"),
-					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/tf-test-service:v1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/tftest-service:v1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
@@ -2534,7 +2534,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 
 				resource "docker_service" "foo" {
 					name     = "tftest-service-up-crihiadr"
-					image    = "127.0.0.1:5000/tf-test-service:v2"
+					image    = "127.0.0.1:5000/tftest-service:v2"
 					replicas = 6
 
 					update_config {
@@ -2583,7 +2583,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-crihiadr"),
-					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/tf-test-service:v2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/tftest-service:v2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "6"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
@@ -2619,7 +2619,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 
 				resource "docker_service" "foo" {
 					name     = "tftest-service-up-crihiadr"
-					image    = "127.0.0.1:5000/tf-test-service:v2"
+					image    = "127.0.0.1:5000/tftest-service:v2"
 					replicas = 3
 
 					update_config {
@@ -2668,7 +2668,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-crihiadr"),
-					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/tf-test-service:v2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/tftest-service:v2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "3"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
