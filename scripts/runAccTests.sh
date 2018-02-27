@@ -12,7 +12,7 @@ setup() {
   export DOCKER_REGISTRY_ADDRESS="127.0.0.1:5000"
   export DOCKER_REGISTRY_USER="testuser"
   export DOCKER_REGISTRY_PASS="testpwd"
-  export DOCKER_PRIVATE_IMAGE="127.0.0.1:5000/my-private-service:v1"
+  export DOCKER_PRIVATE_IMAGE="127.0.0.1:5000/tftest-service:v1"
   sh scripts/testing/setup_private_registry.sh
 }
 
@@ -35,13 +35,13 @@ cleanup() {
   rm -f scripts/testing/certs/registry_auth.*
   echo "### removed auth and certs ###"
   # Is fixed in v18.02 https://github.com/moby/moby/issues/35933#issuecomment-366149721
-  for c in $(docker container ls --filter=name=service- -aq); do docker rm -f $c; done
+  for c in $(docker container ls --filter=name=tftest-service- -aq); do docker rm -f $c; done
   echo "### removed stopped containers ###"
-  for c in $(docker config ls --filter=name=myconfig -q); do docker config rm $c; done
-  for s in $(docker secret ls --filter=name=mysecret -q); do docker secret rm $s; done
+  for c in $(docker config ls --filter=name=tftest -q); do docker config rm $c; done
+  for s in $(docker secret ls --filter=name=tftest -q); do docker secret rm $s; done
   echo "### configs and secrets ###"
-  for i in $(docker images -aq 127.0.0.1:5000/my-private-service); do docker rmi -f $i; done
-  echo "### removed my-private-service images ###"
+  for i in $(docker images -aq 127.0.0.1:5000/tftest-service); do docker rmi -f $i; done
+  echo "### removed tftest-service images ###"
 }
 
 ## main

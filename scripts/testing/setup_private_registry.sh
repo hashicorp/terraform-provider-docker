@@ -30,7 +30,7 @@ sleep 5
 docker login -u testuser -p testpwd 127.0.0.1:5000
 # Build private images
 for i in $(seq 1 3); do 
-  docker build -t my-private-service ./scripts/testing -f ./scripts/testing/Dockerfile_v${i}
-  docker tag my-private-service 127.0.0.1:5000/my-private-service:v${i}
-  docker push 127.0.0.1:5000/my-private-service:v${i}
+  docker build -t tftest-service ./scripts/testing -f ./scripts/testing/Dockerfile_v${i}
+  docker tag tftest-service 127.0.0.1:5000/tftest-service:v${i}
+  docker push 127.0.0.1:5000/tftest-service:v${i}
 done
