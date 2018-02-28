@@ -21,7 +21,7 @@ run() {
   TF_ACC=1 go test ./docker -v -timeout 120m
   
   # for a single test
-  #TF_LOG=INFO TF_ACC=1 go test -v github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerService_full$ -timeout 360s
+  #TF_LOG=INFO TF_ACC=1 go test -v github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerService_updateMounts$ -timeout 360s
   # keep the return for the scripts to fail and clean properly
   return $?
 }
@@ -29,16 +29,22 @@ run() {
 cleanup() {
   unset DOCKER_REGISTRY_ADDRESS DOCKER_REGISTRY_USER DOCKER_REGISTRY_PASS DOCKER_PRIVATE_IMAGE
   echo "### unsetted env ###"
-  for p in $(docker container ls --filter=name=private_registry -q); do docker stop $p; done
+  for p in $(docker container ls -f 'name=private_registry' -q); do docker stop $p; done
   echo "### stopped private registry ###"
   rm -f scripts/testing/auth/htpasswd
   rm -f scripts/testing/certs/registry_auth.*
   echo "### removed auth and certs ###"
   # For containers it's fixed in v18.02 https://github.com/moby/moby/issues/35933#issuecomment-366149721
-  for resource in "container" "config" "secret" "network" "volume"; do
-    for r in $(docker $resource ls --filter=name=tftest -q); do docker $resource rm $r; done
+  for resource in "container" "volume"; do
+    for r in $(docker $resource ls -f 'name=tftest-' -q); do docker $resource rm -f $r; done
     echo "### removed $resource ###"
   done
+  for resource in "config" "secret"; do
+    for r in $(docker $resource ls -f 'name=tftest-' -q); do docker $resource rm $r; done
+    echo "### removed $resource ###"
+  done
+  # for n in $(docker network ls -f 'name=tftest-' -q); do docker network rm $n; done
+    # echo "### removed network ###"
   for i in $(docker images -aq 127.0.0.1:5000/tftest-service); do docker rmi -f $i; done
   echo "### removed service images ###"
 }
