@@ -75,6 +75,7 @@ func resourceDockerServiceCreate(d *schema.ResourceData, meta interface{}) error
 		ServiceSpec: serviceSpec,
 	}
 
+	// TODO refactor
 	if v, ok := d.GetOk("auth"); ok {
 		createOpts.Auth = authToServiceAuth(v.(map[string]interface{}))
 	} else {
@@ -152,6 +153,7 @@ func resourceDockerServiceUpdate(d *schema.ResourceData, meta interface{}) error
 		Version:     service.Version.Index,
 	}
 
+	// TODO refactor
 	if v, ok := d.GetOk("auth"); ok {
 		updateOpts.Auth = authToServiceAuth(v.(map[string]interface{}))
 	} else {
@@ -232,7 +234,7 @@ func internalDeleteService(serviceID string, d *schema.ResourceData, client *dc.
 			ctx, cancel := context.WithTimeout(context.Background(), destroyGraceSeconds)
 			defer cancel()
 			exitCode, _ := client.WaitContainerWithContext(containerID, ctx)
-			log.Printf("[INFO] container exited with code [%v]: '%s'", exitCode, containerID)
+			log.Printf("[INFO] Container exited with code [%v]: '%s'", exitCode, containerID)
 
 			removeOpts := dc.RemoveContainerOptions{
 				ID:            containerID,
@@ -372,7 +374,6 @@ func getActiveNodes(ctx context.Context, client *dc.Client) (map[string]struct{}
 			activeNodes[n.ID] = struct{}{}
 		}
 	}
-	log.Printf("[INFO] active nodes: %v", len(activeNodes))
 	return activeNodes, nil
 }
 
@@ -381,8 +382,6 @@ type progressUpdater interface {
 }
 
 type replicatedProgressUpdater struct {
-	// progressOut progress.Output
-
 	// used for mapping slots to a contiguous space
 	// this also causes progress bars to appear in order
 	slotMap map[int]int
@@ -425,17 +424,13 @@ func (u *replicatedProgressUpdater) update(service *swarm.Service, tasks []swarm
 
 		if !terminalState(task.DesiredState) && task.Status.State == swarm.TaskStateRunning {
 			running++
-			log.Printf("[INFO] got running replica: %v for task %v", running, task.ID)
 		}
-
-		// u.writeTaskProgress(task, mappedSlot, replicas, rollback) TODO
 	}
 
 	if !u.done {
-		// writeOverallProgress(u.progressOut, int(running), int(replicas), rollback)
-
+		log.Printf("[INFO] ... progress: [%v/%v] - rollback: %v", running, replicas, rollback)
 		if running == replicas {
-			log.Printf("[INFO] got all %v replicas up and running", running)
+			log.Printf("[INFO] DONE: all %v replicas running", running)
 			u.done = true
 		}
 	}
@@ -479,7 +474,6 @@ func terminalState(state swarm.TaskState) bool {
 	return numberedStates[state] > numberedStates[swarm.TaskStateRunning]
 }
 
-//////////
 func deleteService(serviceID string, client *dc.Client) error {
 	removeOpts := dc.RemoveServiceOptions{
 		ID: serviceID,
