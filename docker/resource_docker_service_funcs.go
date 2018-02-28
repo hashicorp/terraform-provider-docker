@@ -204,19 +204,21 @@ func resourceDockerServiceDelete(d *schema.ResourceData, meta interface{}) error
 	client := meta.(*ProviderConfig).DockerClient
 
 	// == 1: get containerIDs of the running service
+	// because they do not exist after the service is deleted
 	serviceContainerIds := make([]string, 0)
-	if _, ok := d.GetOk("stop_grace_period"); ok {
+	if _, ok := d.GetOk("destroy_grace_seconds"); ok {
 		filter := make(map[string][]string)
 		filter["service"] = []string{d.Get("name").(string)}
+		filter["desired-state"] = []string{"running"}
 		tasks, err := client.ListTasks(dc.ListTasksOptions{
 			Filters: filter,
 		})
 		if err != nil {
 			return err
 		}
-		for i := 0; i < len(tasks); i++ {
-			task, _ := client.InspectTask(tasks[i].ID)
-			log.Printf("[INFO] Inspecting container '%s' and state '%s' for shutdown", task.Status.ContainerStatus.ContainerID, task.Status.State)
+		for _, t := range tasks {
+			task, _ := client.InspectTask(t.ID)
+			log.Printf("[INFO] Found container ['%s'] for destroying: '%s'", task.Status.State, task.Status.ContainerStatus.ContainerID)
 			if strings.TrimSpace(task.Status.ContainerStatus.ContainerID) != "" && task.Status.State != swarm.TaskStateShutdown {
 				serviceContainerIds = append(serviceContainerIds, task.Status.ContainerStatus.ContainerID)
 			}
@@ -228,38 +230,28 @@ func resourceDockerServiceDelete(d *schema.ResourceData, meta interface{}) error
 		return err
 	}
 
-	// == 3: wait until all containers of the service are down to be able to unmount the associated volumes
-	if v, ok := d.GetOk("stop_grace_period"); ok {
-		stopGracePeriod, _ := time.ParseDuration(v.(string))
+	// == 3: destroy each container after a grace period
+	if v, ok := d.GetOk("destroy_grace_seconds"); ok {
 		for _, containerID := range serviceContainerIds {
-			log.Printf("[INFO] Waiting for container: '%s' to exit: max %v", containerID, stopGracePeriod)
-			ctx, cancel := context.WithTimeout(context.Background(), stopGracePeriod)
-			defer cancel()
-			if exitCode, errOnExit := client.WaitContainerWithContext(containerID, ctx); errOnExit == nil {
-				log.Printf("[INFO] Container: '%s' exited with code '%d'", containerID, exitCode)
-				select {
-				case <-ctx.Done():
-					log.Printf("[INFO] Container: '%s' shutdown was canceled. Killing it now", containerID)
-					killOps := dc.KillContainerOptions{
-						Signal:  dc.SIGKILL,
-						Context: ctx,
-					}
-					if errOnKill := client.KillContainer(killOps); errOnKill != nil {
-						log.Printf("[INFO] Container: '%s' killing errord with '%s'", containerID, errOnKill)
-					}
-				default:
-					// ctx is not canceled, continue with removal TODO does it work properly?
+			var timeout = uint(v.(int))
+			log.Printf("[INFO] Stopping container: '%s'", containerID)
+			if err := client.StopContainer(containerID, timeout); err != nil {
+				if !(strings.Contains(err.Error(), "Container not running") ||
+					strings.Contains(err.Error(), "No such container")) {
+					return fmt.Errorf("Error stopping container %s: %s", containerID, err)
 				}
-				// Remove the container if it did not exit properly to be able to unmount the volumes
-				log.Printf("[INFO] Removing container: '%s'", containerID)
-				removeOps := dc.RemoveContainerOptions{
-					ID:      containerID,
-					Force:   true,
-					Context: ctx,
-				}
-				if errOnRemove := client.RemoveContainer(removeOps); errOnRemove != nil {
-					// if the removal is already in progress, this error can be ignored
-					log.Printf("[INFO] Error '%s' on removal of Container: '%s'", errOnRemove, containerID)
+			}
+
+			removeOpts := dc.RemoveContainerOptions{
+				ID:            containerID,
+				RemoveVolumes: true,
+				Force:         true,
+			}
+
+			log.Printf("[INFO] Removing container: '%s'", containerID)
+			if err := client.RemoveContainer(removeOpts); err != nil {
+				if !strings.Contains(err.Error(), "No such container") {
+					return fmt.Errorf("Error deleting container %s: %s", containerID, err)
 				}
 			}
 		}

@@ -62,11 +62,11 @@ func resourceDockerService() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 			},
-			"stop_grace_period": &schema.Schema{
-				Type:         schema.TypeString,
-				Description:  "Amount of time to wait for the container to terminate before forcefully killing it (ns|us|ms|s|m|h)",
+			"destroy_grace_seconds": &schema.Schema{
+				Type:         schema.TypeInt,
 				Optional:     true,
-				ValidateFunc: validateDurationGeq0(),
+				Description:  "Amount of seconds to wait for the container to terminate before forcefully removing it",
+				ValidateFunc: validateIntegerGeqThan(0),
 			},
 			"command": &schema.Schema{
 				Type:     schema.TypeList,
