@@ -39,6 +39,15 @@ var (
 	longestState int
 )
 
+type convergeConfig struct {
+	interval time.Duration
+	monitor  time.Duration
+	timeout  time.Duration
+}
+
+/////////////////
+// TF CRUD funcs
+/////////////////
 func resourceDockerServiceExists(d *schema.ResourceData, meta interface{}) (bool, error) {
 	client := meta.(*ProviderConfig).DockerClient
 	if client == nil {
@@ -56,12 +65,6 @@ func resourceDockerServiceExists(d *schema.ResourceData, meta interface{}) (bool
 	return true, nil
 }
 
-type convergeConfig struct {
-	interval time.Duration
-	monitor  time.Duration
-	timeout  time.Duration
-}
-
 func resourceDockerServiceCreate(d *schema.ResourceData, meta interface{}) error {
 	var err error
 	client := meta.(*ProviderConfig).DockerClient
@@ -75,7 +78,6 @@ func resourceDockerServiceCreate(d *schema.ResourceData, meta interface{}) error
 		ServiceSpec: serviceSpec,
 	}
 
-	// TODO refactor
 	if v, ok := d.GetOk("auth"); ok {
 		createOpts.Auth = authToServiceAuth(v.(map[string]interface{}))
 	} else {
@@ -98,7 +100,7 @@ func resourceDockerServiceCreate(d *schema.ResourceData, meta interface{}) error
 	if v, ok := d.GetOk("converge_config"); ok {
 		convergeConfig := createConvergeConfig(v.([]interface{}))
 		if err := waitOnService(context.Background(), client, convergeConfig, service.ID); err != nil {
-			if err := internalDeleteService(service.ID, d, client); err != nil {
+			if err := deleteService(service.ID, d, client); err != nil {
 				return err
 			}
 			return err
@@ -153,7 +155,6 @@ func resourceDockerServiceUpdate(d *schema.ResourceData, meta interface{}) error
 		Version:     service.Version.Index,
 	}
 
-	// TODO refactor
 	if v, ok := d.GetOk("auth"); ok {
 		updateOpts.Auth = authToServiceAuth(v.(map[string]interface{}))
 	} else {
@@ -186,7 +187,7 @@ func resourceDockerServiceUpdate(d *schema.ResourceData, meta interface{}) error
 func resourceDockerServiceDelete(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*ProviderConfig).DockerClient
 
-	if err := internalDeleteService(d.Id(), d, client); err != nil {
+	if err := deleteService(d.Id(), d, client); err != nil {
 		return err
 	}
 
@@ -194,10 +195,26 @@ func resourceDockerServiceDelete(d *schema.ResourceData, meta interface{}) error
 	return nil
 }
 
-////////////
+/////////////////
 // Helpers
-////////////
-func internalDeleteService(serviceID string, d *schema.ResourceData, client *dc.Client) error {
+/////////////////
+func fetchDockerService(ID string, name string, client *dc.Client) (*swarm.Service, error) {
+	apiServices, err := client.ListServices(dc.ListServicesOptions{})
+
+	if err != nil {
+		return nil, fmt.Errorf("Error fetching service information from Docker: %s", err)
+	}
+
+	for _, apiService := range apiServices {
+		if apiService.ID == ID || apiService.Spec.Name == name {
+			return &apiService, nil
+		}
+	}
+
+	return nil, nil
+}
+
+func deleteService(serviceID string, d *schema.ResourceData, client *dc.Client) error {
 	// == 1: get containerIDs of the running service
 	// because they do not exist after the service is deleted
 	serviceContainerIds := make([]string, 0)
@@ -221,8 +238,12 @@ func internalDeleteService(serviceID string, d *schema.ResourceData, client *dc.
 
 	// == 2: delete the service
 	log.Printf("[INFO] Deleting service: '%s'", d.Id())
-	if err := deleteService(serviceID, client); err != nil {
-		return err
+	removeOpts := dc.RemoveServiceOptions{
+		ID: serviceID,
+	}
+
+	if err := client.RemoveService(removeOpts); err != nil {
+		return fmt.Errorf("Error deleting service %s: %s", serviceID, err)
 	}
 
 	// == 3: destroy each container after a grace period
@@ -254,6 +275,7 @@ func internalDeleteService(serviceID string, d *schema.ResourceData, client *dc.
 	return nil
 }
 
+//////// Convergers
 func waitOnService(ctx context.Context, client *dc.Client, plainConvergeConfig *convergeConfig, serviceID string) error {
 	filter := make(map[string][]string)
 	filter["service"] = []string{serviceID}
@@ -474,34 +496,7 @@ func terminalState(state swarm.TaskState) bool {
 	return numberedStates[state] > numberedStates[swarm.TaskStateRunning]
 }
 
-func deleteService(serviceID string, client *dc.Client) error {
-	removeOpts := dc.RemoveServiceOptions{
-		ID: serviceID,
-	}
-
-	if err := client.RemoveService(removeOpts); err != nil {
-		return fmt.Errorf("Error deleting service %s: %s", serviceID, err)
-	}
-
-	return nil
-}
-
-func fetchDockerService(ID string, name string, client *dc.Client) (*swarm.Service, error) {
-	apiServices, err := client.ListServices(dc.ListServicesOptions{})
-
-	if err != nil {
-		return nil, fmt.Errorf("Error fetching service information from Docker: %s", err)
-	}
-
-	for _, apiService := range apiServices {
-		if apiService.ID == ID || apiService.Spec.Name == name {
-			return &apiService, nil
-		}
-	}
-
-	return nil, nil
-}
-
+//////// Mappers
 func createServiceSpec(d *schema.ResourceData) (swarm.ServiceSpec, error) {
 
 	serviceSpec := swarm.ServiceSpec{
