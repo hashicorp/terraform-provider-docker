@@ -476,6 +476,12 @@ func resourceDockerService() *schema.Resource {
 							Default:      "5s",
 							ValidateFunc: validateDurationGeq0(),
 						},
+						"timeout": &schema.Schema{
+							Type:         schema.TypeString,
+							Optional:     true,
+							Default:      "3m",
+							ValidateFunc: validateDurationGeq0(),
+						},
 					},
 				},
 			},

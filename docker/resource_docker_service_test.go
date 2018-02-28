@@ -8,6 +8,7 @@ import (
 
 	dc "github.com/fsouza/go-dockerclient"
 	"github.com/hashicorp/terraform/helper/resource"
+	"github.com/hashicorp/terraform/terraform"
 )
 
 // ----------------------------------------
@@ -481,6 +482,61 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 }
 
 // Converging tests
+func TestAccDockerService_nonExistingPrivateImageConverge(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:  func() { testAccPreCheck(t) },
+		Providers: testAccProviders,
+		Steps: []resource.TestStep{
+			resource.TestStep{
+				Config: `
+				resource "docker_service" "foo" {
+					name     = "tftest-service-privateimagedoesnotexist"
+					image    = "127.0.0.1:5000/idonoexist:latest"
+					replicas = 2
+
+					converge_config {
+						interval = "500ms"
+						monitor  = "5s"
+						timeout  = "10s"
+					}
+				}
+				`,
+				ExpectError: regexp.MustCompile(`.*Converging timed out.*`),
+				Check: resource.ComposeTestCheckFunc(
+					isServiceRemoved("docker_service.foo.name"),
+				),
+			},
+		},
+	})
+}
+func TestAccDockerService_nonExistingPublicImageConverge(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:  func() { testAccPreCheck(t) },
+		Providers: testAccProviders,
+		Steps: []resource.TestStep{
+			resource.TestStep{
+				Config: `
+				resource "docker_service" "foo" {
+					name     = "tftest-service-publicimagedoesnotexist"
+					image    = "stovogel/blablabla:part5"
+					replicas = 2
+
+					converge_config {
+						interval = "500ms"
+						monitor  = "5s"
+						timeout  = "10s"
+					}
+				}
+				`,
+				ExpectError: regexp.MustCompile(`.*Converging timed out.*`),
+				Check: resource.ComposeTestCheckFunc(
+					isServiceRemoved("docker_service.foo.name"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccDockerService_fullConverge(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
@@ -3068,4 +3124,24 @@ func TestAccDockerService_privateConverge(t *testing.T) {
 			},
 		},
 	})
+}
+
+// Helpers
+func isServiceRemoved(serviceName string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		client := testAccProvider.Meta().(*ProviderConfig).DockerClient
+		filter := make(map[string][]string)
+		filter["name"] = []string{serviceName}
+		services, err := client.ListServices(dc.ListServicesOptions{
+			Filters: filter,
+		})
+		if err != nil {
+			return fmt.Errorf("Error listing service for name %s: %v", serviceName, err)
+		}
+		if len(services) == 0 {
+			return nil
+		}
+
+		return fmt.Errorf("Service should be removed but is running: %s", serviceName)
+	}
 }

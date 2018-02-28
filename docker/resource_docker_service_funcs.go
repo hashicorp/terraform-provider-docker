@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"os/signal"
 	"strings"
 	"time"
 
@@ -60,6 +59,7 @@ func resourceDockerServiceExists(d *schema.ResourceData, meta interface{}) (bool
 type convergeConfig struct {
 	interval time.Duration
 	monitor  time.Duration
+	timeout  time.Duration
 }
 
 func resourceDockerServiceCreate(d *schema.ResourceData, meta interface{}) error {
@@ -95,19 +95,11 @@ func resourceDockerServiceCreate(d *schema.ResourceData, meta interface{}) error
 	}
 
 	if v, ok := d.GetOk("converge_config"); ok {
-		plainConvergeConfig := &convergeConfig{}
-		if len(v.([]interface{})) > 0 {
-			for _, rawConvergeConfig := range v.([]interface{}) {
-				rawConvergeConfig := rawConvergeConfig.(map[string]interface{})
-				if interval, ok := rawConvergeConfig["interval"]; ok {
-					plainConvergeConfig.interval, _ = time.ParseDuration(interval.(string))
-				}
-				if monitor, ok := rawConvergeConfig["monitor"]; ok {
-					plainConvergeConfig.monitor, _ = time.ParseDuration(monitor.(string))
-				}
+		convergeConfig := createConvergeConfig(v.([]interface{}))
+		if err := waitOnService(context.Background(), client, convergeConfig, service.ID); err != nil {
+			if err := internalDeleteService(service.ID, d, client); err != nil {
+				return err
 			}
-		}
-		if err := waitOnService(context.Background(), client, plainConvergeConfig, service.ID); err != nil {
 			return err
 		}
 	}
@@ -179,19 +171,8 @@ func resourceDockerServiceUpdate(d *schema.ResourceData, meta interface{}) error
 	}
 
 	if v, ok := d.GetOk("converge_config"); ok {
-		plainConvergeConfig := &convergeConfig{}
-		if len(v.([]interface{})) > 0 {
-			for _, rawConvergeConfig := range v.([]interface{}) {
-				rawConvergeConfig := rawConvergeConfig.(map[string]interface{})
-				if interval, ok := rawConvergeConfig["interval"]; ok {
-					plainConvergeConfig.interval, _ = time.ParseDuration(interval.(string))
-				}
-				if monitor, ok := rawConvergeConfig["monitor"]; ok {
-					plainConvergeConfig.monitor, _ = time.ParseDuration(monitor.(string))
-				}
-			}
-		}
-		if err := waitOnService(context.Background(), client, plainConvergeConfig, service.ID); err != nil {
+		convergeConfig := createConvergeConfig(v.([]interface{}))
+		if err := waitOnService(context.Background(), client, convergeConfig, service.ID); err != nil {
 			log.Printf("[INFO] error on update --> %v", err)
 			return err
 		}
@@ -203,6 +184,18 @@ func resourceDockerServiceUpdate(d *schema.ResourceData, meta interface{}) error
 func resourceDockerServiceDelete(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*ProviderConfig).DockerClient
 
+	if err := internalDeleteService(d.Id(), d, client); err != nil {
+		return err
+	}
+
+	d.SetId("")
+	return nil
+}
+
+////////////
+// Helpers
+////////////
+func internalDeleteService(serviceID string, d *schema.ResourceData, client *dc.Client) error {
 	// == 1: get containerIDs of the running service
 	// because they do not exist after the service is deleted
 	serviceContainerIds := make([]string, 0)
@@ -225,7 +218,8 @@ func resourceDockerServiceDelete(d *schema.ResourceData, meta interface{}) error
 	}
 
 	// == 2: delete the service
-	if err := deleteService(d.Id(), client); err != nil {
+	log.Printf("[INFO] Deleting service: '%s'", d.Id())
+	if err := deleteService(serviceID, client); err != nil {
 		return err
 	}
 
@@ -255,18 +249,10 @@ func resourceDockerServiceDelete(d *schema.ResourceData, meta interface{}) error
 		}
 	}
 
-	d.SetId("")
 	return nil
 }
 
-////////////
-// Helpers
-////////////
 func waitOnService(ctx context.Context, client *dc.Client, plainConvergeConfig *convergeConfig, serviceID string) error {
-	sigint := make(chan os.Signal, 1)
-	signal.Notify(sigint, os.Interrupt)
-	defer signal.Stop(sigint)
-
 	filter := make(map[string][]string)
 	filter["service"] = []string{serviceID}
 	filter["desired-state"] = []string{"running"}
@@ -286,6 +272,7 @@ func waitOnService(ctx context.Context, client *dc.Client, plainConvergeConfig *
 		rollback    bool
 	)
 
+	timeout := time.After(plainConvergeConfig.timeout)
 	for {
 		service, err := client.InspectService(serviceID)
 		if err != nil {
@@ -363,9 +350,9 @@ func waitOnService(ctx context.Context, client *dc.Client, plainConvergeConfig *
 
 		select {
 		case <-time.After(plainConvergeConfig.interval):
-		case <-sigint:
+		case <-timeout:
 			if !converged {
-				log.Printf("[INFO] Operation continuing in background.")
+				return fmt.Errorf("Converging timed out after %v", plainConvergeConfig.timeout)
 			}
 			return nil
 		}
@@ -799,6 +786,25 @@ func createUpdateOrRollbackConfig(config []interface{}) (*swarm.UpdateConfig, er
 	}
 
 	return &updateConfig, nil
+}
+
+func createConvergeConfig(config []interface{}) *convergeConfig {
+	plainConvergeConfig := &convergeConfig{}
+	if len(config) > 0 {
+		for _, rawConvergeConfig := range config {
+			rawConvergeConfig := rawConvergeConfig.(map[string]interface{})
+			if interval, ok := rawConvergeConfig["interval"]; ok {
+				plainConvergeConfig.interval, _ = time.ParseDuration(interval.(string))
+			}
+			if monitor, ok := rawConvergeConfig["monitor"]; ok {
+				plainConvergeConfig.monitor, _ = time.ParseDuration(monitor.(string))
+			}
+			if timeout, ok := rawConvergeConfig["timeout"]; ok {
+				plainConvergeConfig.timeout, _ = time.ParseDuration(timeout.(string))
+			}
+		}
+	}
+	return plainConvergeConfig
 }
 
 func portSetToServicePorts(ports *schema.Set) []swarm.PortConfig {
