@@ -43,8 +43,6 @@ cleanup() {
     for r in $(docker $resource ls -f 'name=tftest-' -q); do docker $resource rm $r; done
     echo "### removed $resource ###"
   done
-  # for n in $(docker network ls -f 'name=tftest-' -q); do docker network rm $n; done
-    # echo "### removed network ###"
   for i in $(docker images -aq 127.0.0.1:5000/tftest-service); do docker rmi -f $i; done
   echo "### removed service images ###"
 }

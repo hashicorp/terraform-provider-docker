@@ -609,7 +609,6 @@ func TestAccDockerService_updateNetworks(t *testing.T) {
 	})
 }
 func TestAccDockerService_updateMounts(t *testing.T) {
-	t.Skip("ATM")
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
 		Providers: testAccProviders,
@@ -650,51 +649,6 @@ func TestAccDockerService_updateMounts(t *testing.T) {
 
 					destroy_grace_seconds = "10"
 					
-				}
-				`,
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
-					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-mounts"),
-					resource.TestCheckResourceAttr("docker_service.foo", "image", "stovogel/friendlyhello:part2"),
-					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
-					resource.TestCheckResourceAttr("docker_service.foo", "mounts.#", "1"),
-				),
-			},
-			resource.TestStep{
-				Config: `
-				resource "docker_volume" "foo" {
-					name = "tftest-volume"
-				}
-
-				resource "docker_volume" "foo2" {
-					name = "tftest-volume2"
-				}
-
-				resource "docker_service" "foo" {
-					name     = "tftest-service-up-mounts"
-					image    = "stovogel/friendlyhello:part2"
-					replicas = 2
-
-					mounts = [
-						{
-							source = "${docker_volume.foo2.name}"
-							target = "/mount/test"
-							type   = "volume"
-							consistency = "default"
-							read_only = true
-							volume_labels {
-								env = "dev"
-								terraform = "true"
-							}
-						}
-					]
-
-					converge_config {
-						interval = "500ms"
-						monitor  = "10s"
-					}
-
-					destroy_grace_seconds = "10"
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(

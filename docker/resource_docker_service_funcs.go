@@ -209,7 +209,6 @@ func resourceDockerServiceDelete(d *schema.ResourceData, meta interface{}) error
 	if _, ok := d.GetOk("destroy_grace_seconds"); ok {
 		filter := make(map[string][]string)
 		filter["service"] = []string{d.Get("name").(string)}
-		filter["desired-state"] = []string{"running"}
 		tasks, err := client.ListTasks(dc.ListTasksOptions{
 			Filters: filter,
 		})
@@ -233,14 +232,13 @@ func resourceDockerServiceDelete(d *schema.ResourceData, meta interface{}) error
 	// == 3: destroy each container after a grace period
 	if v, ok := d.GetOk("destroy_grace_seconds"); ok {
 		for _, containerID := range serviceContainerIds {
-			var timeout = uint(v.(int))
-			log.Printf("[INFO] Stopping container: '%s'", containerID)
-			if err := client.StopContainer(containerID, timeout); err != nil {
-				if !(strings.Contains(err.Error(), "Container not running") ||
-					strings.Contains(err.Error(), "No such container")) {
-					return fmt.Errorf("Error stopping container %s: %s", containerID, err)
-				}
-			}
+			timeout := v.(int)
+			destroyGraceSeconds := time.Duration(timeout) * time.Second
+			log.Printf("[INFO] Waiting for container: '%s' to exit: max %v", containerID, destroyGraceSeconds)
+			ctx, cancel := context.WithTimeout(context.Background(), destroyGraceSeconds)
+			defer cancel()
+			exitCode, _ := client.WaitContainerWithContext(containerID, ctx)
+			log.Printf("[INFO] container exited with code [%v]: '%s'", exitCode, containerID)
 
 			removeOpts := dc.RemoveContainerOptions{
 				ID:            containerID,
