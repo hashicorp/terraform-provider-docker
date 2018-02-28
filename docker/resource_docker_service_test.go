@@ -69,6 +69,7 @@ func checkAttribute(t *testing.T, name, actual, expected string) error {
 // ----------------------------------------
 // ----------- ACCEPTANCE TESTS -----------
 // ----------------------------------------
+// Fire and Forget
 var serviceIDRegex = regexp.MustCompile(`[A-Za-z0-9_\+\.-]+`)
 
 func TestAccDockerService_basic(t *testing.T) {
@@ -94,7 +95,393 @@ func TestAccDockerService_basic(t *testing.T) {
 		},
 	})
 }
-func TestAccDockerService_full(t *testing.T) {
+
+func TestAccDockerService_updateImage(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:  func() { testAccPreCheck(t) },
+		Providers: testAccProviders,
+		Steps: []resource.TestStep{
+			resource.TestStep{
+				Config: `
+				resource "docker_config" "service_config" {
+					name = "tftest-fnf-up-image-myconfig"
+					data = "ewogICJwcmVmaXgiOiAiMTIzIgp9"
+				}
+
+				resource "docker_service" "foo" {
+					name     = "tftest-fnf-service-up-image"
+					image    = "127.0.0.1:5000/tftest-service:v1"
+					replicas = 2
+
+					update_config {
+						parallelism       = 1
+						delay             = "1s"
+						failure_action    = "pause"
+						monitor           = "1s"
+						max_failure_ratio = 0.1
+						order             = "start-first"
+					}
+
+					configs = [
+						{
+							config_id   = "${docker_config.service_config.id}"
+							config_name = "${docker_config.service_config.name}"
+							file_name   = "/configs.json"
+						},
+					]
+
+					ports {
+						internal = "8080"
+						external = "8080"
+					}
+
+					healthcheck {
+						test     = ["CMD", "curl", "-f", "http://localhost:8080/health"]
+						interval = "1s"
+						timeout  = "500ms"
+						retries  = 2
+					}
+
+					destroy_grace_seconds = "10"
+				}
+				`,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-fnf-service-up-image"),
+					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/tftest-service:v1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "pause"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.monitor", "1s"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.order", "start-first"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.#", "1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.4021806484.internal", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.4021806484.external", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.0", "CMD"),
+					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.1", "curl"),
+					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.2", "-f"),
+					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.3", "http://localhost:8080/health"),
+					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.interval", "1s"),
+					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.timeout", "500ms"),
+					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.retries", "2"),
+				),
+			},
+			resource.TestStep{
+				Config: `
+				resource "docker_config" "service_config" {
+					name = "tftest-fnf-up-image-myconfig"
+					data = "ewogICJwcmVmaXgiOiAiMTIzIgp9"
+				}
+
+				resource "docker_service" "foo" {
+					name     = "tftest-fnf-service-up-image"
+					image    = "127.0.0.1:5000/tftest-service:v2"
+					replicas = 2
+
+					update_config {
+						parallelism       = 1
+						delay             = "1s"
+						failure_action    = "pause"
+						monitor           = "1s"
+						max_failure_ratio = 0.1
+						order             = "start-first"
+					}
+
+					configs = [
+						{
+							config_id   = "${docker_config.service_config.id}"
+							config_name = "${docker_config.service_config.name}"
+							file_name   = "/configs.json"
+						},
+					]
+
+					ports {
+						internal = "8080"
+						external = "8080"
+					}
+
+					healthcheck {
+						test     = ["CMD", "curl", "-f", "http://localhost:8080/health"]
+						interval = "1s"
+						timeout  = "500ms"
+						retries  = 2
+					}
+
+					destroy_grace_seconds = "10"
+				}
+				`,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-fnf-service-up-image"),
+					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/tftest-service:v2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "pause"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.monitor", "1s"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.order", "start-first"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.#", "1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.4021806484.internal", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.4021806484.external", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.0", "CMD"),
+					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.1", "curl"),
+					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.2", "-f"),
+					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.3", "http://localhost:8080/health"),
+					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.interval", "1s"),
+					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.timeout", "500ms"),
+					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.retries", "2"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseReplicas(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:  func() { testAccPreCheck(t) },
+		Providers: testAccProviders,
+		Steps: []resource.TestStep{
+			resource.TestStep{
+				Config: `
+				resource "docker_config" "service_config" {
+					name 			 = "tftests-myconfig-${uuid()}"
+					data 			 = "ewogICJwcmVmaXgiOiAiMTIzIgp9"
+					updateable = true
+
+					lifecycle {
+						ignore_changes = ["name"]
+					}
+				}
+
+				resource "docker_service" "foo" {
+					name     = "tftest-fnf-service-up-crihiadr"
+					image    = "127.0.0.1:5000/tftest-service:v1"
+					replicas = 2
+
+					update_config {
+						parallelism       = 1
+						delay             = "1s"
+						failure_action    = "pause"
+						monitor           = "1s"
+						max_failure_ratio = 0.1
+						order             = "start-first"
+					}
+
+					configs = [
+						{
+							config_id   = "${docker_config.service_config.id}"
+							config_name = "${docker_config.service_config.name}"
+							file_name   = "/configs.json"
+						},
+					]
+
+					ports {
+						internal = "8080"
+						external = "8081"
+					}
+
+					healthcheck {
+						test     = ["CMD", "curl", "-f", "http://localhost:8080/health"]
+						interval = "1s"
+						timeout  = "500ms"
+						retries  = 2
+					}
+
+					destroy_grace_seconds = "10"
+				}
+				`,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-fnf-service-up-crihiadr"),
+					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/tftest-service:v1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "pause"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.monitor", "1s"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.order", "start-first"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.#", "1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.1648302198.internal", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.1648302198.external", "8081"),
+					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.0", "CMD"),
+					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.1", "curl"),
+					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.2", "-f"),
+					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.3", "http://localhost:8080/health"),
+					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.interval", "1s"),
+					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.timeout", "500ms"),
+					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.retries", "2"),
+				),
+			},
+			resource.TestStep{
+				Config: `
+				resource "docker_config" "service_config" {
+					name 			 = "tftest-myconfig-${uuid()}"
+					data 			 = "ewogICJwcmVmaXgiOiAiNTY3Igp9" # UPDATED to prefix: 567
+					updateable = true
+
+					lifecycle {
+						ignore_changes = ["name"]
+					}
+				}
+
+				resource "docker_service" "foo" {
+					name     = "tftest-fnf-service-up-crihiadr"
+					image    = "127.0.0.1:5000/tftest-service:v2"
+					replicas = 6
+
+					update_config {
+						parallelism       = 1
+						delay             = "1s"
+						failure_action    = "pause"
+						monitor           = "1s"
+						max_failure_ratio = 0.1
+						order             = "start-first"
+					}
+
+					configs = [
+						{
+							config_id   = "${docker_config.service_config.id}"
+							config_name = "${docker_config.service_config.name}"
+							file_name   = "/configs.json"
+						},
+					]
+
+					ports = [
+						{
+							internal = "8080"
+							external = "8081"
+						},
+						{
+							internal = "8080"
+							external = "8082"
+						}
+					] 
+
+					healthcheck {
+						test     = ["CMD", "curl", "-f", "http://localhost:8080/health"]
+						interval = "2s"
+						timeout  = "800ms"
+						retries  = 4
+					}
+
+					destroy_grace_seconds = "10"
+				}
+				`,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-fnf-service-up-crihiadr"),
+					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/tftest-service:v2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "6"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "pause"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.monitor", "1s"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.order", "start-first"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.#", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.1648302198.internal", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.1648302198.external", "8081"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.802625553.internal", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.802625553.external", "8082"),
+					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.0", "CMD"),
+					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.1", "curl"),
+					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.2", "-f"),
+					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.3", "http://localhost:8080/health"),
+					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.interval", "2s"),
+					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.timeout", "800ms"),
+					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.retries", "4"),
+				),
+			},
+			resource.TestStep{
+				Config: `
+				resource "docker_config" "service_config" {
+					name 			 = "tftest-myconfig-${uuid()}"
+					data 			 = "ewogICJwcmVmaXgiOiAiNTY3Igp9"
+					updateable = true
+
+					lifecycle {
+						ignore_changes = ["name"]
+					}
+				}
+
+				resource "docker_service" "foo" {
+					name     = "tftest-fnf-service-up-crihiadr"
+					image    = "127.0.0.1:5000/tftest-service:v2"
+					replicas = 3
+
+					update_config {
+						parallelism       = 1
+						delay             = "1s"
+						failure_action    = "pause"
+						monitor           = "1s"
+						max_failure_ratio = 0.1
+						order             = "start-first"
+					}
+
+					configs = [
+						{
+							config_id   = "${docker_config.service_config.id}"
+							config_name = "${docker_config.service_config.name}"
+							file_name   = "/configs.json"
+						},
+					]
+
+					ports = [
+						{
+							internal = "8080"
+							external = "8081"
+						},
+						{
+							internal = "8080"
+							external = "8082"
+						}
+					] 
+
+					healthcheck {
+						test     = ["CMD", "curl", "-f", "http://localhost:8080/health"]
+						interval = "2s"
+						timeout  = "800ms"
+						retries  = 4
+					}
+
+					destroy_grace_seconds = "10"
+				}
+				`,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-fnf-service-up-crihiadr"),
+					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:5000/tftest-service:v2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "replicas", "3"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "pause"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.monitor", "1s"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.order", "start-first"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.#", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.1648302198.internal", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.1648302198.external", "8081"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.802625553.internal", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.802625553.external", "8082"),
+					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.0", "CMD"),
+					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.1", "curl"),
+					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.2", "-f"),
+					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.3", "http://localhost:8080/health"),
+					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.interval", "2s"),
+					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.timeout", "800ms"),
+					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.retries", "4"),
+				),
+			},
+		},
+	})
+}
+
+// Converging tests
+func TestAccDockerService_fullConverge(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
 		Providers: testAccProviders,
@@ -295,7 +682,7 @@ func TestAccDockerService_full(t *testing.T) {
 	})
 }
 
-func TestAccDockerService_updateFailsAndRollback(t *testing.T) {
+func TestAccDockerService_updateFailsAndRollbackConverge(t *testing.T) {
 	// t.Skip("Skipping: service update failed. Waiting for feedback..")
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
@@ -484,7 +871,7 @@ func TestAccDockerService_updateFailsAndRollback(t *testing.T) {
 	})
 }
 
-func TestAccDockerService_updateNetworks(t *testing.T) {
+func TestAccDockerService_updateNetworksConverge(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
 		Providers: testAccProviders,
@@ -608,7 +995,7 @@ func TestAccDockerService_updateNetworks(t *testing.T) {
 		},
 	})
 }
-func TestAccDockerService_updateMounts(t *testing.T) {
+func TestAccDockerService_updateMountsConverge(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
 		Providers: testAccProviders,
@@ -718,7 +1105,7 @@ func TestAccDockerService_updateMounts(t *testing.T) {
 		},
 	})
 }
-func TestAccDockerService_updateHosts(t *testing.T) {
+func TestAccDockerService_updateHostsConverge(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
 		Providers: testAccProviders,
@@ -820,7 +1207,7 @@ func TestAccDockerService_updateHosts(t *testing.T) {
 		},
 	})
 }
-func TestAccDockerService_updateLogging(t *testing.T) {
+func TestAccDockerService_updateLoggingConverge(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
 		Providers: testAccProviders,
@@ -921,7 +1308,7 @@ func TestAccDockerService_updateLogging(t *testing.T) {
 	})
 }
 
-func TestAccDockerService_updateHealthcheck(t *testing.T) {
+func TestAccDockerService_updateHealthcheckConverge(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
 		Providers: testAccProviders,
@@ -1078,7 +1465,7 @@ func TestAccDockerService_updateHealthcheck(t *testing.T) {
 	})
 }
 
-func TestAccDockerService_updateIncreaseReplicas(t *testing.T) {
+func TestAccDockerService_updateIncreaseReplicasConverge(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
 		Providers: testAccProviders,
@@ -1230,7 +1617,7 @@ func TestAccDockerService_updateIncreaseReplicas(t *testing.T) {
 		},
 	})
 }
-func TestAccDockerService_updateDecreaseReplicas(t *testing.T) {
+func TestAccDockerService_updateDecreaseReplicasConverge(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
 		Providers: testAccProviders,
@@ -1383,7 +1770,7 @@ func TestAccDockerService_updateDecreaseReplicas(t *testing.T) {
 	})
 }
 
-func TestAccDockerService_updateImage(t *testing.T) {
+func TestAccDockerService_updateImageConverge(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
 		Providers: testAccProviders,
@@ -1536,7 +1923,7 @@ func TestAccDockerService_updateImage(t *testing.T) {
 	})
 }
 
-func TestAccDockerService_updateConfig(t *testing.T) {
+func TestAccDockerService_updateConfigConverge(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
 		Providers: testAccProviders,
@@ -1698,7 +2085,7 @@ func TestAccDockerService_updateConfig(t *testing.T) {
 		},
 	})
 }
-func TestAccDockerService_updateConfigAndSecret(t *testing.T) {
+func TestAccDockerService_updateConfigAndSecretConverge(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
 		Providers: testAccProviders,
@@ -1900,7 +2287,7 @@ func TestAccDockerService_updateConfigAndSecret(t *testing.T) {
 		},
 	})
 }
-func TestAccDockerService_updatePort(t *testing.T) {
+func TestAccDockerService_updatePortConverge(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
 		Providers: testAccProviders,
@@ -2060,7 +2447,7 @@ func TestAccDockerService_updatePort(t *testing.T) {
 		},
 	})
 }
-func TestAccDockerService_updateConfigReplicasImageAndHealth(t *testing.T) {
+func TestAccDockerService_updateConfigReplicasImageAndHealthConverge(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
 		Providers: testAccProviders,
@@ -2230,7 +2617,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealth(t *testing.T) {
 		},
 	})
 }
-func TestAccDockerService_updateConfigAndDecreaseReplicas(t *testing.T) {
+func TestAccDockerService_updateConfigAndDecreaseReplicasConverge(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
 		Providers: testAccProviders,
@@ -2392,7 +2779,7 @@ func TestAccDockerService_updateConfigAndDecreaseReplicas(t *testing.T) {
 		},
 	})
 }
-func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseReplicas(t *testing.T) {
+func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseReplicasConverge(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
 		Providers: testAccProviders,
@@ -2648,7 +3035,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 	})
 }
 
-func TestAccDockerService_private(t *testing.T) {
+func TestAccDockerService_privateConverge(t *testing.T) {
 	registry := os.Getenv("DOCKER_REGISTRY_ADDRESS")
 	image := os.Getenv("DOCKER_PRIVATE_IMAGE")
 
