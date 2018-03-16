@@ -83,6 +83,7 @@ The following arguments are supported:
   container is.
 * `destroy_grace_seconds` - (Optional, int) If defined will attempt to stop the container before destroying. Container will be destroyed after `n` seconds or on successful stop.
 * `upload` - (Optional, block) See [File Upload](#upload) below for details.
+* `userns` - (Optional, string) The usernamespace to use for the container.
 
 <a id="capabilities"></a>
 ### Capabilities
