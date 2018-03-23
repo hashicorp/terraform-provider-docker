@@ -2,6 +2,7 @@ package docker
 
 import (
 	"encoding/base64"
+	"log"
 
 	"github.com/docker/docker/api/types/swarm"
 	dc "github.com/fsouza/go-dockerclient"
@@ -68,10 +69,15 @@ func resourceDockerSecretRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*ProviderConfig).DockerClient
 	secret, err := client.InspectSecret(d.Id())
 
-	if err != nil || secret == nil {
-		d.SetId("")
+	if err != nil {
+		if _, ok := err.(*dc.NoSuchSecret); ok {
+			log.Printf("[WARN] Secret (%s) not found, removing from state", d.Id())
+			d.SetId("")
+			return nil
+		}
+		return err
 	}
-
+	d.SetId(secret.ID)
 	return nil
 }
 

@@ -10,7 +10,6 @@ import (
 
 func TestAccDockerSecret_basicNotUpdateable(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		// swarm will be initialized in 'testAccPreCheck' if necessary
 		PreCheck:     func() { testAccPreCheck(t) },
 		Providers:    testAccProviders,
 		CheckDestroy: testCheckDockerSecretDestroy,
@@ -33,7 +32,6 @@ func TestAccDockerSecret_basicNotUpdateable(t *testing.T) {
 }
 func TestAccDockerSecret_basicUpdateable(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		// swarm will be initialized in 'testAccPreCheck' if necessary
 		PreCheck:     func() { testAccPreCheck(t) },
 		Providers:    testAccProviders,
 		CheckDestroy: testCheckDockerSecretShouldStillExist,
