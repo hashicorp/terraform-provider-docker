@@ -30,7 +30,7 @@ func resourceDockerConfig() *schema.Resource {
 				ValidateFunc: validateStringIsBase64Encoded(),
 			},
 			// Workaround until https://github.com/moby/moby/issues/35803 is fixed
-			"updateable": &schema.Schema{
+			"updatable": &schema.Schema{
 				Type:     schema.TypeBool,
 				Optional: true,
 				ForceNew: true,
@@ -99,8 +99,8 @@ func resourceDockerConfigUpdate(d *schema.ResourceData, meta interface{}) error 
 func resourceDockerConfigDelete(d *schema.ResourceData, meta interface{}) error {
 	// HACK configs simply cannot be deleted to have an update mechanism
 	// Wait for https://github.com/moby/moby/issues/35803
-	isUpdateable := d.Get("updateable").(bool)
-	if !isUpdateable {
+	isUpdatable := d.Get("updatable").(bool)
+	if !isUpdatable {
 		client := meta.(*ProviderConfig).DockerClient
 		err := client.RemoveConfig(dc.RemoveConfigOptions{
 			ID: d.Id(),

@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/terraform/terraform"
 )
 
-func TestAccDockerSecret_basicNotUpdateable(t *testing.T) {
+func TestAccDockerSecret_basicNotUpdatable(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
 		Providers:    testAccProviders,
@@ -23,14 +23,14 @@ func TestAccDockerSecret_basicNotUpdateable(t *testing.T) {
 				`,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("docker_secret.foo", "name", "foo-secret"),
-					resource.TestCheckResourceAttr("docker_secret.foo", "updateable", "false"),
+					resource.TestCheckResourceAttr("docker_secret.foo", "updatable", "false"),
 					resource.TestCheckResourceAttr("docker_secret.foo", "data", "Ymxhc2RzYmxhYmxhMTI0ZHNkd2VzZA=="),
 				),
 			},
 		},
 	})
 }
-func TestAccDockerSecret_basicUpdateable(t *testing.T) {
+func TestAccDockerSecret_basicUpdateble(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
 		Providers:    testAccProviders,
@@ -41,7 +41,7 @@ func TestAccDockerSecret_basicUpdateable(t *testing.T) {
 				resource "docker_secret" "foo" {
 					name 			 = "tftest-mysecret-${replace(timestamp(),":", ".")}"
 					data 			 = "Ymxhc2RzYmxhYmxhMTI0ZHNkd2VzZA=="
-					updateable = true
+					updatable = true
 
 					lifecycle {
 						ignore_changes = ["name"]
@@ -50,7 +50,7 @@ func TestAccDockerSecret_basicUpdateable(t *testing.T) {
 				`,
 				Check: resource.ComposeTestCheckFunc(
 					// resource.TestCheckResourceAttr("docker_secret.foo", "name", "foo"),
-					resource.TestCheckResourceAttr("docker_secret.foo", "updateable", "true"),
+					resource.TestCheckResourceAttr("docker_secret.foo", "updatable", "true"),
 					resource.TestCheckResourceAttr("docker_secret.foo", "data", "Ymxhc2RzYmxhYmxhMTI0ZHNkd2VzZA=="),
 				),
 			},

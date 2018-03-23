@@ -250,7 +250,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 				resource "docker_config" "service_config" {
 					name 			 = "tftests-myconfig-${uuid()}"
 					data 			 = "ewogICJwcmVmaXgiOiAiMTIzIgp9"
-					updateable = true
+					updatable = true
 
 					lifecycle {
 						ignore_changes = ["name"]
@@ -322,7 +322,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 				resource "docker_config" "service_config" {
 					name 			 = "tftest-myconfig-${uuid()}"
 					data 			 = "ewogICJwcmVmaXgiOiAiNTY3Igp9" # UPDATED to prefix: 567
-					updateable = true
+					updatable = true
 
 					lifecycle {
 						ignore_changes = ["name"]
@@ -402,7 +402,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 				resource "docker_config" "service_config" {
 					name 			 = "tftest-myconfig-${uuid()}"
 					data 			 = "ewogICJwcmVmaXgiOiAiNTY3Igp9"
-					updateable = true
+					updatable = true
 
 					lifecycle {
 						ignore_changes = ["name"]
@@ -1989,7 +1989,7 @@ func TestAccDockerService_updateConfigConverge(t *testing.T) {
 				resource "docker_config" "service_config" {
 					name 			 = "tftest-myconfig-${uuid()}"
 					data 			 = "ewogICJwcmVmaXgiOiAiMTIzIgp9"
-					updateable = true
+					updatable = true
 
 					lifecycle {
 						ignore_changes = ["name"]
@@ -2066,7 +2066,7 @@ func TestAccDockerService_updateConfigConverge(t *testing.T) {
 				resource "docker_config" "service_config" {
 					name 			 = "tftest-myconfig-${uuid()}"
 					data 			 = "ewogICJwcmVmaXgiOiAiNTY3Igp9" # UPDATED to prefix: 567
-					updateable = true
+					updatable = true
 
 					lifecycle {
 						ignore_changes = ["name"]
@@ -2151,7 +2151,7 @@ func TestAccDockerService_updateConfigAndSecretConverge(t *testing.T) {
 				resource "docker_config" "service_config" {
 					name 			 = "tftest-myconfig-${uuid()}"
 					data 			 = "ewogICJwcmVmaXgiOiAiMTIzIgp9"
-					updateable = true
+					updatable = true
 
 					lifecycle {
 						ignore_changes = ["name"]
@@ -2161,7 +2161,7 @@ func TestAccDockerService_updateConfigAndSecretConverge(t *testing.T) {
 				resource "docker_secret" "service_secret" {
 					name 			 = "tftest-tftest-mysecret-${replace(timestamp(),":", ".")}"
 					data 			 = "ewogICJrZXkiOiAiUVdFUlRZIgp9"
-					updateable = true
+					updatable = true
 
 					lifecycle {
 						ignore_changes = ["name"]
@@ -2248,7 +2248,7 @@ func TestAccDockerService_updateConfigAndSecretConverge(t *testing.T) {
 				resource "docker_config" "service_config" {
 					name       = "tftest-myconfig-${uuid()}"
 					data       = "ewogICJwcmVmaXgiOiAiNTY3Igp9" # UPDATED to prefix: 567
-					updateable = true
+					updatable = true
 
 					lifecycle {
 						ignore_changes = ["name"]
@@ -2258,7 +2258,7 @@ func TestAccDockerService_updateConfigAndSecretConverge(t *testing.T) {
 				resource "docker_secret" "service_secret" {
 					name       = "tftest-tftest-mysecret-${replace(timestamp(),":", ".")}"
 					data       = "ewogICJrZXkiOiAiUVdFUlRZIgp9" # UPDATED to YXCVB
-					updateable = true
+					updatable = true
 
 					lifecycle {
 						ignore_changes = ["name"]
@@ -2513,7 +2513,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthConverge(t *testing.
 				resource "docker_config" "service_config" {
 					name 			 = "tftest-myconfig-${uuid()}"
 					data 			 = "ewogICJwcmVmaXgiOiAiMTIzIgp9"
-					updateable = true
+					updatable = true
 
 					lifecycle {
 						ignore_changes = ["name"]
@@ -2590,7 +2590,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthConverge(t *testing.
 				resource "docker_config" "service_config" {
 					name 			 = "tftest-myconfig-${uuid()}"
 					data 			 = "ewogICJwcmVmaXgiOiAiNTY3Igp9" # UPDATED to prefix: 567
-					updateable = true
+					updatable = true
 
 					lifecycle {
 						ignore_changes = ["name"]
@@ -2683,7 +2683,7 @@ func TestAccDockerService_updateConfigAndDecreaseReplicasConverge(t *testing.T) 
 				resource "docker_config" "service_config" {
 					name 			 = "tftest-myconfig-${uuid()}"
 					data 			 = "ewogICJwcmVmaXgiOiAiMTIzIgp9"
-					updateable = true
+					updatable = true
 
 					lifecycle {
 						ignore_changes = ["name"]
@@ -2760,7 +2760,7 @@ func TestAccDockerService_updateConfigAndDecreaseReplicasConverge(t *testing.T) 
 				resource "docker_config" "service_config" {
 					name 			 = "tftest-myconfig-${uuid()}"
 					data 			 = "ewogICJwcmVmaXgiOiAiNTY3Igp9" # UPDATED to prefix: 567
-					updateable = true
+					updatable = true
 
 					lifecycle {
 						ignore_changes = ["name"]
@@ -2845,7 +2845,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 				resource "docker_config" "service_config" {
 					name 			 = "tftest-myconfig-${uuid()}"
 					data 			 = "ewogICJwcmVmaXgiOiAiMTIzIgp9"
-					updateable = true
+					updatable = true
 
 					lifecycle {
 						ignore_changes = ["name"]
@@ -2922,7 +2922,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 				resource "docker_config" "service_config" {
 					name 			 = "tftest-myconfig-${uuid()}"
 					data 			 = "ewogICJwcmVmaXgiOiAiNTY3Igp9" # UPDATED to prefix: 567
-					updateable = true
+					updatable = true
 
 					lifecycle {
 						ignore_changes = ["name"]
@@ -3007,7 +3007,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 				resource "docker_config" "service_config" {
 					name 			 = "tftest-myconfig-${uuid()}"
 					data 			 = "ewogICJwcmVmaXgiOiAiNTY3Igp9"
-					updateable = true
+					updatable = true
 
 					lifecycle {
 						ignore_changes = ["name"]

@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/terraform/terraform"
 )
 
-func TestAccDockerConfig_basicNotUpdateable(t *testing.T) {
+func TestAccDockerConfig_basicNotUpdatable(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
 		Providers:    testAccProviders,
@@ -23,14 +23,14 @@ func TestAccDockerConfig_basicNotUpdateable(t *testing.T) {
 				`,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("docker_config.foo", "name", "foo-config"),
-					resource.TestCheckResourceAttr("docker_config.foo", "updateable", "false"),
+					resource.TestCheckResourceAttr("docker_config.foo", "updatable", "false"),
 					resource.TestCheckResourceAttr("docker_config.foo", "data", "Ymxhc2RzYmxhYmxhMTI0ZHNkd2VzZA=="),
 				),
 			},
 		},
 	})
 }
-func TestAccDockerConfig_basicUpdateable(t *testing.T) {
+func TestAccDockerConfig_basicUpdatable(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
 		Providers:    testAccProviders,
@@ -41,7 +41,7 @@ func TestAccDockerConfig_basicUpdateable(t *testing.T) {
 				resource "docker_config" "foo" {
 					name 			 = "tftest-myconfig-${replace(timestamp(),":", ".")}"
 					data 			 = "Ymxhc2RzYmxhYmxhMTI0ZHNkd2VzZA=="
-					updateable = true
+					updatable = true
 
 					lifecycle {
 						ignore_changes = ["name"]
@@ -50,7 +50,7 @@ func TestAccDockerConfig_basicUpdateable(t *testing.T) {
 				`,
 				Check: resource.ComposeTestCheckFunc(
 					// resource.TestCheckResourceAttr("docker_config.foo", "name", "foo"),
-					resource.TestCheckResourceAttr("docker_config.foo", "updateable", "true"),
+					resource.TestCheckResourceAttr("docker_config.foo", "updatable", "true"),
 					resource.TestCheckResourceAttr("docker_config.foo", "data", "Ymxhc2RzYmxhYmxhMTI0ZHNkd2VzZA=="),
 				),
 			},

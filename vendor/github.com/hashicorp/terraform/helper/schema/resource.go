@@ -364,14 +364,14 @@ func (r *Resource) InternalValidate(topSchemaMap schemaMap, writable bool) error
 					"No Update defined, must set ForceNew on: %#v", nonForceNewAttrs)
 			}
 		} else {
-			nonUpdateableAttrs := make([]string, 0)
+			nonUpdatableAttrs := make([]string, 0)
 			for k, v := range r.Schema {
 				if v.ForceNew || v.Computed && !v.Optional {
-					nonUpdateableAttrs = append(nonUpdateableAttrs, k)
+					nonUpdatableAttrs = append(nonUpdatableAttrs, k)
 				}
 			}
-			updateableAttrs := len(r.Schema) - len(nonUpdateableAttrs)
-			if updateableAttrs == 0 {
+			updatableAttrs := len(r.Schema) - len(nonUpdatableAttrs)
+			if updatableAttrs == 0 {
 				return fmt.Errorf(
 					"All fields are ForceNew or Computed w/out Optional, Update is superfluous")
 			}

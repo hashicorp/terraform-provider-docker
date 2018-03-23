@@ -31,7 +31,7 @@ func resourceDockerSecret() *schema.Resource {
 			},
 
 			// Workaround until https://github.com/moby/moby/issues/35803 is fixed
-			"updateable": &schema.Schema{
+			"updatable": &schema.Schema{
 				Type:     schema.TypeBool,
 				Optional: true,
 				ForceNew: true,
@@ -102,8 +102,8 @@ func resourceDockerSecretUpdate(d *schema.ResourceData, meta interface{}) error 
 func resourceDockerSecretDelete(d *schema.ResourceData, meta interface{}) error {
 	// HACK configs simply cannot be deleted to have an update mechanism
 	// Wait for https://github.com/moby/moby/issues/35803
-	isUpdateable := d.Get("updateable").(bool)
-	if !isUpdateable {
+	isUpdatable := d.Get("updatable").(bool)
+	if !isUpdatable {
 		client := meta.(*ProviderConfig).DockerClient
 		err := client.RemoveSecret(dc.RemoveSecretOptions{
 			ID: d.Id(),
