@@ -59,7 +59,7 @@ func resourceDockerConfigCreate(d *schema.ResourceData, meta interface{}) error 
 	}
 	d.SetId(config.ID)
 
-	return nil
+	return resourceDockerConfigRead(d, meta)
 }
 
 func resourceDockerConfigRead(d *schema.ResourceData, meta interface{}) error {

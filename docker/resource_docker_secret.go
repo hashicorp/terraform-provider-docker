@@ -62,7 +62,7 @@ func resourceDockerSecretCreate(d *schema.ResourceData, meta interface{}) error 
 
 	d.SetId(secret.ID)
 
-	return nil
+	return resourceDockerSecretRead(d, meta)
 }
 
 func resourceDockerSecretRead(d *schema.ResourceData, meta interface{}) error {
