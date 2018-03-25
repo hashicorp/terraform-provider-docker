@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/terraform/terraform"
 )
 
-func TestAccDockerConfig_basicNotUpdatable(t *testing.T) {
+func TestAccDockerConfig_basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
 		Providers:    testAccProviders,
@@ -23,7 +23,6 @@ func TestAccDockerConfig_basicNotUpdatable(t *testing.T) {
 				`,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("docker_config.foo", "name", "foo-config"),
-					resource.TestCheckResourceAttr("docker_config.foo", "updatable", "false"),
 					resource.TestCheckResourceAttr("docker_config.foo", "data", "Ymxhc2RzYmxhYmxhMTI0ZHNkd2VzZA=="),
 				),
 			},
@@ -34,24 +33,38 @@ func TestAccDockerConfig_basicUpdatable(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
 		Providers:    testAccProviders,
-		CheckDestroy: testCheckDockerConfigShouldStillExist,
+		CheckDestroy: testCheckDockerConfigDestroy,
 		Steps: []resource.TestStep{
 			resource.TestStep{
 				Config: `
 				resource "docker_config" "foo" {
 					name 			 = "tftest-myconfig-${replace(timestamp(),":", ".")}"
 					data 			 = "Ymxhc2RzYmxhYmxhMTI0ZHNkd2VzZA=="
-					updatable = true
 
 					lifecycle {
 						ignore_changes = ["name"]
+						create_before_destroy = true
 					}
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
-					// resource.TestCheckResourceAttr("docker_config.foo", "name", "foo"),
-					resource.TestCheckResourceAttr("docker_config.foo", "updatable", "true"),
 					resource.TestCheckResourceAttr("docker_config.foo", "data", "Ymxhc2RzYmxhYmxhMTI0ZHNkd2VzZA=="),
+				),
+			},
+			resource.TestStep{
+				Config: `
+				resource "docker_config" "foo" {
+					name 			 = "tftest-myconfig2-${replace(timestamp(),":", ".")}"
+					data 			 = "U3VuIDI1IE1hciAyMDE4IDE0OjQ2OjE5IENFU1QK"
+
+					lifecycle {
+						ignore_changes = ["name"]
+						create_before_destroy = true
+					}
+				}
+				`,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("docker_config.foo", "data", "U3VuIDI1IE1hciAyMDE4IDE0OjQ2OjE5IENFU1QK"),
 				),
 			},
 		},
@@ -73,24 +86,6 @@ func testCheckDockerConfigDestroy(s *terraform.State) error {
 
 		if err == nil || config != nil {
 			return fmt.Errorf("Config with id '%s' still exists", id)
-		}
-		return nil
-	}
-	return nil
-}
-
-func testCheckDockerConfigShouldStillExist(s *terraform.State) error {
-	client := testAccProvider.Meta().(*ProviderConfig).DockerClient
-	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "configs" {
-			continue
-		}
-
-		id := rs.Primary.Attributes["id"]
-		config, err := client.InspectConfig(id)
-
-		if err != nil || config == nil {
-			return fmt.Errorf("Config with id '%s' is destroyed but it should exist", id)
 		}
 		return nil
 	}

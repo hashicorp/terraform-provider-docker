@@ -13,13 +13,13 @@ func resourceDockerConfig() *schema.Resource {
 	return &schema.Resource{
 		Create: resourceDockerConfigCreate,
 		Read:   resourceDockerConfigRead,
-		Update: resourceDockerConfigUpdate,
 		Delete: resourceDockerConfigDelete,
 
 		Schema: map[string]*schema.Schema{
 			"name": &schema.Schema{
 				Type:     schema.TypeString,
 				Required: true,
+				ForceNew: true,
 			},
 
 			"data": &schema.Schema{
@@ -28,13 +28,6 @@ func resourceDockerConfig() *schema.Resource {
 				Sensitive:    true,
 				ForceNew:     true,
 				ValidateFunc: validateStringIsBase64Encoded(),
-			},
-			// Workaround until https://github.com/moby/moby/issues/35803 is fixed
-			"updatable": &schema.Schema{
-				Type:     schema.TypeBool,
-				Optional: true,
-				ForceNew: true,
-				Default:  false,
 			},
 		},
 	}
@@ -78,36 +71,13 @@ func resourceDockerConfigRead(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func resourceDockerConfigUpdate(d *schema.ResourceData, meta interface{}) error {
-	// NOTE: atm only the labels of a config can be updated. not the data
-	// Wait for https://github.com/moby/moby/issues/35803
+func resourceDockerConfigDelete(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*ProviderConfig).DockerClient
-	data, _ := base64.StdEncoding.DecodeString(d.Get("data").(string))
-
-	err := client.UpdateConfig(d.Id(), dc.UpdateConfigOptions{
-		ConfigSpec: swarm.ConfigSpec{
-			Data: data,
-		},
+	err := client.RemoveConfig(dc.RemoveConfigOptions{
+		ID: d.Id(),
 	})
 	if err != nil {
 		return err
-	}
-
-	return nil
-}
-
-func resourceDockerConfigDelete(d *schema.ResourceData, meta interface{}) error {
-	// HACK configs simply cannot be deleted to have an update mechanism
-	// Wait for https://github.com/moby/moby/issues/35803
-	isUpdatable := d.Get("updatable").(bool)
-	if !isUpdatable {
-		client := meta.(*ProviderConfig).DockerClient
-		err := client.RemoveConfig(dc.RemoveConfigOptions{
-			ID: d.Id(),
-		})
-		if err != nil {
-			return err
-		}
 	}
 
 	d.SetId("")

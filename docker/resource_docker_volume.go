@@ -95,6 +95,7 @@ func resourceDockerVolumeRead(d *schema.ResourceData, meta interface{}) error {
 func resourceDockerVolumeDelete(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*ProviderConfig).DockerClient
 
+	// TODO catch error if removal is already in progress
 	if err := client.RemoveVolume(d.Id()); err != nil && err != dc.ErrNoSuchVolume {
 		if err == dc.ErrVolumeInUse {
 			loops := 20

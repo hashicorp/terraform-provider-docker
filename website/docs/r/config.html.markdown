@@ -58,10 +58,9 @@ resource "docker_config" "foo_config" {
 ```
 
 #### Update config with no downtime
-This example shows how a config can be updated and the service has not to be shutdown.
-Each config gets a unique timestamp. The drawback is that for every update a new config will be created. This is because at the moment
-it is not possible to update the data for a config (or secret). The issue [moby-35803](https://github.com/moby/moby/issues/35803)
-will solve this in the future.
+In order to update a `config`, Terraform will destroy the existing resource and create areplacement. In order to effectively use a `docker_config` resource with a `docker_service` resource, it's recommended to specify `create_before_destroy` in a `lifecycle` block. Provide a uniqie `name` attribute, for example
+with one of the interpolation functions `uuid` or `timestamp` as shown
+in the example below. The reason is [moby-35803](https://github.com/moby/moby/issues/35803).
 
 ```hcl
 resource "docker_config" "service_config" {
@@ -70,6 +69,7 @@ resource "docker_config" "service_config" {
 
   lifecycle {
     ignore_changes = ["name"]
+    create_before_destroy = true
   }
 }
 resource "docker_service" "service" {

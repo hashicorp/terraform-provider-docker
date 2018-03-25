@@ -13,13 +13,13 @@ func resourceDockerSecret() *schema.Resource {
 	return &schema.Resource{
 		Create: resourceDockerSecretCreate,
 		Read:   resourceDockerSecretRead,
-		Update: resourceDockerSecretUpdate,
 		Delete: resourceDockerSecretDelete,
 
 		Schema: map[string]*schema.Schema{
 			"name": &schema.Schema{
 				Type:     schema.TypeString,
 				Required: true,
+				ForceNew: true,
 			},
 
 			"data": &schema.Schema{
@@ -29,21 +29,12 @@ func resourceDockerSecret() *schema.Resource {
 				ForceNew:     true,
 				ValidateFunc: validateStringIsBase64Encoded(),
 			},
-
-			// Workaround until https://github.com/moby/moby/issues/35803 is fixed
-			"updatable": &schema.Schema{
-				Type:     schema.TypeBool,
-				Optional: true,
-				ForceNew: true,
-				Default:  false,
-			},
 		},
 	}
 }
 
 func resourceDockerSecretCreate(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*ProviderConfig).DockerClient
-	// is validated on resource creation
 	data, _ := base64.StdEncoding.DecodeString(d.Get("data").(string))
 
 	createSecretOpts := dc.CreateSecretOptions{
@@ -81,37 +72,14 @@ func resourceDockerSecretRead(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func resourceDockerSecretUpdate(d *schema.ResourceData, meta interface{}) error {
-	// NOTE: atm only the labels of a config can be updated. not the data
-	// Wait for https://github.com/moby/moby/issues/35803
+func resourceDockerSecretDelete(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*ProviderConfig).DockerClient
-	data, err := base64.StdEncoding.DecodeString(d.Get("data").(string))
-
-	err = client.UpdateSecret(d.Id(), dc.UpdateSecretOptions{
-		SecretSpec: swarm.SecretSpec{
-			Data: data,
-		},
+	err := client.RemoveSecret(dc.RemoveSecretOptions{
+		ID: d.Id(),
 	})
+
 	if err != nil {
 		return err
-	}
-
-	return nil
-}
-
-func resourceDockerSecretDelete(d *schema.ResourceData, meta interface{}) error {
-	// HACK configs simply cannot be deleted to have an update mechanism
-	// Wait for https://github.com/moby/moby/issues/35803
-	isUpdatable := d.Get("updatable").(bool)
-	if !isUpdatable {
-		client := meta.(*ProviderConfig).DockerClient
-		err := client.RemoveSecret(dc.RemoveSecretOptions{
-			ID: d.Id(),
-		})
-
-		if err != nil {
-			return err
-		}
 	}
 
 	d.SetId("")
