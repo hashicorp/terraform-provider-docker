@@ -101,6 +101,7 @@ func resourceDockerServiceCreate(d *schema.ResourceData, meta interface{}) error
 		convergeConfig := createConvergeConfig(v.([]interface{}))
 		if err := waitOnService(context.Background(), client, convergeConfig, service.ID); err != nil {
 			if _, ok := err.(*DidNotConvergeError); ok {
+				log.Printf("[INFO] service (%s) did not converge on create", d.Id())
 				if err := deleteService(service.ID, d, client); err != nil {
 					return err
 				}
@@ -177,7 +178,9 @@ func resourceDockerServiceUpdate(d *schema.ResourceData, meta interface{}) error
 	if v, ok := d.GetOk("converge_config"); ok {
 		convergeConfig := createConvergeConfig(v.([]interface{}))
 		if err := waitOnService(context.Background(), client, convergeConfig, service.ID); err != nil {
-			log.Printf("[INFO] error on update --> %v", err)
+			if _, ok := err.(*DidNotConvergeError); ok {
+				log.Printf("[INFO] service (%s) did not converge on update", d.Id())
+			}
 			return err
 		}
 	}
