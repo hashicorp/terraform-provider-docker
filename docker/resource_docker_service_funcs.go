@@ -100,10 +100,11 @@ func resourceDockerServiceCreate(d *schema.ResourceData, meta interface{}) error
 	if v, ok := d.GetOk("converge_config"); ok {
 		convergeConfig := createConvergeConfig(v.([]interface{}))
 		if err := waitOnService(context.Background(), client, convergeConfig, service.ID); err != nil {
-			if err := deleteService(service.ID, d, client); err != nil {
-				return err
+			if _, ok := err.(*DidNotConvergeError); ok {
+				if err := deleteService(service.ID, d, client); err != nil {
+					return err
+				}
 			}
-			return err
 		}
 	}
 
@@ -243,6 +244,11 @@ func deleteService(serviceID string, d *schema.ResourceData, client *dc.Client) 
 	}
 
 	if err := client.RemoveService(removeOpts); err != nil {
+		if _, ok := err.(*dc.NoSuchService); ok {
+			log.Printf("[WARN] Service (%s) not found, removing from state", d.Id())
+			d.SetId("")
+			return nil
+		}
 		return fmt.Errorf("Error deleting service %s: %s", serviceID, err)
 	}
 
@@ -276,6 +282,21 @@ func deleteService(serviceID string, d *schema.ResourceData, client *dc.Client) 
 }
 
 //////// Convergers
+// DidNotConvergeError is the error returned when a the service does not converge in
+// the defined time
+type DidNotConvergeError struct {
+	ServiceID string
+	Timeout   time.Duration
+	Err       error
+}
+
+func (err *DidNotConvergeError) Error() string {
+	if err.Err != nil {
+		return err.Err.Error()
+	}
+	return "Service with ID (" + err.ServiceID + ") did not converge after " + err.Timeout.String()
+}
+
 func waitOnService(ctx context.Context, client *dc.Client, plainConvergeConfig *convergeConfig, serviceID string) error {
 	filter := make(map[string][]string)
 	filter["service"] = []string{serviceID}
@@ -376,7 +397,7 @@ func waitOnService(ctx context.Context, client *dc.Client, plainConvergeConfig *
 		case <-time.After(plainConvergeConfig.interval):
 		case <-timeout:
 			if !converged {
-				return fmt.Errorf("Converging timed out after %v", plainConvergeConfig.timeout)
+				return &DidNotConvergeError{ServiceID: serviceID, Timeout: plainConvergeConfig.timeout}
 			}
 			return nil
 		}
