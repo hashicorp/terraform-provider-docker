@@ -304,6 +304,11 @@ func resourceDockerContainerRead(d *schema.ResourceData, meta interface{}) error
 		d.Set("ip_prefix_length", container.NetworkSettings.IPPrefixLen)
 		d.Set("gateway", container.NetworkSettings.Gateway)
 		d.Set("bridge", container.NetworkSettings.Bridge)
+		ips := make(map[string]string, len(container.NetworkSettings.Networks))
+		for name, net := range container.NetworkSettings.Networks {
+			ips[name] = net.IPAddress
+		}
+		d.Set(fmt.Sprintf("ip_addresses"), ips)
 	}
 
 	return nil

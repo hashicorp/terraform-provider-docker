@@ -271,6 +271,11 @@ func resourceDockerContainer() *schema.Resource {
 				Computed: true,
 			},
 
+			"ip_addresses": &schema.Schema{
+				Type:     schema.TypeMap,
+				Computed: true,
+			},
+
 			"ip_prefix_length": &schema.Schema{
 				Type:     schema.TypeInt,
 				Computed: true,
