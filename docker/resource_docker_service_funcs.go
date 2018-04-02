@@ -13,6 +13,7 @@ import (
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/swarm"
 	dc "github.com/fsouza/go-dockerclient"
+	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/helper/schema"
 )
 
@@ -40,9 +41,10 @@ var (
 )
 
 type convergeConfig struct {
-	interval time.Duration
-	monitor  time.Duration
-	timeout  time.Duration
+	interval   time.Duration
+	monitor    time.Duration
+	timeout    time.Duration
+	timeoutRaw string
 }
 
 /////////////////
@@ -98,15 +100,31 @@ func resourceDockerServiceCreate(d *schema.ResourceData, meta interface{}) error
 	}
 
 	if v, ok := d.GetOk("converge_config"); ok {
+		log.Printf("Waiting for Service '%s' to be created...", service.ID)
 		convergeConfig := createConvergeConfig(v.([]interface{}))
-		if err := waitOnService(context.Background(), client, convergeConfig, service.ID); err != nil {
-			if _, ok := err.(*DidNotConvergeError); ok {
-				log.Printf("[INFO] service (%s) did not converge on create", d.Id())
-				if err := deleteService(service.ID, d, client); err != nil {
-					return err
-				}
-			}
+
+		stateConf := &resource.StateChangeConf{
+			Pending:    resourceDockerServiceCreatePendingStates,
+			Target:     []string{"running"}, //TODO
+			Refresh:    resourceDockerServiceCreateRefreshFunc(d, meta),
+			Timeout:    d.Timeout(convergeConfig.timeoutRaw),
+			MinTimeout: 5 * time.Second,
+			Delay:      7 * time.Second,
 		}
+
+		// Wait, catching any errors
+		_, err := stateConf.WaitForState()
+		if err != nil {
+			return err
+		}
+
+		// if err := waitOnService(context.Background(), client, convergeConfig, service.ID); err != nil {
+		// 	if _, ok := err.(*DidNotConvergeError); ok {
+		// log.Printf("[INFO] service (%s) did not converge on create", d.Id())
+		// if err := deleteService(service.ID, d, client); err != nil {
+		// 	return err
+		// }}
+		// }
 	}
 
 	d.SetId(service.ID)
@@ -177,12 +195,27 @@ func resourceDockerServiceUpdate(d *schema.ResourceData, meta interface{}) error
 
 	if v, ok := d.GetOk("converge_config"); ok {
 		convergeConfig := createConvergeConfig(v.([]interface{}))
-		if err := waitOnService(context.Background(), client, convergeConfig, service.ID); err != nil {
-			if _, ok := err.(*DidNotConvergeError); ok {
-				log.Printf("[INFO] service (%s) did not converge on update", d.Id())
-			}
+
+		stateConf := &resource.StateChangeConf{
+			Pending:    resourceDockerServiceCreatePendingStates,
+			Target:     []string{"completed", "rollback_completed"}, //TODO
+			Refresh:    resourceDockerServiceCreateRefreshFunc(d, meta),
+			Timeout:    d.Timeout(convergeConfig.timeoutRaw),
+			MinTimeout: 5 * time.Second,
+			Delay:      7 * time.Second,
+		}
+
+		// Wait, catching any errors
+		_, err := stateConf.WaitForState()
+		if err != nil {
 			return err
 		}
+		// if err := waitOnService(context.Background(), client, convergeConfig, service.ID); err != nil {
+		// 	if _, ok := err.(*DidNotConvergeError); ok {
+		// 		log.Printf("[INFO] service (%s) did not converge on update", d.Id())
+		// 	}
+		// 	return err
+		// }
 	}
 
 	return resourceDockerServiceRead(d, meta)
@@ -285,6 +318,7 @@ func deleteService(serviceID string, d *schema.ResourceData, client *dc.Client) 
 }
 
 //////// Convergers
+
 // DidNotConvergeError is the error returned when a the service does not converge in
 // the defined time
 type DidNotConvergeError struct {
@@ -298,6 +332,67 @@ func (err *DidNotConvergeError) Error() string {
 		return err.Err.Error()
 	}
 	return "Service with ID (" + err.ServiceID + ") did not converge after " + err.Timeout.String()
+}
+
+func resourceDockerServiceCreateRefreshFunc(
+	d *schema.ResourceData, meta interface{}) resource.StateRefreshFunc {
+	return func() (interface{}, string, error) {
+		client := meta.(*ProviderConfig).DockerClient
+		serviceID := d.Id()
+		ctx := context.Background()
+
+		var updater progressUpdater
+
+		filter := make(map[string][]string)
+		filter["service"] = []string{serviceID}
+		filter["desired-state"] = []string{"running"}
+
+		getUpToDateTasks := func() ([]swarm.Task, error) {
+			return client.ListTasks(dc.ListTasksOptions{
+				Filters: filter,
+				Context: ctx,
+			})
+		}
+		var service *swarm.Service
+		service, err := client.InspectService(serviceID)
+		if err != nil {
+			return nil, "", err
+		}
+
+		if service.UpdateStatus != nil {
+			switch service.UpdateStatus.State {
+			// case swarm.UpdateStateUpdating:
+			// case swarm.UpdateStateCompleted:
+			// case swarm.UpdateStateRollbackStarted:
+			// case swarm.UpdateStateRollbackCompleted:
+			case swarm.UpdateStatePaused:
+				return nil, "", fmt.Errorf("service update paused: %s", service.UpdateStatus.Message)
+			case swarm.UpdateStateRollbackPaused:
+				return nil, "", fmt.Errorf("service rollback paused: %s", service.UpdateStatus.Message)
+			}
+		} else {
+			return nil, "unknown", nil
+		}
+
+		tasks, err := getUpToDateTasks()
+		if err != nil {
+			return nil, "", err
+		}
+
+		activeNodes, err := getActiveNodes(ctx, client)
+		if err != nil {
+			return nil, "", err
+
+		}
+
+		_, err = updater.update(service, tasks, activeNodes, false)
+		if err != nil {
+			return nil, "", err
+		}
+
+		log.Printf(">> service refresh func state: %v", service.UpdateStatus.Message)
+		return service.ID, service.UpdateStatus.Message, nil
+	}
 }
 
 func waitOnService(ctx context.Context, client *dc.Client, plainConvergeConfig *convergeConfig, serviceID string) error {
@@ -387,12 +482,7 @@ func waitOnService(ctx context.Context, client *dc.Client, plainConvergeConfig *
 				convergedAt = time.Now()
 				log.Printf("[INFO] converged at %v", convergedAt)
 			}
-			// wait := monitor - time.Since(convergedAt)
-			// if wait >= 0 {
-			// }
 		} else {
-			// if !convergedAt.IsZero() {
-			// }
 			convergedAt = time.Time{}
 		}
 
@@ -408,7 +498,6 @@ func waitOnService(ctx context.Context, client *dc.Client, plainConvergeConfig *
 }
 
 func getActiveNodes(ctx context.Context, client *dc.Client) (map[string]struct{}, error) {
-	// nodes, err := client.NodeList(ctx, types.NodeListOptions{})
 	nodes, err := client.ListNodes(dc.ListNodesOptions{Context: ctx})
 	if err != nil {
 		return nil, err
@@ -813,6 +902,7 @@ func createConvergeConfig(config []interface{}) *convergeConfig {
 				plainConvergeConfig.monitor, _ = time.ParseDuration(monitor.(string))
 			}
 			if timeout, ok := rawConvergeConfig["timeout"]; ok {
+				plainConvergeConfig.timeoutRaw, _ = timeout.(string)
 				plainConvergeConfig.timeout, _ = time.ParseDuration(timeout.(string))
 			}
 		}
@@ -904,4 +994,38 @@ func mapSetToPlacementPlatforms(stringSet *schema.Set) []swarm.Platform {
 	}
 
 	return ret
+}
+
+var resourceDockerServiceCreatePendingStates = []string{
+	"new",
+	"allocated",
+	"pending",
+	"assigned",
+	"accepted",
+	"preparing",
+	"ready",
+	"starting",
+	// update stati
+	"updating",
+	"paused",
+	"completed",
+	"rollback_started",
+	"rollback_paused",
+	"rollback_completed",
+	// "running",
+	// "complete",
+	// "shutdown",
+	// "failed",
+	// "rejected",
+}
+
+var resourceDockerServiceDeletePendingStates = []string{
+	"new",
+	"allocated",
+	"pending",
+	"assigned",
+	"accepted",
+	"preparing",
+	"ready",
+	"starting",
 }

@@ -18,10 +18,10 @@ setup() {
 
 run() {
   # Run the acc test suite
-  TF_ACC=1 go test ./docker -v -timeout 120m
+  # TF_ACC=1 go test ./docker -v -timeout 120m
   
   # for a single test
-  #TF_LOG=INFO TF_ACC=1 go test -v github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerService_updateMounts$ -timeout 360s
+  TF_LOG=INFO TF_ACC=1 go test -v github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerService_fullConverge$ -timeout 360s
   # keep the return for the scripts to fail and clean properly
   return $?
 }
@@ -36,14 +36,14 @@ cleanup() {
   echo "### removed auth and certs ###"
   # For containers it's fixed in v18.02 https://github.com/moby/moby/issues/35933#issuecomment-366149721
   for resource in "container" "volume"; do
-    for r in $(docker $resource ls -f 'name=tftest-' -q); do docker $resource rm -f $r; done
+    for r in $(docker $resource ls -f 'name=tftest-' -q); do docker $resource rm -f "$r"; done
     echo "### removed $resource ###"
   done
-  for resource in "config" "secret"; do
-    for r in $(docker $resource ls -f 'name=tftest-' -q); do docker $resource rm $r; done
+  for resource in "config" "secret" "network"; do
+    for r in $(docker $resource ls -f 'name=tftest-' -q); do docker $resource rm "$r"; done
     echo "### removed $resource ###"
   done
-  for i in $(docker images -aq 127.0.0.1:5000/tftest-service); do docker rmi -f $i; done
+  for i in $(docker images -aq 127.0.0.1:5000/tftest-service); do docker rmi -f "$i"; done
   echo "### removed service images ###"
 }
 
