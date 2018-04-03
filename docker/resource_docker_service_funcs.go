@@ -575,12 +575,43 @@ func createServiceSpec(d *schema.ResourceData) (swarm.ServiceSpec, error) {
 		TaskTemplate: swarm.TaskSpec{},
 	}
 
-	if v, ok := d.GetOk("replicas"); ok {
-		replicas := uint64(v.(int))
+	// TODO
+	if v, ok := d.GetOk("mode"); ok {
 		serviceSpec.Mode = swarm.ServiceMode{}
-		serviceSpec.Mode.Replicated = &swarm.ReplicatedService{}
-		serviceSpec.Mode.Replicated.Replicas = &replicas
+		// because its a list
+		if len(v.([]interface{})) > 0 {
+			for _, rawMode := range v.([]interface{}) {
+				// with a map
+				rawMode := rawMode.(map[string]interface{})
+
+				if rawReplicatedMode, ok := rawMode["replicated"]; ok {
+					// with a set
+					rawReplicatedModeSet := rawReplicatedMode.(*schema.Set)
+					for _, rawReplicatedModeInt := range rawReplicatedModeSet.List() {
+						// which is a map
+						rawReplicatedModeMap := rawReplicatedModeInt.(map[string]interface{})
+						serviceSpec.Mode.Replicated = &swarm.ReplicatedService{}
+						if testReplicas, ok := rawReplicatedModeMap["replicas"]; ok {
+							replicas := uint64(testReplicas.(int))
+							serviceSpec.Mode.Replicated.Replicas = &replicas
+						}
+					}
+				} else {
+					if _, ok := rawMode["global"]; ok {
+						serviceSpec.Mode.Global = &swarm.GlobalService{}
+					}
+				}
+			}
+		}
 	}
+	// else {
+	// 	if v, ok := d.GetOk("replicas"); ok {
+	// 		replicas := uint64(v.(int))
+	// 		serviceSpec.Mode = swarm.ServiceMode{}
+	// 		serviceSpec.Mode.Replicated = &swarm.ReplicatedService{}
+	// 		serviceSpec.Mode.Replicated.Replicas = &replicas
+	// 	}
+	// }
 
 	// == start Container Spec
 	containerSpec := swarm.ContainerSpec{

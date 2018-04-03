@@ -52,11 +52,36 @@ func resourceDockerService() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			"replicas": &schema.Schema{
-				Type:         schema.TypeInt,
-				Optional:     true,
-				Default:      1,
-				ValidateFunc: validateIntegerGeqThan(1),
+			"mode": &schema.Schema{
+				Type:     schema.TypeList,
+				MaxItems: 1,
+				Optional: true,
+				ForceNew: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"replicated": &schema.Schema{
+							Type:          schema.TypeSet,
+							Optional:      true,
+							ConflictsWith: []string{"mode.0.global"},
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"replicas": &schema.Schema{
+										Type:         schema.TypeInt,
+										Optional:     true,
+										Default:      1,
+										ValidateFunc: validateIntegerGeqThan(1),
+									},
+								},
+							},
+						},
+						"global": &schema.Schema{
+							Type:          schema.TypeBool,
+							Optional:      true,
+							Default:       false,
+							ConflictsWith: []string{"mode.0.replicated", "converge_config"},
+						},
+					},
+				},
 			},
 			"hostname": &schema.Schema{
 				Type:     schema.TypeString,
@@ -459,9 +484,10 @@ func resourceDockerService() *schema.Resource {
 			},
 
 			"converge_config": &schema.Schema{
-				Type:     schema.TypeList,
-				MaxItems: 1,
-				Optional: true,
+				Type:          schema.TypeList,
+				MaxItems:      1,
+				Optional:      true,
+				ConflictsWith: []string{"mode.0.global"},
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"interval": &schema.Schema{

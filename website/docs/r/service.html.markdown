@@ -22,7 +22,12 @@ be updated and was succesfully rolled back.
 resource "docker_service" "foo_service" {
   name     = "swarm-foo-random"
   image    = "repo.mycompany.com:8080/foo-service"
-  replicas = 10
+  mode {
+    replicated {
+      replicas = 10
+    }
+   }
+  }
 
   ports {
     internal = 80
@@ -36,7 +41,11 @@ resource "docker_service" "foo_service" {
 resource "docker_service" "service" {
   name     = "swarm-foo-random"
   image    = "repo.mycompany.com:8080/foo-service"
-  replicas = "10"
+  mode {
+    replicated {
+      replicas = 10
+    }
+  }
 
   update_config {
     parallelism       = 2
@@ -95,7 +104,7 @@ resource "docker_service" "service" {
 }
 ```
 
-See also the `TestAccDockerService_full` test for a complete overview.
+See also the `TestAccDockerService_full` test or all the other tests for a complete overview.
 
 ## Argument Reference
 
@@ -104,7 +113,7 @@ The following arguments are supported:
 * `auth` - (Optional, block) See [Auth](#auth) below for details.
 * `name` - (Required, string) The name of the Docker service.
 * `image` - (Required, string) The image used to create the Docker service.
-* `replicas` - (Optional, string) The image used to create the Docker service.
+* `mode` - (Optional, block) See [Mode](#mode) below for details.
 * `hostname` - (Optional, string) Hostname of the containers.
 * `command` - (Optional, list of strings) The command to use to start the
     container. For example, to run `/usr/bin/myprogram -f baz.conf` set the
@@ -137,6 +146,38 @@ The following arguments are supported:
 * `server_address` - (Required, string) The address of the registry server
 * `username` - (Optional, string) The username to use for authenticating to the registry. If this is blank, the `DOCKER_REGISTRY_USER` will also be checked. 
 * `password` - (Optional, string) The password to use for authenticating to the registry. If this is blank, the `DOCKER_REGISTRY_PASS` will also be checked.
+
+<a id="mode"></a>
+### Mode
+
+`mode` is a block within the configuration that can be repeated only **once** to specify the mode configuration for the service. The `mode` block supports the following:
+
+* `global` - (Optional, bool) set it to `true` to run the service in global mode
+```hcl
+resource "docker_service" "foo" {
+  ...
+  mode {
+    global = true
+  }
+  ...
+}
+```
+* `replicated` - (Optional, map), which contains atm only the amount of `replicas`
+```hcl
+resource "docker_service" "foo" {
+  ...
+  mode {
+    replicated {
+      replicas = 2
+    }
+  }
+  ...
+}
+```
+
+~> **NOTE on `mode`:** if neither `global` nor `replicated` is specified, the service
+will be starter in `replicated` mode with 1 replica.
+
 
 <a id="mounts"></a>
 ### Mounts
