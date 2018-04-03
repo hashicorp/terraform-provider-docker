@@ -17,29 +17,6 @@ import (
 	"github.com/hashicorp/terraform/helper/schema"
 )
 
-var (
-	numberedStates = map[swarm.TaskState]int64{
-		swarm.TaskStateNew:       1,
-		swarm.TaskStateAllocated: 2,
-		swarm.TaskStatePending:   3,
-		swarm.TaskStateAssigned:  4,
-		swarm.TaskStateAccepted:  5,
-		swarm.TaskStatePreparing: 6,
-		swarm.TaskStateReady:     7,
-		swarm.TaskStateStarting:  8,
-		swarm.TaskStateRunning:   9,
-
-		// The following states are not actually shown in progress
-		// output, but are used internally for ordering.
-		swarm.TaskStateComplete: 10,
-		swarm.TaskStateShutdown: 11,
-		swarm.TaskStateFailed:   12,
-		swarm.TaskStateRejected: 13,
-	}
-
-	longestState int
-)
-
 type convergeConfig struct {
 	interval   time.Duration
 	monitor    time.Duration
@@ -104,7 +81,7 @@ func resourceDockerServiceCreate(d *schema.ResourceData, meta interface{}) error
 		log.Printf("[INFO] Waiting for Service '%s' to be created with timeout: %v", service.ID, convergeConfig.timeoutRaw)
 		timeout, _ := time.ParseDuration(convergeConfig.timeoutRaw)
 		stateConf := &resource.StateChangeConf{
-			Pending:    resourceDockerServiceCreatePendingStates,
+			Pending:    serviceCreatePendingStates,
 			Target:     []string{"running", "complete"},
 			Refresh:    resourceDockerServiceCreateRefreshFunc(service.ID, meta),
 			Timeout:    timeout,
@@ -197,7 +174,7 @@ func resourceDockerServiceUpdate(d *schema.ResourceData, meta interface{}) error
 		log.Printf("[INFO] Waiting for Service '%s' to be updated with timeout: %v", service.ID, convergeConfig.timeoutRaw)
 		timeout, _ := time.ParseDuration(convergeConfig.timeoutRaw)
 		stateConf := &resource.StateChangeConf{
-			Pending:    resourceDockerServiceUpdatePendingStates,
+			Pending:    serviceUpdatePendingStates,
 			Target:     []string{"completed"},
 			Refresh:    resourceDockerServiceUpdateRefreshFunc(service.ID, meta),
 			Timeout:    timeout,
@@ -253,10 +230,9 @@ func fetchDockerService(ID string, name string, client *dc.Client) (*swarm.Servi
 	return nil, nil
 }
 
-// deleteService deletes the service by the given id
+// deleteService deletes the service with the given id
 func deleteService(serviceID string, d *schema.ResourceData, client *dc.Client) error {
-	// == 1: get containerIDs of the running service
-	// because they do not exist after the service is deleted
+	// get containerIDs of the running service because they do not exist after the service is deleted
 	serviceContainerIds := make([]string, 0)
 	if _, ok := d.GetOk("destroy_grace_seconds"); ok {
 		filter := make(map[string][]string)
@@ -276,7 +252,7 @@ func deleteService(serviceID string, d *schema.ResourceData, client *dc.Client) 
 		}
 	}
 
-	// == 2: delete the service
+	// delete the service
 	log.Printf("[INFO] Deleting service: '%s'", serviceID)
 	removeOpts := dc.RemoveServiceOptions{
 		ID: serviceID,
@@ -291,7 +267,7 @@ func deleteService(serviceID string, d *schema.ResourceData, client *dc.Client) 
 		return fmt.Errorf("Error deleting service %s: %s", serviceID, err)
 	}
 
-	// == 3: destroy each container after a grace period
+	// destroy each container after a grace period if specified
 	if v, ok := d.GetOk("destroy_grace_seconds"); ok {
 		for _, containerID := range serviceContainerIds {
 			timeout := v.(int)
@@ -338,7 +314,7 @@ func (err *DidNotConvergeError) Error() string {
 	return "Service with ID (" + err.ServiceID + ") did not converge after " + err.Timeout.String()
 }
 
-// resourceDockerServiceCreateRefreshFunc TODO
+// resourceDockerServiceCreateRefreshFunc refreshes the state of a service when it is created and needs to converge
 func resourceDockerServiceCreateRefreshFunc(
 	serviceID string, meta interface{}) resource.StateRefreshFunc {
 	return func() (interface{}, string, error) {
@@ -348,7 +324,7 @@ func resourceDockerServiceCreateRefreshFunc(
 		var updater progressUpdater
 
 		if updater == nil {
-			updater = &replicatedProgressUpdater{}
+			updater = &replicatedConsoleLogUpdater{}
 		}
 
 		filter := make(map[string][]string)
@@ -390,7 +366,7 @@ func resourceDockerServiceCreateRefreshFunc(
 	}
 }
 
-// resourceDockerServiceUpdateRefreshFunc TODO
+// resourceDockerServiceUpdateRefreshFunc refreshes the state of a service when it is updated and needs to converge
 func resourceDockerServiceUpdateRefreshFunc(
 	serviceID string, meta interface{}) resource.StateRefreshFunc {
 	return func() (interface{}, string, error) {
@@ -403,7 +379,7 @@ func resourceDockerServiceUpdateRefreshFunc(
 		)
 
 		if updater == nil {
-			updater = &replicatedProgressUpdater{}
+			updater = &replicatedConsoleLogUpdater{}
 		}
 		rollback = false
 
@@ -484,8 +460,8 @@ type progressUpdater interface {
 	update(service *swarm.Service, tasks []swarm.Task, activeNodes map[string]struct{}, rollback bool) (bool, error)
 }
 
-// replicatedProgressUpdater progress updater for replicated services
-type replicatedProgressUpdater struct {
+// replicatedConsoleLogUpdater console log updater for replicated services
+type replicatedConsoleLogUpdater struct {
 	// used for mapping slots to a contiguous space
 	// this also causes progress bars to appear in order
 	slotMap map[int]int
@@ -494,8 +470,8 @@ type replicatedProgressUpdater struct {
 	done        bool
 }
 
-// update concrete implementation of the update for replicated services
-func (u *replicatedProgressUpdater) update(service *swarm.Service, tasks []swarm.Task, activeNodes map[string]struct{}, rollback bool) (bool, error) {
+// update is the concrete implementation of updating replicated services
+func (u *replicatedConsoleLogUpdater) update(service *swarm.Service, tasks []swarm.Task, activeNodes map[string]struct{}, rollback bool) (bool, error) {
 	if service.Spec.Mode.Replicated == nil || service.Spec.Mode.Replicated.Replicas == nil {
 		return false, fmt.Errorf("no replica count")
 	}
@@ -506,9 +482,10 @@ func (u *replicatedProgressUpdater) update(service *swarm.Service, tasks []swarm
 		u.initialized = true
 	}
 
+	// get the task for each slot. there can be multiple slots on one node
 	tasksBySlot := u.tasksBySlot(tasks, activeNodes)
 
-	// If we had reached a converged state, check if we are still converged.
+	// if a converged state is reached, check if is still converged.
 	if u.done {
 		for _, task := range tasksBySlot {
 			if task.Status.State != swarm.TaskStateRunning {
@@ -520,6 +497,7 @@ func (u *replicatedProgressUpdater) update(service *swarm.Service, tasks []swarm
 
 	running := uint64(0)
 
+	// map the slots to keep track of their state individually
 	for _, task := range tasksBySlot {
 		mappedSlot := u.slotMap[task.Slot]
 		if mappedSlot == 0 {
@@ -527,11 +505,13 @@ func (u *replicatedProgressUpdater) update(service *swarm.Service, tasks []swarm
 			u.slotMap[task.Slot] = mappedSlot
 		}
 
+		// if a task is in the desired state count it as running
 		if !terminalState(task.DesiredState) && task.Status.State == swarm.TaskStateRunning {
 			running++
 		}
 	}
 
+	// check if all tasks the same amount of tasks is running than replicas defined
 	if !u.done {
 		log.Printf("[INFO] ... progress: [%v/%v] - rollback: %v", running, replicas, rollback)
 		if running == replicas {
@@ -543,9 +523,10 @@ func (u *replicatedProgressUpdater) update(service *swarm.Service, tasks []swarm
 	return running == replicas, nil
 }
 
-// tasksBySlot TODO
-func (u *replicatedProgressUpdater) tasksBySlot(tasks []swarm.Task, activeNodes map[string]struct{}) map[int]swarm.Task {
-	// If there are multiple tasks with the same slot number, favor the one
+// tasksBySlot maps the tasks to slots on active nodes. There can be multiple slots on active nodes.
+// A task is analogous to a “slot” where (on a node) the scheduler places a container.
+func (u *replicatedConsoleLogUpdater) tasksBySlot(tasks []swarm.Task, activeNodes map[string]struct{}) map[int]swarm.Task {
+	// if there are multiple tasks with the same slot number, favor the one
 	// with the *lowest* desired state. This can happen in restart
 	// scenarios.
 	tasksBySlot := make(map[int]swarm.Task)
@@ -557,7 +538,7 @@ func (u *replicatedProgressUpdater) tasksBySlot(tasks []swarm.Task, activeNodes 
 			if numberedStates[existingTask.DesiredState] < numberedStates[task.DesiredState] {
 				continue
 			}
-			// If the desired states match, observed state breaks
+			// if the desired states match, observed state breaks
 			// ties. This can happen with the "start first" service
 			// update mode.
 			if numberedStates[existingTask.DesiredState] == numberedStates[task.DesiredState] &&
@@ -565,6 +546,7 @@ func (u *replicatedProgressUpdater) tasksBySlot(tasks []swarm.Task, activeNodes 
 				continue
 			}
 		}
+		// if the task is on a node and this node is active, then map this task to a slot
 		if task.NodeID != "" {
 			if _, nodeActive := activeNodes[task.NodeID]; !nodeActive {
 				continue
@@ -576,7 +558,8 @@ func (u *replicatedProgressUpdater) tasksBySlot(tasks []swarm.Task, activeNodes 
 	return tasksBySlot
 }
 
-// terminalState TODO
+// terminalState determines if the given state is a terminal state
+// meaninig 'higher' than running (see numberedStates)
 func terminalState(state swarm.TaskState) bool {
 	return numberedStates[state] > numberedStates[swarm.TaskStateRunning]
 }
@@ -976,7 +959,35 @@ func mapSetToPlacementPlatforms(stringSet *schema.Set) []swarm.Platform {
 	return ret
 }
 
-var resourceDockerServiceCreatePendingStates = []string{
+//////// States
+
+// numberedStates are ascending sorted states for docker tasks
+// meaning they appear internally in this order in the statemachine
+var (
+	numberedStates = map[swarm.TaskState]int64{
+		swarm.TaskStateNew:       1,
+		swarm.TaskStateAllocated: 2,
+		swarm.TaskStatePending:   3,
+		swarm.TaskStateAssigned:  4,
+		swarm.TaskStateAccepted:  5,
+		swarm.TaskStatePreparing: 6,
+		swarm.TaskStateReady:     7,
+		swarm.TaskStateStarting:  8,
+		swarm.TaskStateRunning:   9,
+
+		// The following states are not actually shown in progress
+		// output, but are used internally for ordering.
+		swarm.TaskStateComplete: 10,
+		swarm.TaskStateShutdown: 11,
+		swarm.TaskStateFailed:   12,
+		swarm.TaskStateRejected: 13,
+	}
+
+	longestState int
+)
+
+// serviceCreatePendingStates are the pending states for the creation of a service
+var serviceCreatePendingStates = []string{
 	"new",
 	"allocated",
 	"pending",
@@ -987,36 +998,10 @@ var resourceDockerServiceCreatePendingStates = []string{
 	"starting",
 	"creating",
 	"paused",
-	// TODO remove
-	// "running",
-	// "complete",
-	// "shutdown",
-	// "failed",
-	// "rejected",
-}
-var resourceDockerServiceUpdatePendingStates = []string{
-	"creating",
-	"updating",
-	// TODO remove
-	// "paused",
-	// "completed",
-	// "rollback_started",
-	// "rollback_paused",
-	// "rollback_completed",
-	// "running",
-	// "complete",
-	// "shutdown",
-	// "failed",
-	// "rejected",
 }
 
-var resourceDockerServiceDeletePendingStates = []string{
-	"new",
-	"allocated",
-	"pending",
-	"assigned",
-	"accepted",
-	"preparing",
-	"ready",
-	"starting",
+// serviceUpdatePendingStates are the pending states for the update of a service
+var serviceUpdatePendingStates = []string{
+	"creating",
+	"updating",
 }
