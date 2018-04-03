@@ -17,12 +17,12 @@ setup() {
 }
 
 run() {
-  # Run the acc test suite
-  # TF_ACC=1 go test ./docker -v -timeout 120m
+  TF_ACC=1 go test ./docker -v -timeout 120m
   
-  # for a single test
-  TF_LOG=INFO TF_ACC=1 go test -v github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerService_fullConverge$ -timeout 360s
-  # keep the return for the scripts to fail and clean properly
+  # for a single test comment the previous line and uncomment the next line
+  #TF_LOG=INFO TF_ACC=1 go test -v github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerService_updateIncreaseReplicasConverge$ -timeout 360s
+  
+  # keep the return value for the scripts to fail and clean properly
   return $?
 }
 
@@ -34,7 +34,6 @@ cleanup() {
   rm -f scripts/testing/auth/htpasswd
   rm -f scripts/testing/certs/registry_auth.*
   echo "### removed auth and certs ###"
-  # For containers it's fixed in v18.02 https://github.com/moby/moby/issues/35933#issuecomment-366149721
   for resource in "container" "volume"; do
     for r in $(docker $resource ls -f 'name=tftest-' -q); do docker $resource rm -f "$r"; done
     echo "### removed $resource ###"
@@ -49,9 +48,5 @@ cleanup() {
 
 ## main
 log "setup" && setup 
-log "run" && run && echo $?
-if [ $? -ne 0 ]; then
-  log "cleanup" && cleanup
-  exit 1
-fi
+log "run" && run || (log "cleanup" && cleanup && exit 1)
 log "cleanup" && cleanup
