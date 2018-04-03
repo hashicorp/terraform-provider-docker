@@ -236,7 +236,7 @@ func resourceDockerServiceDelete(d *schema.ResourceData, meta interface{}) error
 /////////////////
 // Helpers
 /////////////////
-// fetchDockerService TODO
+// fetchDockerService fetches a service by its name or id
 func fetchDockerService(ID string, name string, client *dc.Client) (*swarm.Service, error) {
 	apiServices, err := client.ListServices(dc.ListServicesOptions{})
 
@@ -253,7 +253,7 @@ func fetchDockerService(ID string, name string, client *dc.Client) (*swarm.Servi
 	return nil, nil
 }
 
-// deleteService TODO
+// deleteService deletes the service by the given id
 func deleteService(serviceID string, d *schema.ResourceData, client *dc.Client) error {
 	// == 1: get containerIDs of the running service
 	// because they do not exist after the service is deleted
@@ -330,6 +330,7 @@ type DidNotConvergeError struct {
 	Err       error
 }
 
+// Error the custom error if a service does not converge
 func (err *DidNotConvergeError) Error() string {
 	if err.Err != nil {
 		return err.Err.Error()
@@ -462,7 +463,7 @@ func resourceDockerServiceUpdateRefreshFunc(
 	}
 }
 
-// getActiveNodes TODO
+// getActiveNodes gets the actives nodes withon a swarm
 func getActiveNodes(ctx context.Context, client *dc.Client) (map[string]struct{}, error) {
 	nodes, err := client.ListNodes(dc.ListNodesOptions{Context: ctx})
 	if err != nil {
@@ -478,12 +479,12 @@ func getActiveNodes(ctx context.Context, client *dc.Client) (map[string]struct{}
 	return activeNodes, nil
 }
 
-// progressUpdater TODO
+// progressUpdater interface for progressive task updates
 type progressUpdater interface {
 	update(service *swarm.Service, tasks []swarm.Task, activeNodes map[string]struct{}, rollback bool) (bool, error)
 }
 
-// replicatedProgressUpdater TODO
+// replicatedProgressUpdater progress updater for replicated services
 type replicatedProgressUpdater struct {
 	// used for mapping slots to a contiguous space
 	// this also causes progress bars to appear in order
@@ -493,7 +494,7 @@ type replicatedProgressUpdater struct {
 	done        bool
 }
 
-// update TODO
+// update concrete implementation of the update for replicated services
 func (u *replicatedProgressUpdater) update(service *swarm.Service, tasks []swarm.Task, activeNodes map[string]struct{}, rollback bool) (bool, error) {
 	if service.Spec.Mode.Replicated == nil || service.Spec.Mode.Replicated.Replicas == nil {
 		return false, fmt.Errorf("no replica count")
@@ -581,7 +582,7 @@ func terminalState(state swarm.TaskState) bool {
 }
 
 //////// Mappers
-// createServiceSpec TODO
+// createServiceSpec creates the service spec
 func createServiceSpec(d *schema.ResourceData) (swarm.ServiceSpec, error) {
 
 	serviceSpec := swarm.ServiceSpec{
@@ -835,7 +836,7 @@ func createServiceSpec(d *schema.ResourceData) (swarm.ServiceSpec, error) {
 	return serviceSpec, nil
 }
 
-// createUpdateOrRollbackConfig TODO
+// createUpdateOrRollbackConfig create the configuration for and update or rollback
 func createUpdateOrRollbackConfig(config []interface{}) (*swarm.UpdateConfig, error) {
 	updateConfig := swarm.UpdateConfig{}
 	if len(config) > 0 {
@@ -863,7 +864,7 @@ func createUpdateOrRollbackConfig(config []interface{}) (*swarm.UpdateConfig, er
 	return &updateConfig, nil
 }
 
-// createConvergeConfig TODO
+// createConvergeConfig creates the configuration for converging
 func createConvergeConfig(config []interface{}) *convergeConfig {
 	plainConvergeConfig := &convergeConfig{}
 	if len(config) > 0 {
@@ -884,7 +885,7 @@ func createConvergeConfig(config []interface{}) *convergeConfig {
 	return plainConvergeConfig
 }
 
-// portSetToServicePorts TODO
+// portSetToServicePorts maps a set of ports to portConfig
 func portSetToServicePorts(ports *schema.Set) []swarm.PortConfig {
 	retPortConfigs := []swarm.PortConfig{}
 
@@ -911,7 +912,7 @@ func portSetToServicePorts(ports *schema.Set) []swarm.PortConfig {
 	return retPortConfigs
 }
 
-// authToServiceAuth TODO
+// authToServiceAuth maps the auth to AuthConfiguration
 func authToServiceAuth(auth map[string]interface{}) dc.AuthConfiguration {
 	if auth["username"] != nil && len(auth["username"].(string)) > 0 && auth["password"] != nil && len(auth["password"].(string)) > 0 {
 		return dc.AuthConfiguration{
@@ -924,7 +925,7 @@ func authToServiceAuth(auth map[string]interface{}) dc.AuthConfiguration {
 	return dc.AuthConfiguration{}
 }
 
-// fromRegistryAuth TODO
+// fromRegistryAuth extract the desired AuthConfiguration for the given image
 func fromRegistryAuth(image string, configs map[string]dc.AuthConfiguration) dc.AuthConfiguration {
 	// Remove normalized prefixes to simlify substring
 	image = strings.Replace(strings.Replace(image, "http://", "", 1), "https://", "", 1)
@@ -941,7 +942,7 @@ func fromRegistryAuth(image string, configs map[string]dc.AuthConfiguration) dc.
 	return dc.AuthConfiguration{}
 }
 
-// stringSetToPlacementPrefs TODO
+// stringSetToPlacementPrefs maps a string set to PlacementPreference
 func stringSetToPlacementPrefs(stringSet *schema.Set) []swarm.PlacementPreference {
 	ret := []swarm.PlacementPreference{}
 	if stringSet == nil {
@@ -957,7 +958,7 @@ func stringSetToPlacementPrefs(stringSet *schema.Set) []swarm.PlacementPreferenc
 	return ret
 }
 
-// mapSetToPlacementPlatforms TODO
+// mapSetToPlacementPlatforms maps a string set to Platform
 func mapSetToPlacementPlatforms(stringSet *schema.Set) []swarm.Platform {
 	ret := []swarm.Platform{}
 	if stringSet == nil {
