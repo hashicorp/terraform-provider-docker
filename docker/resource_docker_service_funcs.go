@@ -100,14 +100,14 @@ func resourceDockerServiceCreate(d *schema.ResourceData, meta interface{}) error
 	}
 
 	if v, ok := d.GetOk("converge_config"); ok {
-		log.Printf("Waiting for Service '%s' to be created...", service.ID)
 		convergeConfig := createConvergeConfig(v.([]interface{}))
-
+		log.Printf("[INFO] Waiting for Service '%s' to be created with timeout: %v", service.ID, convergeConfig.timeoutRaw)
+		timeout, _ := time.ParseDuration(convergeConfig.timeoutRaw)
 		stateConf := &resource.StateChangeConf{
 			Pending:    resourceDockerServiceCreatePendingStates,
-			Target:     []string{"running"}, //TODO
-			Refresh:    resourceDockerServiceCreateRefreshFunc(d, meta),
-			Timeout:    d.Timeout(convergeConfig.timeoutRaw),
+			Target:     []string{"running", "complete"},
+			Refresh:    resourceDockerServiceCreateRefreshFunc(service.ID, meta),
+			Timeout:    timeout,
 			MinTimeout: 5 * time.Second,
 			Delay:      7 * time.Second,
 		}
@@ -115,16 +115,15 @@ func resourceDockerServiceCreate(d *schema.ResourceData, meta interface{}) error
 		// Wait, catching any errors
 		_, err := stateConf.WaitForState()
 		if err != nil {
+			// the service will be deleted in case it cannot be converged
+			if deleteErr := deleteService(service.ID, d, client); deleteErr != nil {
+				return deleteErr
+			}
+			if strings.Contains(err.Error(), "timeout while waiting for state") {
+				return &DidNotConvergeError{ServiceID: service.ID, Timeout: convergeConfig.timeout}
+			}
 			return err
 		}
-
-		// if err := waitOnService(context.Background(), client, convergeConfig, service.ID); err != nil {
-		// 	if _, ok := err.(*DidNotConvergeError); ok {
-		// log.Printf("[INFO] service (%s) did not converge on create", d.Id())
-		// if err := deleteService(service.ID, d, client); err != nil {
-		// 	return err
-		// }}
-		// }
 	}
 
 	d.SetId(service.ID)
@@ -195,12 +194,13 @@ func resourceDockerServiceUpdate(d *schema.ResourceData, meta interface{}) error
 
 	if v, ok := d.GetOk("converge_config"); ok {
 		convergeConfig := createConvergeConfig(v.([]interface{}))
-
+		log.Printf("[INFO] Waiting for Service '%s' to be updated with timeout: %v", service.ID, convergeConfig.timeoutRaw)
+		timeout, _ := time.ParseDuration(convergeConfig.timeoutRaw)
 		stateConf := &resource.StateChangeConf{
-			Pending:    resourceDockerServiceCreatePendingStates,
-			Target:     []string{"completed", "rollback_completed"}, //TODO
-			Refresh:    resourceDockerServiceCreateRefreshFunc(d, meta),
-			Timeout:    d.Timeout(convergeConfig.timeoutRaw),
+			Pending:    resourceDockerServiceUpdatePendingStates,
+			Target:     []string{"completed"},
+			Refresh:    resourceDockerServiceUpdateRefreshFunc(service.ID, meta),
+			Timeout:    timeout,
 			MinTimeout: 5 * time.Second,
 			Delay:      7 * time.Second,
 		}
@@ -208,14 +208,15 @@ func resourceDockerServiceUpdate(d *schema.ResourceData, meta interface{}) error
 		// Wait, catching any errors
 		_, err := stateConf.WaitForState()
 		if err != nil {
+			// the service will be deleted in case it cannot be converged
+			if deleteErr := deleteService(service.ID, d, client); deleteErr != nil {
+				return deleteErr
+			}
+			if strings.Contains(err.Error(), "timeout while waiting for state") {
+				return &DidNotConvergeError{ServiceID: service.ID, Timeout: convergeConfig.timeout}
+			}
 			return err
 		}
-		// if err := waitOnService(context.Background(), client, convergeConfig, service.ID); err != nil {
-		// 	if _, ok := err.(*DidNotConvergeError); ok {
-		// 		log.Printf("[INFO] service (%s) did not converge on update", d.Id())
-		// 	}
-		// 	return err
-		// }
 	}
 
 	return resourceDockerServiceRead(d, meta)
@@ -235,6 +236,7 @@ func resourceDockerServiceDelete(d *schema.ResourceData, meta interface{}) error
 /////////////////
 // Helpers
 /////////////////
+// fetchDockerService TODO
 func fetchDockerService(ID string, name string, client *dc.Client) (*swarm.Service, error) {
 	apiServices, err := client.ListServices(dc.ListServicesOptions{})
 
@@ -251,6 +253,7 @@ func fetchDockerService(ID string, name string, client *dc.Client) (*swarm.Servi
 	return nil, nil
 }
 
+// deleteService TODO
 func deleteService(serviceID string, d *schema.ResourceData, client *dc.Client) error {
 	// == 1: get containerIDs of the running service
 	// because they do not exist after the service is deleted
@@ -274,14 +277,14 @@ func deleteService(serviceID string, d *schema.ResourceData, client *dc.Client) 
 	}
 
 	// == 2: delete the service
-	log.Printf("[INFO] Deleting service: '%s'", d.Id())
+	log.Printf("[INFO] Deleting service: '%s'", serviceID)
 	removeOpts := dc.RemoveServiceOptions{
 		ID: serviceID,
 	}
 
 	if err := client.RemoveService(removeOpts); err != nil {
 		if _, ok := err.(*dc.NoSuchService); ok {
-			log.Printf("[WARN] Service (%s) not found, removing from state", d.Id())
+			log.Printf("[WARN] Service (%s) not found, removing from state", serviceID)
 			d.SetId("")
 			return nil
 		}
@@ -307,7 +310,7 @@ func deleteService(serviceID string, d *schema.ResourceData, client *dc.Client) 
 
 			log.Printf("[INFO] Removing container: '%s'", containerID)
 			if err := client.RemoveContainer(removeOpts); err != nil {
-				if !strings.Contains(err.Error(), "No such container") {
+				if !(strings.Contains(err.Error(), "No such container") || strings.Contains(err.Error(), "is already in progress")) {
 					return fmt.Errorf("Error deleting container %s: %s", containerID, err)
 				}
 			}
@@ -334,14 +337,74 @@ func (err *DidNotConvergeError) Error() string {
 	return "Service with ID (" + err.ServiceID + ") did not converge after " + err.Timeout.String()
 }
 
+// resourceDockerServiceCreateRefreshFunc TODO
 func resourceDockerServiceCreateRefreshFunc(
-	d *schema.ResourceData, meta interface{}) resource.StateRefreshFunc {
+	serviceID string, meta interface{}) resource.StateRefreshFunc {
 	return func() (interface{}, string, error) {
 		client := meta.(*ProviderConfig).DockerClient
-		serviceID := d.Id()
 		ctx := context.Background()
 
 		var updater progressUpdater
+
+		if updater == nil {
+			updater = &replicatedProgressUpdater{}
+		}
+
+		filter := make(map[string][]string)
+		filter["service"] = []string{serviceID}
+		filter["desired-state"] = []string{"running"}
+
+		getUpToDateTasks := func() ([]swarm.Task, error) {
+			return client.ListTasks(dc.ListTasksOptions{
+				Filters: filter,
+				Context: ctx,
+			})
+		}
+		var service *swarm.Service
+		service, err := client.InspectService(serviceID)
+		if err != nil {
+			return nil, "", err
+		}
+
+		tasks, err := getUpToDateTasks()
+		if err != nil {
+			return nil, "", err
+		}
+
+		activeNodes, err := getActiveNodes(ctx, client)
+		if err != nil {
+			return nil, "", err
+		}
+
+		serviceCreateStatus, err := updater.update(service, tasks, activeNodes, false)
+		if err != nil {
+			return nil, "", err
+		}
+
+		if serviceCreateStatus {
+			return service.ID, "running", nil
+		}
+
+		return service.ID, "creating", nil
+	}
+}
+
+// resourceDockerServiceUpdateRefreshFunc TODO
+func resourceDockerServiceUpdateRefreshFunc(
+	serviceID string, meta interface{}) resource.StateRefreshFunc {
+	return func() (interface{}, string, error) {
+		client := meta.(*ProviderConfig).DockerClient
+		ctx := context.Background()
+
+		var (
+			updater  progressUpdater
+			rollback bool
+		)
+
+		if updater == nil {
+			updater = &replicatedProgressUpdater{}
+		}
+		rollback = false
 
 		filter := make(map[string][]string)
 		filter["service"] = []string{serviceID}
@@ -361,17 +424,19 @@ func resourceDockerServiceCreateRefreshFunc(
 
 		if service.UpdateStatus != nil {
 			switch service.UpdateStatus.State {
-			// case swarm.UpdateStateUpdating:
-			// case swarm.UpdateStateCompleted:
-			// case swarm.UpdateStateRollbackStarted:
-			// case swarm.UpdateStateRollbackCompleted:
+			case swarm.UpdateStateUpdating:
+				rollback = false
+			case swarm.UpdateStateCompleted:
+				return service.ID, "completed", nil
+			case swarm.UpdateStateRollbackStarted:
+				rollback = true
+			case swarm.UpdateStateRollbackCompleted:
+				return nil, "", fmt.Errorf("service rollback completed: %s", service.UpdateStatus.Message)
 			case swarm.UpdateStatePaused:
 				return nil, "", fmt.Errorf("service update paused: %s", service.UpdateStatus.Message)
 			case swarm.UpdateStateRollbackPaused:
 				return nil, "", fmt.Errorf("service rollback paused: %s", service.UpdateStatus.Message)
 			}
-		} else {
-			return nil, "unknown", nil
 		}
 
 		tasks, err := getUpToDateTasks()
@@ -382,121 +447,22 @@ func resourceDockerServiceCreateRefreshFunc(
 		activeNodes, err := getActiveNodes(ctx, client)
 		if err != nil {
 			return nil, "", err
-
 		}
 
-		_, err = updater.update(service, tasks, activeNodes, false)
+		isUpdateCompleted, err := updater.update(service, tasks, activeNodes, rollback)
 		if err != nil {
 			return nil, "", err
 		}
 
-		log.Printf(">> service refresh func state: %v", service.UpdateStatus.Message)
-		return service.ID, service.UpdateStatus.Message, nil
+		if isUpdateCompleted {
+			return service.ID, "completed", nil
+		}
+
+		return service.ID, "updating", nil
 	}
 }
 
-func waitOnService(ctx context.Context, client *dc.Client, plainConvergeConfig *convergeConfig, serviceID string) error {
-	filter := make(map[string][]string)
-	filter["service"] = []string{serviceID}
-	filter["desired-state"] = []string{"running"}
-
-	getUpToDateTasks := func() ([]swarm.Task, error) {
-		return client.ListTasks(dc.ListTasksOptions{
-			Filters: filter,
-			Context: ctx,
-		})
-	}
-
-	var (
-		updater     progressUpdater
-		converged   bool
-		convergedAt time.Time
-		monitor     = plainConvergeConfig.monitor
-		rollback    bool
-	)
-
-	timeout := time.After(plainConvergeConfig.timeout)
-	for {
-		service, err := client.InspectService(serviceID)
-		if err != nil {
-			return err
-		}
-
-		if service.Spec.UpdateConfig != nil && service.Spec.UpdateConfig.Monitor != 0 {
-			monitor = service.Spec.UpdateConfig.Monitor
-		}
-
-		if updater == nil {
-			updater = &replicatedProgressUpdater{}
-		}
-
-		if service.UpdateStatus != nil {
-			switch service.UpdateStatus.State {
-			case swarm.UpdateStateUpdating:
-				rollback = false
-			case swarm.UpdateStateCompleted:
-				if !converged {
-					return nil
-				}
-			case swarm.UpdateStatePaused:
-				return fmt.Errorf("service update paused: %s", service.UpdateStatus.Message)
-			case swarm.UpdateStateRollbackStarted:
-				rollback = true
-			case swarm.UpdateStateRollbackPaused:
-				return fmt.Errorf("service rollback paused: %s", service.UpdateStatus.Message)
-			case swarm.UpdateStateRollbackCompleted:
-				if !converged {
-					return fmt.Errorf("service rolled back: %s", service.UpdateStatus.Message)
-				}
-			}
-		}
-
-		if converged && time.Since(convergedAt) >= monitor {
-			if service.UpdateStatus != nil {
-				if service.UpdateStatus.State == swarm.UpdateStateRollbackCompleted {
-					return fmt.Errorf("service rollback completed at %v", convergedAt)
-				}
-				log.Printf("[INFO] return after update with status: %v", service.UpdateStatus.State)
-			}
-			log.Printf("[INFO] return after converged")
-			return nil
-		}
-
-		tasks, err := getUpToDateTasks()
-		if err != nil {
-			return err
-		}
-
-		activeNodes, err := getActiveNodes(ctx, client)
-		if err != nil {
-			return err
-		}
-
-		converged, err = updater.update(service, tasks, activeNodes, rollback)
-		if err != nil {
-			return err
-		}
-
-		if converged {
-			if convergedAt.IsZero() {
-				convergedAt = time.Now()
-				log.Printf("[INFO] converged at %v", convergedAt)
-			}
-		} else {
-			convergedAt = time.Time{}
-		}
-
-		select {
-		case <-time.After(plainConvergeConfig.interval):
-		case <-timeout:
-			if !converged {
-				return &DidNotConvergeError{ServiceID: serviceID, Timeout: plainConvergeConfig.timeout}
-			}
-			return nil
-		}
-	}
-}
-
+// getActiveNodes TODO
 func getActiveNodes(ctx context.Context, client *dc.Client) (map[string]struct{}, error) {
 	nodes, err := client.ListNodes(dc.ListNodesOptions{Context: ctx})
 	if err != nil {
@@ -512,10 +478,12 @@ func getActiveNodes(ctx context.Context, client *dc.Client) (map[string]struct{}
 	return activeNodes, nil
 }
 
+// progressUpdater TODO
 type progressUpdater interface {
 	update(service *swarm.Service, tasks []swarm.Task, activeNodes map[string]struct{}, rollback bool) (bool, error)
 }
 
+// replicatedProgressUpdater TODO
 type replicatedProgressUpdater struct {
 	// used for mapping slots to a contiguous space
 	// this also causes progress bars to appear in order
@@ -525,6 +493,7 @@ type replicatedProgressUpdater struct {
 	done        bool
 }
 
+// update TODO
 func (u *replicatedProgressUpdater) update(service *swarm.Service, tasks []swarm.Task, activeNodes map[string]struct{}, rollback bool) (bool, error) {
 	if service.Spec.Mode.Replicated == nil || service.Spec.Mode.Replicated.Replicas == nil {
 		return false, fmt.Errorf("no replica count")
@@ -573,6 +542,7 @@ func (u *replicatedProgressUpdater) update(service *swarm.Service, tasks []swarm
 	return running == replicas, nil
 }
 
+// tasksBySlot TODO
 func (u *replicatedProgressUpdater) tasksBySlot(tasks []swarm.Task, activeNodes map[string]struct{}) map[int]swarm.Task {
 	// If there are multiple tasks with the same slot number, favor the one
 	// with the *lowest* desired state. This can happen in restart
@@ -605,11 +575,13 @@ func (u *replicatedProgressUpdater) tasksBySlot(tasks []swarm.Task, activeNodes 
 	return tasksBySlot
 }
 
+// terminalState TODO
 func terminalState(state swarm.TaskState) bool {
 	return numberedStates[state] > numberedStates[swarm.TaskStateRunning]
 }
 
 //////// Mappers
+// createServiceSpec TODO
 func createServiceSpec(d *schema.ResourceData) (swarm.ServiceSpec, error) {
 
 	serviceSpec := swarm.ServiceSpec{
@@ -863,6 +835,7 @@ func createServiceSpec(d *schema.ResourceData) (swarm.ServiceSpec, error) {
 	return serviceSpec, nil
 }
 
+// createUpdateOrRollbackConfig TODO
 func createUpdateOrRollbackConfig(config []interface{}) (*swarm.UpdateConfig, error) {
 	updateConfig := swarm.UpdateConfig{}
 	if len(config) > 0 {
@@ -890,6 +863,7 @@ func createUpdateOrRollbackConfig(config []interface{}) (*swarm.UpdateConfig, er
 	return &updateConfig, nil
 }
 
+// createConvergeConfig TODO
 func createConvergeConfig(config []interface{}) *convergeConfig {
 	plainConvergeConfig := &convergeConfig{}
 	if len(config) > 0 {
@@ -910,6 +884,7 @@ func createConvergeConfig(config []interface{}) *convergeConfig {
 	return plainConvergeConfig
 }
 
+// portSetToServicePorts TODO
 func portSetToServicePorts(ports *schema.Set) []swarm.PortConfig {
 	retPortConfigs := []swarm.PortConfig{}
 
@@ -936,6 +911,7 @@ func portSetToServicePorts(ports *schema.Set) []swarm.PortConfig {
 	return retPortConfigs
 }
 
+// authToServiceAuth TODO
 func authToServiceAuth(auth map[string]interface{}) dc.AuthConfiguration {
 	if auth["username"] != nil && len(auth["username"].(string)) > 0 && auth["password"] != nil && len(auth["password"].(string)) > 0 {
 		return dc.AuthConfiguration{
@@ -948,6 +924,7 @@ func authToServiceAuth(auth map[string]interface{}) dc.AuthConfiguration {
 	return dc.AuthConfiguration{}
 }
 
+// fromRegistryAuth TODO
 func fromRegistryAuth(image string, configs map[string]dc.AuthConfiguration) dc.AuthConfiguration {
 	// Remove normalized prefixes to simlify substring
 	image = strings.Replace(strings.Replace(image, "http://", "", 1), "https://", "", 1)
@@ -964,6 +941,7 @@ func fromRegistryAuth(image string, configs map[string]dc.AuthConfiguration) dc.
 	return dc.AuthConfiguration{}
 }
 
+// stringSetToPlacementPrefs TODO
 func stringSetToPlacementPrefs(stringSet *schema.Set) []swarm.PlacementPreference {
 	ret := []swarm.PlacementPreference{}
 	if stringSet == nil {
@@ -979,6 +957,7 @@ func stringSetToPlacementPrefs(stringSet *schema.Set) []swarm.PlacementPreferenc
 	return ret
 }
 
+// mapSetToPlacementPlatforms TODO
 func mapSetToPlacementPlatforms(stringSet *schema.Set) []swarm.Platform {
 	ret := []swarm.Platform{}
 	if stringSet == nil {
@@ -1005,13 +984,24 @@ var resourceDockerServiceCreatePendingStates = []string{
 	"preparing",
 	"ready",
 	"starting",
-	// update stati
-	"updating",
+	"creating",
 	"paused",
-	"completed",
-	"rollback_started",
-	"rollback_paused",
-	"rollback_completed",
+	// TODO remove
+	// "running",
+	// "complete",
+	// "shutdown",
+	// "failed",
+	// "rejected",
+}
+var resourceDockerServiceUpdatePendingStates = []string{
+	"creating",
+	"updating",
+	// TODO remove
+	// "paused",
+	// "completed",
+	// "rollback_started",
+	// "rollback_paused",
+	// "rollback_completed",
 	// "running",
 	// "complete",
 	// "shutdown",

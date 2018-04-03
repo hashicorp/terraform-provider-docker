@@ -2,6 +2,7 @@ package docker
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"regexp"
 	"testing"
@@ -497,13 +498,13 @@ func TestAccDockerService_nonExistingPrivateImageConverge(t *testing.T) {
 					converge_config {
 						interval = "500ms"
 						monitor  = "5s"
-						timeout  = "10s"
+						timeout  = "20s"
 					}
 				}
 				`,
-				ExpectError: regexp.MustCompile(`.*Converging timed out.*`),
+				ExpectError: regexp.MustCompile(`.*did not converge after.*`),
 				Check: resource.ComposeTestCheckFunc(
-					isServiceRemoved("docker_service.foo.name"),
+					isServiceRemoved("tftest-service-privateimagedoesnotexist"),
 				),
 			},
 		},
@@ -528,9 +529,9 @@ func TestAccDockerService_nonExistingPublicImageConverge(t *testing.T) {
 					}
 				}
 				`,
-				ExpectError: regexp.MustCompile(`.*Converging timed out.*`),
+				ExpectError: regexp.MustCompile(`.*did not converge after.*`),
 				Check: resource.ComposeTestCheckFunc(
-					isServiceRemoved("docker_service.foo.name"),
+					isServiceRemoved("tftest-service-publicimagedoesnotexist"),
 				),
 			},
 		},
@@ -666,6 +667,7 @@ func TestAccDockerService_fullConverge(t *testing.T) {
 					converge_config {
 						interval = "500ms"
 						monitor  = "10s"
+						timeout  = "1m"
 					}
 				}
 				`,
@@ -681,7 +683,7 @@ func TestAccDockerService_fullConverge(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_service.foo", "hosts.#", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "hosts.1878413705.host", "testhost"),
 					resource.TestCheckResourceAttr("docker_service.foo", "hosts.1878413705.ip", "10.0.1.0"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "stop_grace_period", "5s"),
+					resource.TestCheckResourceAttr("docker_service.foo", "destroy_grace_seconds", "10"),
 					resource.TestCheckResourceAttr("docker_service.foo", "mounts.#", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "mounts.1085008189.consistency", "default"),
 					resource.TestCheckResourceAttr("docker_service.foo", "mounts.1085008189.read_only", "true"),
@@ -739,7 +741,6 @@ func TestAccDockerService_fullConverge(t *testing.T) {
 }
 
 func TestAccDockerService_updateFailsAndRollbackConverge(t *testing.T) {
-	// t.Skip("Skipping: service update failed. Waiting for feedback..")
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
 		Providers: testAccProviders,
@@ -797,6 +798,7 @@ func TestAccDockerService_updateFailsAndRollbackConverge(t *testing.T) {
 					converge_config {
 						interval = "500ms"
 						monitor  = "10s"
+						timeout  = "3m"
 					}
 
 					destroy_grace_seconds = "10"
@@ -834,12 +836,8 @@ func TestAccDockerService_updateFailsAndRollbackConverge(t *testing.T) {
 			resource.TestStep{
 				Config: `
 				resource "docker_config" "service_config" {
-					name = "tftest-myconfig-${uuid()}"
+					name = "tftest-up-rollback-myconfig"
 					data = "ewogICJwcmVmaXgiOiAiMTIzIgp9"
-
-					lifecycle {
-						ignore_changes = ["name"]
-					}
 				}
 
 				resource "docker_service" "foo" {
@@ -888,6 +886,7 @@ func TestAccDockerService_updateFailsAndRollbackConverge(t *testing.T) {
 					converge_config {
 						interval = "500ms"
 						monitor  = "10s"
+						timeout  = "3m"
 					}
 
 					destroy_grace_seconds = "10"
@@ -1444,12 +1443,8 @@ func TestAccDockerService_updateHealthcheckConverge(t *testing.T) {
 			resource.TestStep{
 				Config: `
 				resource "docker_config" "service_config" {
-					name = "tftest-myconfig-${uuid()}"
+					name = "tftest-up-healthcheck-myconfig"
 					data = "ewogICJwcmVmaXgiOiAiMTIzIgp9"
-
-					lifecycle {
-						ignore_changes = ["name"]
-					}
 				}
 
 				resource "docker_service" "foo" {
@@ -3138,10 +3133,12 @@ func isServiceRemoved(serviceName string) resource.TestCheckFunc {
 		if err != nil {
 			return fmt.Errorf("Error listing service for name %s: %v", serviceName, err)
 		}
-		if len(services) == 0 {
-			return nil
+		length := len(services)
+		log.Printf("### isServiceRemoved length: %v", length)
+		if length != 0 {
+			return fmt.Errorf("Service should be removed but is running: %s", serviceName)
 		}
 
-		return fmt.Errorf("Service should be removed but is running: %s", serviceName)
+		return nil
 	}
 }
