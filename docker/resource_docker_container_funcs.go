@@ -261,6 +261,7 @@ func resourceDockerContainerRead(d *schema.ResourceData, meta interface{}) error
 
 	var container *dc.Container
 
+	// TODO fix this with statefunc
 	loops := 1 // if it hasn't just been created, don't delay
 	if !creationTime.IsZero() {
 		loops = 30 // with 500ms spacing, 15 seconds; ought to be plenty

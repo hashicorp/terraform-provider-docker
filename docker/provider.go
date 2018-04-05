@@ -9,8 +9,14 @@ import (
 	dc "github.com/fsouza/go-dockerclient"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
+	fw "github.com/mavogel/sshforward"
 )
 
+// Workaround for mutiple calls for configureFunc
+// and no teardown method in provider https://github.com/hashicorp/terraform/issues/6258
+var isForwardEstablished = false
+
+// Provider creates the Docker provider
 func Provider() terraform.ResourceProvider {
 	return &schema.Provider{
 		Schema: map[string]*schema.Schema{
@@ -69,6 +75,7 @@ func Provider() terraform.ResourceProvider {
 						"password": &schema.Schema{
 							Type:          schema.TypeString,
 							Optional:      true,
+							Sensitive:     true,
 							ConflictsWith: []string{"registry_auth.config_file"},
 							DefaultFunc:   schema.EnvDefaultFunc("DOCKER_REGISTRY_PASS", ""),
 							Description:   "Password for the registry",
@@ -84,6 +91,77 @@ func Provider() terraform.ResourceProvider {
 					},
 				},
 			},
+
+			"forward_config": &schema.Schema{
+				Type:        schema.TypeList,
+				MaxItems:    1,
+				Optional:    true,
+				Description: "Configuration to forward the docker daemon from a remote to a local address",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"bastion_host": &schema.Schema{
+							Type:         schema.TypeString,
+							Optional:     true,
+							Description:  "The host address of the bastion host",
+							ValidateFunc: validateStringMatchesPattern(`^.+:\d+$`),
+						},
+						"bastion_host_user": &schema.Schema{
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "The user to login via ssh on the bastion host",
+						},
+						"bastion_host_password": &schema.Schema{
+							Type:          schema.TypeString,
+							Optional:      true,
+							Sensitive:     true,
+							ConflictsWith: []string{"forward_config.bastion_host_private_key_file"},
+							Description:   "The password of the user to login via ssh on the bastion host",
+						},
+						"bastion_host_private_key_file": &schema.Schema{
+							Type:          schema.TypeString,
+							Optional:      true,
+							ConflictsWith: []string{"forward_config.bastion_host_password"},
+							Description:   "The private key file associated with the user to login via ssh on the bastion host",
+						},
+						"end_host": &schema.Schema{
+							Type:         schema.TypeString,
+							Required:     true,
+							Description:  "The host address of the end host",
+							ValidateFunc: validateStringMatchesPattern(`^.+:\d+$`),
+						},
+						"end_host_user": &schema.Schema{
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The user to login via ssh on the end host",
+						},
+						"end_host_password": &schema.Schema{
+							Type:          schema.TypeString,
+							Optional:      true,
+							Sensitive:     true,
+							ConflictsWith: []string{"forward_config.end_host_private_key_file"},
+							Description:   "The password of the user to login via ssh on the end host",
+						},
+						"end_host_private_key_file": &schema.Schema{
+							Type:          schema.TypeString,
+							Optional:      true,
+							ConflictsWith: []string{"forward_config.end_host_password"},
+							Description:   "The private key file associated with the user to login via ssh on the end host",
+						},
+						"local_address": &schema.Schema{
+							Type:         schema.TypeString,
+							Required:     true,
+							Description:  "The local address the docker daemon is forwarded to",
+							ValidateFunc: validateStringMatchesPattern(`^.+:\d+$`),
+						},
+						"remote_address": &schema.Schema{
+							Type:         schema.TypeString,
+							Required:     true,
+							Description:  "The address on the remote/end host the docker daemon is forwarded from",
+							ValidateFunc: validateStringMatchesPattern(`^.+:\d+$`),
+						},
+					},
+				},
+			},
 		},
 
 		ResourcesMap: map[string]*schema.Resource{
@@ -91,6 +169,9 @@ func Provider() terraform.ResourceProvider {
 			"docker_image":     resourceDockerImage(),
 			"docker_network":   resourceDockerNetwork(),
 			"docker_volume":    resourceDockerVolume(),
+			"docker_config":    resourceDockerConfig(),
+			"docker_secret":    resourceDockerSecret(),
+			"docker_service":   resourceDockerService(),
 		},
 
 		DataSourcesMap: map[string]*schema.Resource{
@@ -110,6 +191,15 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 		CertPath: d.Get("cert_path").(string),
 	}
 
+	if forwardConfig, ok := d.GetOk("forward_config"); ok {
+		if !isForwardEstablished {
+			if err := createForward(forwardConfig.([]interface{})); err != nil {
+				return nil, fmt.Errorf("Error creating forward: %s", err)
+			}
+			isForwardEstablished = true
+		}
+	}
+
 	client, err := config.NewClient()
 	if err != nil {
 		return nil, fmt.Errorf("Error initializing Docker client: %s", err)
@@ -121,7 +211,6 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	}
 
 	authConfigs := &dc.AuthConfigurations{}
-
 	if v, ok := d.GetOk("registry_auth"); ok {
 		authConfigs, err = providerSetToRegistryAuth(v.(*schema.Set))
 
@@ -136,6 +225,72 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	}
 
 	return &providerConfig, nil
+}
+
+// Takes the given forward config and parses it into the fw.Config
+func parseForwardConfig(forwardConfigList []interface{}) (*fw.Config, error) {
+	forwardConfig := &fw.Config{}
+
+	if forwardConfigList != nil && len(forwardConfigList) > 0 {
+		fc := forwardConfigList[0].(map[string]interface{})
+
+		if v, ok := fc["bastion_host"]; ok {
+			jumpHostConfigs := make([]*fw.SSHConfig, 0)
+			bastionHostConfig := &fw.SSHConfig{}
+			bastionHostConfig.Address = v.(string)
+			if v, ok := fc["bastion_host_user"]; ok {
+				bastionHostConfig.User = v.(string)
+			}
+			if v, ok := fc["bastion_host_password"]; ok {
+				bastionHostConfig.Password = v.(string)
+			}
+			if v, ok := fc["bastion_host_private_key_file"]; ok {
+				bastionHostConfig.PrivateKeyFile = v.(string)
+			}
+			jumpHostConfigs = append(jumpHostConfigs, bastionHostConfig)
+			forwardConfig.JumpHostConfigs = jumpHostConfigs
+		}
+
+		forwardConfig.EndHostConfig = &fw.SSHConfig{}
+		if v, ok := fc["end_host"]; ok {
+			forwardConfig.EndHostConfig.Address = v.(string)
+		}
+		if v, ok := fc["end_host_user"]; ok {
+			forwardConfig.EndHostConfig.User = v.(string)
+		}
+		if v, ok := fc["end_host_password"]; ok {
+			forwardConfig.EndHostConfig.Password = v.(string)
+		}
+		if v, ok := fc["end_host_private_key_file"]; ok {
+			forwardConfig.EndHostConfig.PrivateKeyFile = v.(string)
+		}
+
+		if v, ok := fc["local_address"]; ok {
+			forwardConfig.LocalAddress = v.(string)
+		}
+
+		if v, ok := fc["remote_address"]; ok {
+			forwardConfig.RemoteAddress = v.(string)
+		}
+	}
+
+	return forwardConfig, nil
+}
+
+// Creates a forward
+func createForward(forwardConfig []interface{}) error {
+	parsedForwardConfig, err := parseForwardConfig(forwardConfig)
+	if err != nil {
+		return fmt.Errorf("Invalid forward config: %s", err)
+	}
+
+	// NOTE: when teardown exists https://github.com/hashicorp/terraform/issues/6258
+	// we should close the forward then
+	_, _, bootstrapErr := fw.NewForward(parsedForwardConfig)
+	if bootstrapErr != nil {
+		return fmt.Errorf("bootstrapErr while establishing forward: %s", bootstrapErr)
+	}
+	return nil
 }
 
 // Take the given registry_auth schemas and return a map of registry auth configurations

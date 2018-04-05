@@ -11,22 +11,22 @@ Requirements
 ------------
 
 -	[Terraform](https://www.terraform.io/downloads.html) 0.10.x
--	[Go](https://golang.org/doc/install) 1.8 (to build the provider plugin)
+-	[Go](https://golang.org/doc/install) 1.9.1 (to build the provider plugin)
 
 Building The Provider
 ---------------------
 
-Clone repository to: `$GOPATH/src/github.com/terraform-providers/terraform-provider-$PROVIDER_NAME`
+Clone repository to: `$GOPATH/src/github.com/terraform-providers/terraform-provider-docker`
 
 ```sh
 $ mkdir -p $GOPATH/src/github.com/terraform-providers; cd $GOPATH/src/github.com/terraform-providers
-$ git clone git@github.com:terraform-providers/terraform-provider-$PROVIDER_NAME
+$ git clone git@github.com:terraform-providers/terraform-provider-docker
 ```
 
 Enter the provider directory and build the provider
 
 ```sh
-$ cd $GOPATH/src/github.com/terraform-providers/terraform-provider-$PROVIDER_NAME
+$ cd $GOPATH/src/github.com/terraform-providers/terraform-provider-docker
 $ make build
 ```
 
@@ -44,7 +44,7 @@ To compile the provider, run `make build`. This will build the provider and put 
 ```sh
 $ make build
 ...
-$ $GOPATH/bin/terraform-provider-$PROVIDER_NAME
+$ $GOPATH/bin/terraform-provider-docker
 ...
 ```
 
@@ -56,12 +56,10 @@ $ make test
 
 In order to run the full suite of Acceptance tests, run `make testacc`.
 
-*Note:* Acceptance tests create real resources, and often cost money to run.
+*Note:* Acceptance tests create a local registry which will be deleted afterwards.
 
 ```sh
-$ make testacc
-# e.g. run a single acceptance test: e.g. 'TestAccDockerRegistryImage_private' in 'data_source_docker_registry_image_test.go'
-go test -v -timeout 30s github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerRegistryImage_private$
+$ sh scripts/runAccTests.sh
 ```
 
 In order to extend the provider and test it with `terraform`, build the provider as mentioned above with
@@ -72,7 +70,7 @@ $ make build
 Remove an explicit version of the provider you develop, because `terraform` will fetch
 the locally built one in `$GOPATH/bin`
 ```hcl
-provider "$PROVIDER_NAME" {
+provider "docker" {
   # version = "~> 0.1.2"
   ...
 }
@@ -81,4 +79,4 @@ provider "$PROVIDER_NAME" {
 
 Don't forget to run `terraform init` each time you rebuild the provider. Check [here](https://www.youtube.com/watch?v=TMmovxyo5sY&t=30m14s) for a more detailed explanation.
 
-You can check the latest released version of a provider at https://releases.hashicorp.com/terraform-provider-$PROVIDER_NAME/.
+You can check the latest released version of a provider at https://releases.hashicorp.com/terraform-provider-docker/.

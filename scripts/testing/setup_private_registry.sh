@@ -1,3 +1,4 @@
+#!/bin/bash
 set -e
 
 # Create private registry
@@ -14,7 +15,7 @@ openssl req \
 ## Create auth
 mkdir -p scripts/testing/auth
 # Start registry
-docker run --entrypoint htpasswd registry:2 -Bbn testuser testpwd > scripts/testing/auth/htpasswd
+docker run --rm --entrypoint htpasswd registry:2 -Bbn testuser testpwd > scripts/testing/auth/htpasswd
 docker run -d -p 5000:5000 --rm --name private_registry \
   -v "$(pwd)"/scripts/testing/auth:/auth \
   -e "REGISTRY_AUTH=htpasswd" \
@@ -29,10 +30,8 @@ sleep 5
 # Login to private registry
 docker login -u testuser -p testpwd 127.0.0.1:5000
 # Build private images
-docker build -t my-private-service ./scripts/testing -f ./scripts/testing/Dockerfile_v1
-docker tag my-private-service 127.0.0.1:5000/my-private-service:v1
-docker build -t my-private-service ./scripts/testing -f ./scripts/testing/Dockerfile_v2
-docker tag my-private-service 127.0.0.1:5000/my-private-service:v2
-# Push private images into private registry
-docker push 127.0.0.1:5000/my-private-service:v1
-docker push 127.0.0.1:5000/my-private-service:v2
+for i in $(seq 1 3); do 
+  docker build -t tftest-service ./scripts/testing -f ./scripts/testing/Dockerfile_v${i}
+  docker tag tftest-service 127.0.0.1:5000/tftest-service:v${i}
+  docker push 127.0.0.1:5000/tftest-service:v${i}
+done

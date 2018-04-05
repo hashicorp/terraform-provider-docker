@@ -18,7 +18,7 @@ type DockerConfig struct {
 	CertPath string
 }
 
-// NewClient() returns a new Docker client.
+// NewClient returns a new Docker client.
 func (c *DockerConfig) NewClient() (*dc.Client, error) {
 	if c.Ca != "" || c.Cert != "" || c.Key != "" {
 		if c.Ca == "" || c.Cert == "" || c.Key == "" {
@@ -37,6 +37,7 @@ func (c *DockerConfig) NewClient() (*dc.Client, error) {
 		ca := filepath.Join(c.CertPath, "ca.pem")
 		cert := filepath.Join(c.CertPath, "cert.pem")
 		key := filepath.Join(c.CertPath, "key.pem")
+
 		return dc.NewTLSClient(c.Host, cert, key, ca)
 	}
 
