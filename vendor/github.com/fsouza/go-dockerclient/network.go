@@ -5,16 +5,11 @@
 package docker
 
 import (
-<<<<<<< HEAD
 	"context"
-=======
->>>>>>> Update dependencies. Mainly go-dockerclient.
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
-
-	"golang.org/x/net/context"
 )
 
 // ErrNetworkAlreadyExists is the error returned by CreateNetwork when the
@@ -116,11 +111,7 @@ func (c *Client) NetworkInfo(id string) (*Network, error) {
 type CreateNetworkOptions struct {
 	Name           string                 `json:"Name" yaml:"Name" toml:"Name"`
 	Driver         string                 `json:"Driver" yaml:"Driver" toml:"Driver"`
-<<<<<<< HEAD
 	IPAM           *IPAMOptions           `json:"IPAM,omitempty" yaml:"IPAM" toml:"IPAM"`
-=======
-	IPAM           IPAMOptions            `json:"IPAM" yaml:"IPAM" toml:"IPAM"`
->>>>>>> Update dependencies. Mainly go-dockerclient.
 	Options        map[string]interface{} `json:"Options" yaml:"Options" toml:"Options"`
 	Labels         map[string]string      `json:"Labels" yaml:"Labels" toml:"Labels"`
 	CheckDuplicate bool                   `json:"CheckDuplicate" yaml:"CheckDuplicate" toml:"CheckDuplicate"`

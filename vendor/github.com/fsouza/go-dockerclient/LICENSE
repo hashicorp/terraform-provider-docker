@@ -1,8 +1,4 @@
-<<<<<<< HEAD
 Copyright (c) 2013-2018, go-dockerclient authors
-=======
-Copyright (c) 2013-2017, go-dockerclient authors
->>>>>>> Update dependencies. Mainly go-dockerclient.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without

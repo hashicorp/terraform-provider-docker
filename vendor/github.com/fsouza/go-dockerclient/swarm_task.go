@@ -5,18 +5,11 @@
 package docker
 
 import (
-<<<<<<< HEAD
 	"context"
-=======
->>>>>>> Update dependencies. Mainly go-dockerclient.
 	"encoding/json"
 	"net/http"
 
 	"github.com/docker/docker/api/types/swarm"
-<<<<<<< HEAD
-=======
-	"golang.org/x/net/context"
->>>>>>> Update dependencies. Mainly go-dockerclient.
 )
 
 // NoSuchTask is the error returned when a given task does not exist.

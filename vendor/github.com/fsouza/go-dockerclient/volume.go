@@ -9,8 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-
-	"golang.org/x/net/context"
 )
 
 var (
@@ -29,10 +27,7 @@ type Volume struct {
 	Driver     string            `json:"Driver,omitempty" yaml:"Driver,omitempty" toml:"Driver,omitempty"`
 	Mountpoint string            `json:"Mountpoint,omitempty" yaml:"Mountpoint,omitempty" toml:"Mountpoint,omitempty"`
 	Labels     map[string]string `json:"Labels,omitempty" yaml:"Labels,omitempty" toml:"Labels,omitempty"`
-<<<<<<< HEAD
 	Options    map[string]string `json:"Options,omitempty" yaml:"Options,omitempty" toml:"Options,omitempty"`
-=======
->>>>>>> Update dependencies. Mainly go-dockerclient.
 }
 
 // ListVolumesOptions specify parameters to the ListVolumes function.
@@ -163,11 +158,7 @@ func (c *Client) RemoveVolumeWithOptions(opts RemoveVolumeOptions) error {
 
 // PruneVolumesOptions specify parameters to the PruneVolumes function.
 //
-<<<<<<< HEAD
 // See https://goo.gl/f9XDem for more details.
-=======
-// See https://goo.gl/pFN1Hj for more details.
->>>>>>> Update dependencies. Mainly go-dockerclient.
 type PruneVolumesOptions struct {
 	Filters map[string][]string
 	Context context.Context
@@ -175,11 +166,7 @@ type PruneVolumesOptions struct {
 
 // PruneVolumesResults specify results from the PruneVolumes function.
 //
-<<<<<<< HEAD
 // See https://goo.gl/f9XDem for more details.
-=======
-// See https://goo.gl/pFN1Hj for more details.
->>>>>>> Update dependencies. Mainly go-dockerclient.
 type PruneVolumesResults struct {
 	VolumesDeleted []string
 	SpaceReclaimed int64
@@ -187,11 +174,7 @@ type PruneVolumesResults struct {
 
 // PruneVolumes deletes volumes which are unused.
 //
-<<<<<<< HEAD
 // See https://goo.gl/f9XDem for more details.
-=======
-// See https://goo.gl/pFN1Hj for more details.
->>>>>>> Update dependencies. Mainly go-dockerclient.
 func (c *Client) PruneVolumes(opts PruneVolumesOptions) (*PruneVolumesResults, error) {
 	path := "/volumes/prune?" + queryString(opts)
 	resp, err := c.do("POST", path, doOptions{context: opts.Context})

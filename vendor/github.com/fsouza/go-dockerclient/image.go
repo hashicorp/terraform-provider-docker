@@ -17,8 +17,6 @@ import (
 	"os"
 	"strings"
 	"time"
-
-	"golang.org/x/net/context"
 )
 
 // APIImages represent an image returned in the ListImages call.

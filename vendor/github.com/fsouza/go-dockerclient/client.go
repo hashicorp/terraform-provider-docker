@@ -35,11 +35,6 @@ import (
 	"github.com/docker/docker/pkg/homedir"
 	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/docker/docker/pkg/stdcopy"
-<<<<<<< HEAD
-=======
-	"golang.org/x/net/context"
-	"golang.org/x/net/context/ctxhttp"
->>>>>>> Update dependencies. Mainly go-dockerclient.
 )
 
 const (
@@ -222,7 +217,6 @@ func NewVersionedClient(endpoint string, apiVersionString string) (*Client, erro
 		eventMonitor:        new(eventMonitoringState),
 		requestedAPIVersion: requestedAPIVersion,
 	}
-<<<<<<< HEAD
 	c.initializeNativeClient(defaultTransport)
 	return c, nil
 }
@@ -231,10 +225,6 @@ func NewVersionedClient(endpoint string, apiVersionString string) (*Client, erro
 // a function that returns pointer to a transport object.
 func (c *Client) WithTransport(trFunc func() *http.Transport) {
 	c.initializeNativeClient(trFunc)
-=======
-	c.initializeNativeClient()
-	return c, nil
->>>>>>> Update dependencies. Mainly go-dockerclient.
 }
 
 // NewVersionnedTLSClient is like NewVersionedClient, but with ann extra n.
@@ -356,11 +346,7 @@ func NewVersionedTLSClientFromBytes(endpoint string, certPEMBlock, keyPEMBlock, 
 		eventMonitor:        new(eventMonitoringState),
 		requestedAPIVersion: requestedAPIVersion,
 	}
-<<<<<<< HEAD
 	c.initializeNativeClient(defaultTransport)
-=======
-	c.initializeNativeClient()
->>>>>>> Update dependencies. Mainly go-dockerclient.
 	return c, nil
 }
 
@@ -490,11 +476,7 @@ func (c *Client) do(method, path string, doOptions doOptions) (*http.Response, e
 		ctx = context.Background()
 	}
 
-<<<<<<< HEAD
 	resp, err := c.HTTPClient.Do(req.WithContext(ctx))
-=======
-	resp, err := ctxhttp.Do(ctx, c.HTTPClient, req)
->>>>>>> Update dependencies. Mainly go-dockerclient.
 	if err != nil {
 		if strings.Contains(err.Error(), "connection refused") {
 			return nil, ErrConnectionRefused
@@ -610,11 +592,7 @@ func (c *Client) stream(method, path string, streamOptions streamOptions) error 
 			return chooseError(subCtx, err)
 		}
 	} else {
-<<<<<<< HEAD
 		if resp, err = c.HTTPClient.Do(req.WithContext(subCtx)); err != nil {
-=======
-		if resp, err = ctxhttp.Do(subCtx, c.HTTPClient, req); err != nil {
->>>>>>> Update dependencies. Mainly go-dockerclient.
 			if strings.Contains(err.Error(), "connection refused") {
 				return ErrConnectionRefused
 			}

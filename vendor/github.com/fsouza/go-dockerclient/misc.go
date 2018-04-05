@@ -68,10 +68,7 @@ type DockerInfo struct {
 	Architecture       string
 	IndexServerAddress string
 	RegistryConfig     *ServiceConfig
-<<<<<<< HEAD
 	SecurityOptions    []string
-=======
->>>>>>> Update dependencies. Mainly go-dockerclient.
 	NCPU               int
 	MemTotal           int64
 	DockerRootDir      string

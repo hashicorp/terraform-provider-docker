@@ -9,10 +9,7 @@ package docker
 import (
 	"context"
 	"net"
-<<<<<<< HEAD
 	"net/http"
-=======
->>>>>>> Update dependencies. Mainly go-dockerclient.
 	"time"
 
 	"github.com/Microsoft/go-winio"
@@ -29,11 +26,7 @@ func (p pipeDialer) Dial(network, address string) (net.Conn, error) {
 }
 
 // initializeNativeClient initializes the native Named Pipe client for Windows
-<<<<<<< HEAD
 func (c *Client) initializeNativeClient(trFunc func() *http.Transport) {
-=======
-func (c *Client) initializeNativeClient() {
->>>>>>> Update dependencies. Mainly go-dockerclient.
 	if c.endpointURL.Scheme != namedPipeProtocol {
 		return
 	}
@@ -42,11 +35,7 @@ func (c *Client) initializeNativeClient() {
 		timeout := namedPipeConnectTimeout
 		return winio.DialPipe(namedPipePath, &timeout)
 	}
-<<<<<<< HEAD
 	tr := trFunc()
-=======
-	tr := defaultTransport()
->>>>>>> Update dependencies. Mainly go-dockerclient.
 	tr.Dial = dialFunc
 	tr.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
 		return dialFunc(network, addr)
