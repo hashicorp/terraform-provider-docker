@@ -9,18 +9,18 @@ log() {
 }
 
 setup() {
-  export DOCKER_REGISTRY_ADDRESS="127.0.0.1:5000"
+  export DOCKER_REGISTRY_ADDRESS="127.0.0.1:15000"
   export DOCKER_REGISTRY_USER="testuser"
   export DOCKER_REGISTRY_PASS="testpwd"
-  export DOCKER_PRIVATE_IMAGE="127.0.0.1:5000/tftest-service:v1"
-  sh scripts/testing/setup_private_registry.sh
+  export DOCKER_PRIVATE_IMAGE="127.0.0.1:15000/my-private-service:v1"
+  sh "$(pwd)"/scripts/testing/setup_private_registry.sh
 }
 
 run() {
   TF_ACC=1 go test ./docker -v -timeout 120m
   
   # for a single test comment the previous line and uncomment the next line
-  #TF_LOG=INFO TF_ACC=1 go test -v github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerService_updateIncreaseReplicasConverge$ -timeout 360s
+  #TF_LOG=INFO TF_ACC=1 go test -v github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerService_fullConverge$ -timeout 360s
   
   # keep the return value for the scripts to fail and clean properly
   return $?
@@ -31,8 +31,8 @@ cleanup() {
   echo "### unsetted env ###"
   for p in $(docker container ls -f 'name=private_registry' -q); do docker stop $p; done
   echo "### stopped private registry ###"
-  rm -f scripts/testing/auth/htpasswd
-  rm -f scripts/testing/certs/registry_auth.*
+  rm -f "$(pwd)"/scripts/testing/auth/htpasswd
+  rm -f "$(pwd)"/scripts/testing/certs/registry_auth.*
   echo "### removed auth and certs ###"
   for resource in "container" "volume"; do
     for r in $(docker $resource ls -f 'name=tftest-' -q); do docker $resource rm -f "$r"; done
