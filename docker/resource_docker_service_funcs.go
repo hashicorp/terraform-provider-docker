@@ -75,6 +75,7 @@ func resourceDockerServiceCreate(d *schema.ResourceData, meta interface{}) error
 	if err != nil {
 		return err
 	}
+	d.SetId(service.ID)
 
 	if v, ok := d.GetOk("converge_config"); ok {
 		convergeConfig := createConvergeConfig(v.([]interface{}))
@@ -103,7 +104,6 @@ func resourceDockerServiceCreate(d *schema.ResourceData, meta interface{}) error
 		}
 	}
 
-	d.SetId(service.ID)
 	return resourceDockerServiceRead(d, meta)
 }
 
