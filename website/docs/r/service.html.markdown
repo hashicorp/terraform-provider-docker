@@ -8,11 +8,11 @@ description: |-
 
 # docker\_service
 
-Manages the lifecycle of a Docker service. By default the creation, update and delete of a service are detached.
+Manages the lifecycle of a Docker service. By default, the creation, update and delete of a service are detached.
 
-With the [Converge Config](#convergeconfig) the behaviour of the `docker cli` will be imitated to guarantee that
-e.g. all tasks of a service are running or succesfully updated or to inform `terraform` that a service could not
-be updated and was succesfully rolled back.
+With the [Converge Config](#convergeconfig) the behavior of the `docker cli` will be imitated to guarantee that
+e.g. all tasks of a service are running or successfully updated or to inform `terraform` that a service could not
+be updated and was successfully rolled back.
 
 ## Example Usage
 
@@ -119,7 +119,7 @@ The following arguments are supported:
     container. For example, to run `/usr/bin/myprogram -f baz.conf` set the
     command to be `["/usr/bin/myprogram", "-f", "baz.conf"]`.
 * `env` - (Optional, set of strings) Environment variables to set.
-* `host` - (Optional, list of strings) Each host is a string with the ip, the cononical hostname and its aliase serparated with a whitespace: `IP_address canonical_hostname [aliases...]` e.g. `10.10.10.10 host1`. 
+* `host` - (Optional, list of strings) Each host is a string with the ip, the canonical hostname, and its aliases separated with whitespace: `IP_address canonical_hostname [aliases...]` e.g. `10.10.10.10 host1`. 
 * `destroy_grace_seconds` - (Optional, string) Amount of seconds to wait for the container to terminate before forcefully stopping it. This setting also ensures that all containers of a service are shut down successfully.
 * `network_mode` - (Optional, string) Network mode of the containers of the service (vip|dnsrr).
 * `networks` - (Optional, set of strings) Id of the networks in which the
@@ -141,7 +141,7 @@ The following arguments are supported:
 <a id="auth"></a>
 ### Auth
 
-`auth` can be used additionally to the `registry_auth`. If both are given the `auth` wins and overwrites the auth of the provider.
+`auth` can be used additionally to the `registry_auth`. If both properties are given the `auth` wins and overwrites the auth of the provider.
 
 * `server_address` - (Required, string) The address of the registry server
 * `username` - (Optional, string) The username to use for authenticating to the registry. If this is blank, the `DOCKER_REGISTRY_USER` will also be checked. 
@@ -152,7 +152,7 @@ The following arguments are supported:
 
 `mode` is a block within the configuration that can be repeated only **once** to specify the mode configuration for the service. The `mode` block supports the following:
 
-* `global` - (Optional, bool) set it to `true` to run the service in global mode
+* `global` - (Optional, bool) set it to `true` to run the service in the global mode
 ```hcl
 resource "docker_service" "foo" {
   ...
@@ -176,7 +176,7 @@ resource "docker_service" "foo" {
 ```
 
 ~> **NOTE on `mode`:** if neither `global` nor `replicated` is specified, the service
-will be starter in `replicated` mode with 1 replica.
+will be started in `replicated` mode with 1 replica.
 
 
 <a id="mounts"></a>
@@ -231,8 +231,7 @@ the following:
 * `internal` - (Required, int) Port within the container.
 * `external` - (Required, int) Port exposed out of the container.
 * `ip` - (Optional, string) IP address/mask that can access this port.
-* `protocol` - (Optional, string) Protocol that can be used over this port,
-  defaults to TCP.
+* `protocol` - (Optional, string) Protocol that can be used over this port defaults to TCP.
 
 <a id="update-rollback-config"></a>
 ### UpdateConfig and RollbackConfig
@@ -251,8 +250,8 @@ the following:
 
 `placement_platform` is a block within the configuration that can be repeated only **once** to specify the architecture the service can run on. The `placement_platform` block supports the following:
 
-* `architecture` - (Required, string), the hardware architecture, e.g. `x86_64`
-* `os` - (Required, string) the operation system, e.g. `linux`
+* `architecture` - (Required, string), the hardware architecture, e.g., `x86_64`
+* `os` - (Required, string) the operation system, e.g. `Linux`
 
 <a id="logging"></a>
 ### Logging
@@ -286,22 +285,22 @@ options {
 
 `dns_config` is a block within the configuration that can be repeated only **once** to specify the extra DNS configuration for the containers of the service. The `dns_config` block supports the following:
 
-* `nameservers` - (Required, list of strings) The IP addresses of the name servers, for example `8.8.8.8`
+* `nameservers` - (Required, list of strings) The IP addresses of the name servers, for example, `8.8.8.8`
 * `search` - (Optional, list of strings)A search list for host-name lookup.
-* `options` - (Optional, list of strings) A list of internal resolver variables to be modified, for example `debug`, `ndots:3`
+* `options` - (Optional, list of strings) A list of internal resolver variables to be modified, for example, `debug`, `ndots:3`
 
 <a id="convergeconfig"></a>
 ### Converge Config
 
-`converge_config` is a block within the configuration that can be repeated only **once** to specify the extra Converging configuration for the containers of the service. This is the same behaviour like the `docker cli`. By adding this configuration it is monitored with the
-given interval that e.g. all tasks/replicas of a service are up and healthy
+`converge_config` is a block within the configuration that can be repeated only **once** to specify the extra Converging configuration for the containers of the service. This is the same behavior as the `docker cli`. By adding this configuration, it is monitored with the
+given interval that, e.g. all tasks/replicas of a service are up and healthy
 
 The `converge_config` block supports the following:
 
 * `interval` - (Optional, string) Time between each the check to check docker endpoint (ms|s|m|h). For example, to check if
-all task are up when a service is created, or to check if all task are successfully updated on an update. Default 500ms.
+all tasks are up when a service is created, or to check if all tasks are successfully updated on an update. Default 500ms.
 * `monitor` - (Optional, string) Maximum time to allow one check to run (ms|s|m|h). Default 5s. This setting is only applied
-if no [UpdateConfig](#update-rollback-config) is set. Otherwise the `monitor` setting of the Update Config is used.
+if no [UpdateConfig](#update-rollback-config) is set. Otherwise, the `monitor` setting of the Update Config is used.
 
 
 ## Attributes Reference

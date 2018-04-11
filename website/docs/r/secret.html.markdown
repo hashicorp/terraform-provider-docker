@@ -8,7 +8,7 @@ description: |-
 
 # docker\_secret
 
-Manages the secreturation of a Docker service in a swarm.
+Manages the secrets of a Docker service in a swarm.
 
 ## Example Usage
 
@@ -23,7 +23,7 @@ resource "docker_secret" "foo_secret" {
 ```
 
 #### Update secret with no downtime
-In order to update a `secret`, Terraform will destroy the existing resource and create areplacement. In order to effectively use a `docker_secret` resource with a `docker_service` resource, it's recommended to specify `create_before_destroy` in a `lifecycle` block. Provide a uniqie `name` attribute, for example
+To update a `secret`, Terraform will destroy the existing resource and create a replacement. To effectively use a `docker_secret` resource with a `docker_service` resource, it's recommended to specify `create_before_destroy` in a `lifecycle` block. Provide a unique `name` attribute, for example
 with one of the interpolation functions `uuid` or `timestamp` as shown
 in the example below. The reason is [moby-35803](https://github.com/moby/moby/issues/35803).
 
