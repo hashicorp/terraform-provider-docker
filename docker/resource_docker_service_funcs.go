@@ -119,18 +119,59 @@ func resourceDockerServiceRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
-	var service *swarm.Service
-	service, err = client.InspectService(apiService.ID)
+	service, err := client.InspectService(apiService.ID)
 	if err != nil {
 		return fmt.Errorf("Error inspecting service %s: %s", apiService.ID, err)
 	}
 
+	d.Set("spec", flattenServiceSpec(service.Spec))
+	d.Set("endpoint", flattenServiceEndpoint(service.Endpoint))
 	d.Set("version", service.Version.Index)
 	d.Set("name", service.Spec.Name)
 
 	d.SetId(service.ID)
 
 	return nil
+}
+
+func flattenServiceSpec(in swarm.ServiceSpec) []interface{} {
+	att := make(map[string]interface{})
+
+	att["name"] = in.Name
+	att["task_template"] = flattenTaskTemplate(in.TaskTemplate)
+	att["mode"] = "TODO"
+	att["update_config"] = "TODO"
+	att["rollback_config"] = "TODO"
+	att["endpoint_config"] = "TODO"
+
+	return []interface{}{att}
+}
+
+func flattenTaskTemplate(l swarm.TaskSpec) map[string]string {
+	m := make(map[string]string)
+	m["container_spec"] = "TODO"
+	m["plugin_spec"] = "TODO"
+	m["resources"] = "TODO"
+	m["restart_policy"] = "TODO"
+	m["placement"] = "TODO"
+	m["networks"] = "TODO"
+	m["log_driver"] = "TODO"
+	m["force_update"] = "TODO"
+	m["runtime"] = "TODO"
+	// for k, v := range l {
+	// 	m[string(k)] = v.String()
+	// }
+	return m
+}
+
+func flattenServiceEndpoint(in swarm.Endpoint) []interface{} {
+	att := make(map[string]interface{})
+
+	att["spec"] = "TODO"
+	att["ports"] = "TODO"
+	att["virtual_ips"] = "TODO"
+
+	return []interface{}{att}
 }
 
 func resourceDockerServiceUpdate(d *schema.ResourceData, meta interface{}) error {
@@ -575,7 +616,6 @@ func createServiceSpec(d *schema.ResourceData) (swarm.ServiceSpec, error) {
 		TaskTemplate: swarm.TaskSpec{},
 	}
 
-	// TODO
 	if v, ok := d.GetOk("mode"); ok {
 		serviceSpec.Mode = swarm.ServiceMode{}
 		// because its a list
@@ -604,14 +644,6 @@ func createServiceSpec(d *schema.ResourceData) (swarm.ServiceSpec, error) {
 			}
 		}
 	}
-	// else {
-	// 	if v, ok := d.GetOk("replicas"); ok {
-	// 		replicas := uint64(v.(int))
-	// 		serviceSpec.Mode = swarm.ServiceMode{}
-	// 		serviceSpec.Mode.Replicated = &swarm.ReplicatedService{}
-	// 		serviceSpec.Mode.Replicated.Replicas = &replicas
-	// 	}
-	// }
 
 	// == start Container Spec
 	containerSpec := swarm.ContainerSpec{
