@@ -11,8 +11,8 @@ import (
 	"github.com/hashicorp/terraform/helper/schema"
 )
 
-func flattenServiceMode(in swarm.ServiceMode) []interface{} { // List
-	att := make(map[string]interface{}) // map
+func flattenServiceMode(in swarm.ServiceMode) []interface{} {
+	att := make(map[string]interface{})
 
 	if in.Replicated != nil {
 		att["replicated"] = flattenReplicated(in.Replicated)
@@ -26,15 +26,15 @@ func flattenServiceMode(in swarm.ServiceMode) []interface{} { // List
 	return []interface{}{att}
 }
 
-func flattenReplicated(in *swarm.ReplicatedService) []interface{} {
+func flattenReplicated(in *swarm.ReplicatedService) *schema.Set {
 	var out = make([]interface{}, 1, 1)
 	m := make(map[string]interface{})
-	iPtr := in.Replicas
-	i := *in.Replicas
-	log.Printf("[INFO] ---> %v -- %v", iPtr, i)
-	m["replicas"] = int(i)
+	m["replicas"] = int(*in.Replicas)
 	out[0] = m
-	return out
+	modeResource := resourceDockerService().Schema["mode"].Elem.(*schema.Resource)
+	replicatedResource := modeResource.Schema["replicated"].Elem.(*schema.Resource)
+	f := schema.HashResource(replicatedResource)
+	return schema.NewSet(f, out)
 }
 
 func flattenServiceHosts(in []string) []interface{} {

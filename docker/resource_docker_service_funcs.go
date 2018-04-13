@@ -126,11 +126,10 @@ func resourceDockerServiceRead(d *schema.ResourceData, meta interface{}) error {
 
 	d.Set("name", service.Spec.Name)
 	d.Set("image", service.Spec.TaskTemplate.ContainerSpec.Image)
-	// TODO nesting
-	// err = d.Set("mode", flattenServiceMode(service.Spec.Mode))
-	// if err != nil {
-	// 	return err
-	// }
+	err = d.Set("mode", flattenServiceMode(service.Spec.Mode))
+	if err != nil {
+		return err
+	}
 	if len(service.Spec.TaskTemplate.ContainerSpec.Hostname) > 0 {
 		err = d.Set("hostname", service.Spec.TaskTemplate.ContainerSpec.Hostname)
 		if err != nil {
