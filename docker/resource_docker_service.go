@@ -300,10 +300,10 @@ func resourceDockerService() *schema.Resource {
 							ValidateFunc: validateDurationGeq0(),
 						},
 						"max_failure_ratio": &schema.Schema{
-							Type:         schema.TypeFloat,
+							Type:         schema.TypeString,
 							Optional:     true,
-							Default:      0.0,
-							ValidateFunc: validateFloatRatio(),
+							Default:      "0.0",
+							ValidateFunc: validateStringIsFloatRatio(),
 						},
 						"order": &schema.Schema{
 							Type:         schema.TypeString,
@@ -350,11 +350,11 @@ func resourceDockerService() *schema.Resource {
 							ValidateFunc: validateDurationGeq0(),
 						},
 						"max_failure_ratio": &schema.Schema{
-							Type:         schema.TypeFloat,
+							Type:         schema.TypeString,
 							Description:  "Failure rate to tolerate during a rollback",
 							Optional:     true,
-							Default:      0.0,
-							ValidateFunc: validateFloatRatio(),
+							Default:      "0.0",
+							ValidateFunc: validateStringIsFloatRatio(),
 						},
 						"order": &schema.Schema{
 							Type:         schema.TypeString,

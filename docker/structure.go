@@ -1,7 +1,7 @@
 package docker
 
 import (
-	"log"
+	"strconv"
 	"strings"
 	"time"
 
@@ -142,12 +142,7 @@ func flattenServiceUpdateOrRollbackConfig(in *swarm.UpdateConfig) []interface{} 
 	m["delay"] = shortDur(in.Delay)
 	m["failure_action"] = in.FailureAction
 	m["monitor"] = shortDur(in.Monitor)
-	log.Printf("[INFO] ----> plain :  %v", in.MaxFailureRatio)
-	// log.Printf("[INFO] ----> casted:  %v", float32(float64(in.MaxFailureRatio)))
-	m["max_failure_ratio"] = in.MaxFailureRatio
-	// val, _ := strconv.ParseFloat(fmt.Sprintf("%.1f", in.MaxFailureRatio), 32)
-	// m["max_failure_ratio"] = float32(float64(in.MaxFailureRatio))
-	// m["max_failure_ratio"], _ = strconv.ParseFloat(fmt.Sprintf("%.1f", in.MaxFailureRatio), 32)
+	m["max_failure_ratio"] = strconv.FormatFloat(float64(in.MaxFailureRatio), 'f', 1, 64)
 	m["order"] = in.Order
 	out[0] = m
 	return out

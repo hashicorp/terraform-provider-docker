@@ -52,7 +52,7 @@ resource "docker_service" "service" {
     delay             = "10s"
     failure_action    = "pause"
     monitor           = "5s"
-    max_failure_ratio = 0.1
+    max_failure_ratio = "0.1"
     order             = "start-first"
   }
 
@@ -61,7 +61,7 @@ resource "docker_service" "service" {
     delay             = "10s"
     failure_action    = "pause"
     monitor           = "5s"
-    max_failure_ratio = 0.1
+    max_failure_ratio = "0.1"
     order             = "start-first"
   }
 
@@ -240,7 +240,8 @@ the following:
 * `delay` - (Optional, int) Delay between updates (ns|us|ms|s|m|h), e.g. 5s.
 * `failure_action` - (Optional, int) Action on update failure: pause | continue | rollback.
 * `monitor` - (Optional, int) Duration after each task update to monitor for failure (ns|us|ms|s|m|h)
-* `max_failure_ratio` - (Optional, int) The failure rate to tolerate during an update.
+* `max_failure_ratio` - (Optional, string) The failure rate to tolerate during an update as `float`. **Important:** the `float`need to be wrapped in a `string` to avoid internal
+casting and precision errors. 
 * `order` - (Optional, int) Update order either 'stop-first' or 'start-first'.
 
 <a id="placement"></a>

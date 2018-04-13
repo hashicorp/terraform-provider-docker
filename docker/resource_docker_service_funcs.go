@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strconv"
 	"strings"
 	"time"
 
@@ -126,9 +127,11 @@ func resourceDockerServiceRead(d *schema.ResourceData, meta interface{}) error {
 
 	d.Set("name", service.Spec.Name)
 	d.Set("image", service.Spec.TaskTemplate.ContainerSpec.Image)
-	err = d.Set("mode", flattenServiceMode(service.Spec.Mode))
-	if err != nil {
-		return err
+	if _, ok := d.GetOk("mode"); ok {
+		err = d.Set("mode", flattenServiceMode(service.Spec.Mode))
+		if err != nil {
+			return err
+		}
 	}
 	if len(service.Spec.TaskTemplate.ContainerSpec.Hostname) > 0 {
 		err = d.Set("hostname", service.Spec.TaskTemplate.ContainerSpec.Hostname)
@@ -190,42 +193,36 @@ func resourceDockerServiceRead(d *schema.ResourceData, meta interface{}) error {
 			return err
 		}
 	}
-	// TOOD float64
-	// if service.Spec.UpdateConfig != nil {
-	// 	err = d.Set("update_config", flattenServiceUpdateOrRollbackConfig(service.Spec.UpdateConfig))
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// }
-	// if service.Spec.RollbackConfig != nil {
-	// 	err = d.Set("rollback_config", flattenServiceUpdateOrRollbackConfig(service.Spec.RollbackConfig))
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// }
-
-	// TOOD docker_service.foo: Invalid address to set: []string{"constraints"}
+	if service.Spec.UpdateConfig != nil {
+		err = d.Set("update_config", flattenServiceUpdateOrRollbackConfig(service.Spec.UpdateConfig))
+		if err != nil {
+			return err
+		}
+	}
+	if service.Spec.RollbackConfig != nil {
+		err = d.Set("rollback_config", flattenServiceUpdateOrRollbackConfig(service.Spec.RollbackConfig))
+		if err != nil {
+			return err
+		}
+	}
 	if service.Spec.TaskTemplate.Placement != nil {
 		err = d.Set("placement", flattenServicePlacement(service.Spec.TaskTemplate.Placement))
 		if err != nil {
 			return err
 		}
 	}
-
 	if service.Spec.TaskTemplate.LogDriver != nil {
 		err = d.Set("logging", flattenServiceLogging(service.Spec.TaskTemplate.LogDriver))
 		if err != nil {
 			return err
 		}
 	}
-
 	if service.Spec.TaskTemplate.ContainerSpec.Healthcheck != nil {
 		err = d.Set("healthcheck", flattenServiceHealthcheck(service.Spec.TaskTemplate.ContainerSpec.Healthcheck))
 		if err != nil {
 			return err
 		}
 	}
-
 	if service.Spec.TaskTemplate.ContainerSpec.DNSConfig != nil {
 		err = d.Set("dns_config", flattenServiceDNSConfig(service.Spec.TaskTemplate.ContainerSpec.DNSConfig))
 		if err != nil {
@@ -970,8 +967,8 @@ func createUpdateOrRollbackConfig(config []interface{}) (*swarm.UpdateConfig, er
 			updateConfig.Monitor, _ = time.ParseDuration(v.(string))
 		}
 		if v, ok := sc["max_failure_ratio"]; ok {
-			log.Printf("[INFO] --> setting: %v", float32(v.(float64)))
-			updateConfig.MaxFailureRatio = float32(v.(float64))
+			value, _ := strconv.ParseFloat(v.(string), 64)
+			updateConfig.MaxFailureRatio = float32(value)
 		}
 		if v, ok := sc["order"]; ok {
 			updateConfig.Order = v.(string)

@@ -325,7 +325,7 @@ func TestAccDockerService_updateImage(t *testing.T) {
 						delay             = "1s"
 						failure_action    = "pause"
 						monitor           = "1s"
-						max_failure_ratio = 0.1
+						max_failure_ratio = "0.1"
 						order             = "start-first"
 					}
 
@@ -396,7 +396,7 @@ func TestAccDockerService_updateImage(t *testing.T) {
 						delay             = "1s"
 						failure_action    = "pause"
 						monitor           = "1s"
-						max_failure_ratio = 0.1
+						max_failure_ratio = "0.1"
 						order             = "start-first"
 					}
 
@@ -481,7 +481,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 						delay             = "1s"
 						failure_action    = "pause"
 						monitor           = "1s"
-						max_failure_ratio = 0.1
+						max_failure_ratio = "0.1"
 						order             = "start-first"
 					}
 
@@ -557,7 +557,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 						delay             = "1s"
 						failure_action    = "pause"
 						monitor           = "1s"
-						max_failure_ratio = 0.1
+						max_failure_ratio = "0.1"
 						order             = "start-first"
 					}
 
@@ -641,7 +641,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 						delay             = "1s"
 						failure_action    = "pause"
 						monitor           = "1s"
-						max_failure_ratio = 0.1
+						max_failure_ratio = "0.1"
 						order             = "start-first"
 					}
 
@@ -841,7 +841,7 @@ func TestAccDockerService_fullConverge(t *testing.T) {
 						delay             = "10s"
 						failure_action    = "pause"
 						monitor           = "5s"
-						max_failure_ratio = 0.1
+						max_failure_ratio = "0.1"
 						order             = "start-first"
 					}
 					
@@ -1009,7 +1009,7 @@ func TestAccDockerService_updateFailsAndRollbackConverge(t *testing.T) {
 						delay             = "5s"
 						failure_action    = "rollback"
 						monitor           = "10s"
-						max_failure_ratio = 0
+						max_failure_ratio = "0"
 						order             = "stop-first"
 					}
 
@@ -1018,7 +1018,7 @@ func TestAccDockerService_updateFailsAndRollbackConverge(t *testing.T) {
 						delay             = "1s"
 						failure_action    = "pause"
 						monitor           = "4s"
-						max_failure_ratio = 0
+						max_failure_ratio = "0"
 						order             = "stop-first"
 					}
 
@@ -1101,7 +1101,7 @@ func TestAccDockerService_updateFailsAndRollbackConverge(t *testing.T) {
 						delay             = "5s"
 						failure_action    = "rollback"
 						monitor           = "10s"
-						max_failure_ratio = 0
+						max_failure_ratio = "0"
 						order             = "stop-first"
 					}
 
@@ -1110,7 +1110,7 @@ func TestAccDockerService_updateFailsAndRollbackConverge(t *testing.T) {
 						delay             = "1s"
 						failure_action    = "pause"
 						monitor           = "4s"
-						max_failure_ratio = 0
+						max_failure_ratio = "0"
 						order             = "stop-first"
 					}
 
@@ -1681,7 +1681,7 @@ func TestAccDockerService_updateHealthcheckConverge(t *testing.T) {
 						delay             = "1s"
 						failure_action    = "pause"
 						monitor           = "1s"
-						max_failure_ratio = 0.1
+						max_failure_ratio = "0.1"
 						order             = "start-first"
 					}
 
@@ -1757,7 +1757,7 @@ func TestAccDockerService_updateHealthcheckConverge(t *testing.T) {
 						delay             = "1s"
 						failure_action    = "pause"
 						monitor           = "1s"
-						max_failure_ratio = 0.1
+						max_failure_ratio = "0.1"
 						order             = "start-first"
 					}
 
@@ -1842,7 +1842,7 @@ func TestAccDockerService_updateIncreaseReplicasConverge(t *testing.T) {
 						delay             = "1s"
 						failure_action    = "pause"
 						monitor           = "1s"
-						max_failure_ratio = 0.1
+						max_failure_ratio = "0.1"
 						order             = "start-first"
 					}
 
@@ -1918,7 +1918,7 @@ func TestAccDockerService_updateIncreaseReplicasConverge(t *testing.T) {
 						delay             = "1s"
 						failure_action    = "pause"
 						monitor           = "1s"
-						max_failure_ratio = 0.1
+						max_failure_ratio = "0.1"
 						order             = "start-first"
 					}
 
@@ -2002,7 +2002,7 @@ func TestAccDockerService_updateDecreaseReplicasConverge(t *testing.T) {
 						delay             = "1s"
 						failure_action    = "pause"
 						monitor           = "1s"
-						max_failure_ratio = 0.1
+						max_failure_ratio = "0.1"
 						order             = "start-first"
 					}
 
@@ -2078,7 +2078,7 @@ func TestAccDockerService_updateDecreaseReplicasConverge(t *testing.T) {
 						delay             = "1s"
 						failure_action    = "pause"
 						monitor           = "1s"
-						max_failure_ratio = 0.1
+						max_failure_ratio = "0.1"
 						order             = "start-first"
 					}
 
@@ -2163,7 +2163,7 @@ func TestAccDockerService_updateImageConverge(t *testing.T) {
 						delay             = "1s"
 						failure_action    = "pause"
 						monitor           = "1s"
-						max_failure_ratio = 0.1
+						max_failure_ratio = "0.1"
 						order             = "start-first"
 					}
 
@@ -2239,7 +2239,7 @@ func TestAccDockerService_updateImageConverge(t *testing.T) {
 						delay             = "1s"
 						failure_action    = "pause"
 						monitor           = "1s"
-						max_failure_ratio = 0.1
+						max_failure_ratio = "0.1"
 						order             = "start-first"
 					}
 
@@ -2329,7 +2329,7 @@ func TestAccDockerService_updateConfigConverge(t *testing.T) {
 						delay             = "1s"
 						failure_action    = "pause"
 						monitor           = "1s"
-						max_failure_ratio = 0.1
+						max_failure_ratio = "0.1"
 						order             = "start-first"
 					}
 
@@ -2410,7 +2410,7 @@ func TestAccDockerService_updateConfigConverge(t *testing.T) {
 						delay             = "1s"
 						failure_action    = "pause"
 						monitor           = "1s"
-						max_failure_ratio = 0.1
+						max_failure_ratio = "0.1"
 						order             = "start-first"
 					}
 
@@ -2509,7 +2509,7 @@ func TestAccDockerService_updateConfigAndSecretConverge(t *testing.T) {
 						delay             = "1s"
 						failure_action    = "pause"
 						monitor           = "1s"
-						max_failure_ratio = 0.1
+						max_failure_ratio = "0.1"
 						order             = "start-first"
 					}
 
@@ -2610,7 +2610,7 @@ func TestAccDockerService_updateConfigAndSecretConverge(t *testing.T) {
 						delay             = "1s"
 						failure_action    = "pause"
 						monitor           = "1s"
-						max_failure_ratio = 0.1
+						max_failure_ratio = "0.1"
 						order             = "start-first"
 					}
 
@@ -2704,7 +2704,7 @@ func TestAccDockerService_updatePortConverge(t *testing.T) {
 						delay             = "1s"
 						failure_action    = "pause"
 						monitor           = "1s"
-						max_failure_ratio = 0.1
+						max_failure_ratio = "0.1"
 						order             = "start-first"
 					}
 
@@ -2780,7 +2780,7 @@ func TestAccDockerService_updatePortConverge(t *testing.T) {
 						delay             = "1s"
 						failure_action    = "pause"
 						monitor           = "1s"
-						max_failure_ratio = 0.1
+						max_failure_ratio = "0.1"
 						order             = "start-first"
 					}
 
@@ -2877,7 +2877,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthConverge(t *testing.
 						delay             = "1s"
 						failure_action    = "pause"
 						monitor           = "1s"
-						max_failure_ratio = 0.1
+						max_failure_ratio = "0.1"
 						order             = "start-first"
 					}
 
@@ -2958,7 +2958,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthConverge(t *testing.
 						delay             = "1s"
 						failure_action    = "pause"
 						monitor           = "1s"
-						max_failure_ratio = 0.1
+						max_failure_ratio = "0.1"
 						order             = "start-first"
 					}
 
@@ -3055,7 +3055,7 @@ func TestAccDockerService_updateConfigAndDecreaseReplicasConverge(t *testing.T) 
 						delay             = "1s"
 						failure_action    = "pause"
 						monitor           = "1s"
-						max_failure_ratio = 0.1
+						max_failure_ratio = "0.1"
 						order             = "start-first"
 					}
 
@@ -3136,7 +3136,7 @@ func TestAccDockerService_updateConfigAndDecreaseReplicasConverge(t *testing.T) 
 						delay             = "1s"
 						failure_action    = "pause"
 						monitor           = "1s"
-						max_failure_ratio = 0.1
+						max_failure_ratio = "0.1"
 						order             = "start-first"
 					}
 
@@ -3225,7 +3225,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 						delay             = "1s"
 						failure_action    = "pause"
 						monitor           = "1s"
-						max_failure_ratio = 0.1
+						max_failure_ratio = "0.1"
 						order             = "start-first"
 					}
 
@@ -3306,7 +3306,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 						delay             = "1s"
 						failure_action    = "pause"
 						monitor           = "1s"
-						max_failure_ratio = 0.1
+						max_failure_ratio = "0.1"
 						order             = "start-first"
 					}
 
@@ -3395,7 +3395,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 						delay             = "1s"
 						failure_action    = "pause"
 						monitor           = "1s"
-						max_failure_ratio = 0.1
+						max_failure_ratio = "0.1"
 						order             = "start-first"
 					}
 
