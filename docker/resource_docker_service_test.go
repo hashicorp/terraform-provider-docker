@@ -814,13 +814,14 @@ func TestAccDockerService_fullConverge(t *testing.T) {
 
 					destroy_grace_seconds = "10"
 
-					constraints = [
-						"node.role==manager"
-					]
-					
-					placement_prefs = [
-						"spread=node.role.manager"
-					]
+					placement {
+						constraints = [
+							"node.role==manager"
+						]
+						prefs = [
+							"spread=node.role.manager"
+						]
+					}
 
 					mounts = [
 						{
@@ -914,6 +915,12 @@ func TestAccDockerService_fullConverge(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_service.foo", "networks.#", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "networks.2768978924", "tftest-network"),
 					resource.TestCheckResourceAttr("docker_service.foo", "network_mode", "vip"),
+					resource.TestCheckResourceAttr("docker_service.foo", "placement.#", "1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "placement.0.constraints.#", "1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "placement.0.constraints.4248571116", "node.role==manager"),
+					resource.TestCheckResourceAttr("docker_service.foo", "placement.0.platforms.#", "0"),
+					resource.TestCheckResourceAttr("docker_service.foo", "placement.0.prefs.#", "1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "placement.0.prefs.1751004438", "spread=node.role.manager"),
 					resource.TestCheckResourceAttr("docker_service.foo", "hosts.#", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "hosts.1878413705.host", "testhost"),
 					resource.TestCheckResourceAttr("docker_service.foo", "hosts.1878413705.ip", "10.0.1.0"),

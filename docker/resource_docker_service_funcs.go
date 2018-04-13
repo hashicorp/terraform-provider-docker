@@ -126,7 +126,7 @@ func resourceDockerServiceRead(d *schema.ResourceData, meta interface{}) error {
 
 	d.Set("name", service.Spec.Name)
 	d.Set("image", service.Spec.TaskTemplate.ContainerSpec.Image)
-	// TODO
+	// TODO nesting
 	// err = d.Set("mode", flattenServiceMode(service.Spec.Mode))
 	// if err != nil {
 	// 	return err
@@ -182,6 +182,7 @@ func resourceDockerServiceRead(d *schema.ResourceData, meta interface{}) error {
 			return err
 		}
 	}
+	// TOOD float64
 	// if service.Spec.UpdateConfig != nil {
 	// 	err = d.Set("update_config", flattenServiceUpdateOrRollbackConfig(service.Spec.UpdateConfig))
 	// 	if err != nil {
@@ -195,14 +196,34 @@ func resourceDockerServiceRead(d *schema.ResourceData, meta interface{}) error {
 	// 	}
 	// }
 
+	// TOOD docker_service.foo: Invalid address to set: []string{"constraints"}
 	// if service.Spec.TaskTemplate.Placement != nil {
-	// 	if len(service.Spec.TaskTemplate.Placement.) > 0 {
-	// 		err = d.Set("constraints", flattenService(service.Endpoint.Spec.Ports))
-	// 		if err != nil {
-	// 			return err
-	// 		}
+	// 	err = d.Set("constraints", flattenServicePlacement(service.Spec.TaskTemplate.Placement))
+	// 	if err != nil {
+	// 		return err
 	// 	}
 	// }
+
+	if service.Spec.TaskTemplate.LogDriver != nil {
+		err = d.Set("logging", flattenServiceLogging(service.Spec.TaskTemplate.LogDriver))
+		if err != nil {
+			return err
+		}
+	}
+
+	if service.Spec.TaskTemplate.ContainerSpec.Healthcheck != nil {
+		err = d.Set("healthcheck", flattenServiceHealthcheck(service.Spec.TaskTemplate.ContainerSpec.Healthcheck))
+		if err != nil {
+			return err
+		}
+	}
+
+	if service.Spec.TaskTemplate.ContainerSpec.DNSConfig != nil {
+		err = d.Set("dns_config", flattenServiceDNSConfig(service.Spec.TaskTemplate.ContainerSpec.DNSConfig))
+		if err != nil {
+			return err
+		}
+	}
 
 	d.SetId(service.ID)
 
@@ -845,20 +866,24 @@ func createServiceSpec(d *schema.ResourceData) (swarm.ServiceSpec, error) {
 	// == end Endpoint Spec
 
 	// == start TaskTemplate Spec
-	placement := swarm.Placement{}
-	if v, ok := d.GetOk("constraints"); ok {
-		placement.Constraints = stringSetToStringSlice(v.(*schema.Set))
-	}
+	if v, ok := d.GetOk("placement"); ok {
+		placement := swarm.Placement{}
+		for _, rawPlacement := range v.([]interface{}) {
+			rawPlacement := rawPlacement.(map[string]interface{})
+			if v, ok := rawPlacement["constraints"]; ok {
+				placement.Constraints = stringSetToStringSlice(v.(*schema.Set))
+			}
 
-	if v, ok := d.GetOk("placement_prefs"); ok {
-		placement.Preferences = stringSetToPlacementPrefs(v.(*schema.Set))
-	}
+			if v, ok := rawPlacement["prefs"]; ok {
+				placement.Preferences = stringSetToPlacementPrefs(v.(*schema.Set))
+			}
 
-	if v, ok := d.GetOk("placement_platform"); ok {
-		placement.Platforms = mapSetToPlacementPlatforms(v.(*schema.Set))
+			if v, ok := rawPlacement["platforms"]; ok {
+				placement.Platforms = mapSetToPlacementPlatforms(v.(*schema.Set))
+			}
+		}
+		serviceSpec.TaskTemplate.Placement = &placement
 	}
-
-	serviceSpec.TaskTemplate.Placement = &placement
 
 	if v, ok := d.GetOk("logging"); ok {
 		serviceSpec.TaskTemplate.LogDriver = &swarm.Driver{}

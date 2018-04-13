@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/swarm"
 )
@@ -151,6 +152,89 @@ func flattenServiceUpdateOrRollbackConfig(in *swarm.UpdateConfig) []interface{} 
 	return out
 }
 
+func flattenServicePlacement(in *swarm.Placement) []interface{} {
+	var out = make([]interface{}, 1, 1)
+	m := make(map[string]interface{})
+	if len(in.Constraints) > 0 {
+		m["constraints"] = in.Constraints
+	}
+	if len(in.Preferences) > 0 {
+		m["prefs"] = flattenPlacementPrefs(in.Preferences)
+	}
+	if len(in.Preferences) > 0 {
+		m["platforms"] = flattenPlacementPlatforms(in.Platforms)
+	}
+	out[0] = m
+	return out
+}
+
+func flattenPlacementPrefs(in []swarm.PlacementPreference) []interface{} {
+	var out = make([]interface{}, len(in), len(in))
+	for i, v := range in {
+		out[i] = v.Spread.SpreadDescriptor
+	}
+	return out
+}
+
+func flattenPlacementPlatforms(in []swarm.Platform) []interface{} {
+	var out = make([]interface{}, len(in), len(in))
+	for i, v := range in {
+		m := make(map[string]interface{})
+		m["architecture"] = v.Architecture
+		m["os"] = v.OS
+		out[i] = m
+	}
+	return out
+}
+
+func flattenServiceLogging(in *swarm.Driver) []interface{} {
+	var out = make([]interface{}, 1, 1)
+	m := make(map[string]interface{})
+	m["driver_name"] = in.Name
+	if len(in.Options) > 0 {
+		m["options"] = in.Options
+	}
+	out[0] = m
+	return out
+}
+
+func flattenServiceHealthcheck(in *container.HealthConfig) []interface{} {
+	var out = make([]interface{}, 1, 1)
+	m := make(map[string]interface{})
+	if len(in.Test) > 0 {
+		m["test"] = in.Test
+	}
+	m["interval"] = shortDur(in.Interval)
+	m["timeout"] = shortDur(in.Timeout)
+	m["start_period"] = shortDur(in.StartPeriod)
+	m["retries"] = in.Retries
+	out[0] = m
+	return out
+}
+
+func flattenServiceDNSConfig(in *swarm.DNSConfig) []interface{} {
+	var out = make([]interface{}, 1, 1)
+	m := make(map[string]interface{})
+	if len(in.Nameservers) > 0 {
+		m["nameservers"] = in.Nameservers
+	}
+	if len(in.Search) > 0 {
+		m["search"] = in.Search
+	}
+	if len(in.Options) > 0 {
+		m["options"] = in.Options
+	}
+	out[0] = m
+	return out
+}
+
+// func flattenPlacementPrefs(in []swarm.PlacementPreference) map[string]interface{} {
+// 	m := make(map[string]interface{})
+// 	m["TODO"] = "TODO"
+// 	return m
+// }
+
+// HELPERS
 func shortDur(d time.Duration) string {
 	s := d.String()
 	if strings.HasSuffix(s, "m0s") {
@@ -160,10 +244,4 @@ func shortDur(d time.Duration) string {
 		s = s[:len(s)-2]
 	}
 	return s
-}
-
-func flattenVolumenLabels(in swarm.TaskSpec) map[string]interface{} {
-	m := make(map[string]interface{})
-	m["TODO"] = "TODO"
-	return m
 }

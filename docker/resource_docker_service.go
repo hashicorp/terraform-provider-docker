@@ -367,33 +367,39 @@ func resourceDockerService() *schema.Resource {
 				},
 			},
 
-			// TODO wrap into placement to match API
-			"constraints": &schema.Schema{
-				Type:     schema.TypeSet,
+			"placement": &schema.Schema{
+				Type:     schema.TypeList,
 				Optional: true,
-				Elem:     &schema.Schema{Type: schema.TypeString},
-				Set:      schema.HashString,
-			},
-
-			"placement_prefs": &schema.Schema{
-				Type:     schema.TypeSet,
-				Optional: true,
-				Elem:     &schema.Schema{Type: schema.TypeString},
-				Set:      schema.HashString,
-			},
-
-			"placement_platform": &schema.Schema{
-				Type:     schema.TypeSet,
-				Optional: true,
+				MaxItems: 1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"architecture": &schema.Schema{
-							Type:     schema.TypeString,
-							Required: true,
+						"constraints": &schema.Schema{
+							Type:     schema.TypeSet,
+							Optional: true,
+							Elem:     &schema.Schema{Type: schema.TypeString},
+							Set:      schema.HashString,
 						},
-						"os": &schema.Schema{
-							Type:     schema.TypeString,
-							Required: true,
+						"prefs": &schema.Schema{
+							Type:     schema.TypeSet,
+							Optional: true,
+							Elem:     &schema.Schema{Type: schema.TypeString},
+							Set:      schema.HashString,
+						},
+						"platforms": &schema.Schema{
+							Type:     schema.TypeSet,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"architecture": &schema.Schema{
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"os": &schema.Schema{
+										Type:     schema.TypeString,
+										Required: true,
+									},
+								},
+							},
 						},
 					},
 				},
