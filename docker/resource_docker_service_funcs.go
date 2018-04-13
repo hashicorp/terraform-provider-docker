@@ -197,12 +197,12 @@ func resourceDockerServiceRead(d *schema.ResourceData, meta interface{}) error {
 	// }
 
 	// TOOD docker_service.foo: Invalid address to set: []string{"constraints"}
-	// if service.Spec.TaskTemplate.Placement != nil {
-	// 	err = d.Set("constraints", flattenServicePlacement(service.Spec.TaskTemplate.Placement))
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// }
+	if service.Spec.TaskTemplate.Placement != nil {
+		err = d.Set("placement", flattenServicePlacement(service.Spec.TaskTemplate.Placement))
+		if err != nil {
+			return err
+		}
+	}
 
 	if service.Spec.TaskTemplate.LogDriver != nil {
 		err = d.Set("logging", flattenServiceLogging(service.Spec.TaskTemplate.LogDriver))

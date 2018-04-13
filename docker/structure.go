@@ -8,6 +8,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/swarm"
+	"github.com/hashicorp/terraform/helper/schema"
 )
 
 func flattenServiceMode(in swarm.ServiceMode) []interface{} { // List
@@ -156,27 +157,27 @@ func flattenServicePlacement(in *swarm.Placement) []interface{} {
 	var out = make([]interface{}, 1, 1)
 	m := make(map[string]interface{})
 	if len(in.Constraints) > 0 {
-		m["constraints"] = in.Constraints
+		m["constraints"] = newStringSet(schema.HashString, in.Constraints)
 	}
 	if len(in.Preferences) > 0 {
 		m["prefs"] = flattenPlacementPrefs(in.Preferences)
 	}
-	if len(in.Preferences) > 0 {
+	if len(in.Platforms) > 0 {
 		m["platforms"] = flattenPlacementPlatforms(in.Platforms)
 	}
 	out[0] = m
 	return out
 }
 
-func flattenPlacementPrefs(in []swarm.PlacementPreference) []interface{} {
+func flattenPlacementPrefs(in []swarm.PlacementPreference) *schema.Set {
 	var out = make([]interface{}, len(in), len(in))
 	for i, v := range in {
 		out[i] = v.Spread.SpreadDescriptor
 	}
-	return out
+	return schema.NewSet(schema.HashString, out)
 }
 
-func flattenPlacementPlatforms(in []swarm.Platform) []interface{} {
+func flattenPlacementPlatforms(in []swarm.Platform) *schema.Set {
 	var out = make([]interface{}, len(in), len(in))
 	for i, v := range in {
 		m := make(map[string]interface{})
@@ -184,7 +185,7 @@ func flattenPlacementPlatforms(in []swarm.Platform) []interface{} {
 		m["os"] = v.OS
 		out[i] = m
 	}
-	return out
+	return schema.NewSet(schema.HashString, out)
 }
 
 func flattenServiceLogging(in *swarm.Driver) []interface{} {
@@ -244,4 +245,12 @@ func shortDur(d time.Duration) string {
 		s = s[:len(s)-2]
 	}
 	return s
+}
+
+func newStringSet(f schema.SchemaSetFunc, in []string) *schema.Set {
+	var out = make([]interface{}, len(in), len(in))
+	for i, v := range in {
+		out[i] = v
+	}
+	return schema.NewSet(f, out)
 }
