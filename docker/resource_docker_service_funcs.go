@@ -132,13 +132,22 @@ func resourceDockerServiceRead(d *schema.ResourceData, meta interface{}) error {
 	// 	return err
 	// }
 	if len(service.Spec.TaskTemplate.ContainerSpec.Hostname) > 0 {
-		d.Set("hostname", service.Spec.TaskTemplate.ContainerSpec.Hostname)
+		err = d.Set("hostname", service.Spec.TaskTemplate.ContainerSpec.Hostname)
+		if err != nil {
+			return err
+		}
 	}
 	if len(service.Spec.TaskTemplate.ContainerSpec.Command) > 0 {
-		d.Set("command", service.Spec.TaskTemplate.ContainerSpec.Command)
+		err = d.Set("command", service.Spec.TaskTemplate.ContainerSpec.Command)
+		if err != nil {
+			return err
+		}
 	}
 	if len(service.Spec.TaskTemplate.ContainerSpec.Env) > 0 {
-		d.Set("env", service.Spec.TaskTemplate.ContainerSpec.Env)
+		err = d.Set("env", service.Spec.TaskTemplate.ContainerSpec.Env)
+		if err != nil {
+			return err
+		}
 	}
 	if len(service.Spec.TaskTemplate.ContainerSpec.Hosts) > 0 {
 		err = d.Set("hosts", flattenServiceHosts(service.Spec.TaskTemplate.ContainerSpec.Hosts))
