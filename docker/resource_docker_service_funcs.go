@@ -124,16 +124,85 @@ func resourceDockerServiceRead(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("Error inspecting service %s: %s", apiService.ID, err)
 	}
 
-	err = d.Set("spec", flattenServiceSpec(service.Spec))
-	if err != nil {
-		return err
-	}
-	err = d.Set("endpoint", flattenServiceEndpoint(service.Endpoint))
-	if err != nil {
-		return err
-	}
-	d.Set("version", service.Version.Index)
 	d.Set("name", service.Spec.Name)
+	d.Set("image", service.Spec.TaskTemplate.ContainerSpec.Image)
+	// TODO
+	// err = d.Set("mode", flattenServiceMode(service.Spec.Mode))
+	// if err != nil {
+	// 	return err
+	// }
+	if len(service.Spec.TaskTemplate.ContainerSpec.Hostname) > 0 {
+		d.Set("hostname", service.Spec.TaskTemplate.ContainerSpec.Hostname)
+	}
+	if len(service.Spec.TaskTemplate.ContainerSpec.Command) > 0 {
+		d.Set("command", service.Spec.TaskTemplate.ContainerSpec.Command)
+	}
+	if len(service.Spec.TaskTemplate.ContainerSpec.Env) > 0 {
+		d.Set("env", service.Spec.TaskTemplate.ContainerSpec.Env)
+	}
+	if len(service.Spec.TaskTemplate.ContainerSpec.Hosts) > 0 {
+		err = d.Set("hosts", flattenServiceHosts(service.Spec.TaskTemplate.ContainerSpec.Hosts))
+		if err != nil {
+			return err
+		}
+	}
+	if len(service.Endpoint.Spec.Mode) > 0 {
+		err = d.Set("network_mode", service.Endpoint.Spec.Mode)
+		if err != nil {
+			return err
+		}
+	}
+	if len(service.Spec.Networks) > 0 {
+		err = d.Set("networks", flattenServiceNetworks(service.Spec.Networks))
+		if err != nil {
+			return err
+		}
+	}
+	if len(service.Spec.TaskTemplate.ContainerSpec.Mounts) > 0 {
+		err = d.Set("mounts", flattenServiceMounts(service.Spec.TaskTemplate.ContainerSpec.Mounts))
+		if err != nil {
+			return err
+		}
+	}
+	if len(service.Spec.TaskTemplate.ContainerSpec.Configs) > 0 {
+		err = d.Set("configs", flattenServiceConfigs(service.Spec.TaskTemplate.ContainerSpec.Configs))
+		if err != nil {
+			return err
+		}
+	}
+	if len(service.Spec.TaskTemplate.ContainerSpec.Secrets) > 0 {
+		err = d.Set("secrets", flattenServiceSecrets(service.Spec.TaskTemplate.ContainerSpec.Secrets))
+		if err != nil {
+			return err
+		}
+	}
+	if len(service.Endpoint.Spec.Ports) > 0 {
+		err = d.Set("ports", flattenServicePorts(service.Endpoint.Spec.Ports))
+		if err != nil {
+			return err
+		}
+	}
+	// if service.Spec.UpdateConfig != nil {
+	// 	err = d.Set("update_config", flattenServiceUpdateOrRollbackConfig(service.Spec.UpdateConfig))
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// }
+	// if service.Spec.RollbackConfig != nil {
+	// 	err = d.Set("rollback_config", flattenServiceUpdateOrRollbackConfig(service.Spec.RollbackConfig))
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// }
+
+	// if service.Spec.TaskTemplate.Placement != nil {
+	// 	if len(service.Spec.TaskTemplate.Placement.) > 0 {
+	// 		err = d.Set("constraints", flattenService(service.Endpoint.Spec.Ports))
+	// 		if err != nil {
+	// 			return err
+	// 		}
+	// 	}
+	// }
 
 	d.SetId(service.ID)
 
@@ -675,40 +744,42 @@ func createServiceSpec(d *schema.ResourceData) (swarm.ServiceSpec, error) {
 				Target:   rawMount["target"].(string),
 				ReadOnly: rawMount["read_only"].(bool),
 			}
+			if w, ok := rawMount["consistency"]; ok {
+				mountInstance.Consistency = mount.Consistency(w.(string))
+			}
 
-			if w, ok := d.GetOk("volume_labels"); ok {
+			mountInstance.VolumeOptions = &mount.VolumeOptions{}
+			if w, ok := rawMount["volume_labels"]; ok {
 				mountInstance.VolumeOptions.Labels = mapTypeMapValsToString(w.(map[string]interface{}))
 			}
 
 			if mountType == mount.TypeBind {
-				if w, ok := d.GetOk("bind_propagation"); ok {
+				if w, ok := rawMount["bind_propagation"]; ok {
 					mountInstance.BindOptions = &mount.BindOptions{
 						Propagation: mount.Propagation(w.(string)),
 					}
 				}
 			} else if mountType == mount.TypeVolume {
-				mountInstance.VolumeOptions = &mount.VolumeOptions{}
-
-				if w, ok := d.GetOk("volume_no_copy"); ok {
+				if w, ok := rawMount["volume_no_copy"]; ok {
 					mountInstance.VolumeOptions.NoCopy = w.(bool)
 				}
 
 				mountInstance.VolumeOptions.DriverConfig = &mount.Driver{}
-				if w, ok := d.GetOk("volume_driver_name"); ok {
+				if w, ok := rawMount["volume_driver_name"]; ok {
 					mountInstance.VolumeOptions.DriverConfig.Name = w.(string)
 				}
 
-				if w, ok := d.GetOk("volume_driver_options"); ok {
-					mountInstance.VolumeOptions.DriverConfig.Options = w.(map[string]string)
+				if w, ok := rawMount["volume_driver_options"]; ok {
+					mountInstance.VolumeOptions.DriverConfig.Options = mapTypeMapValsToString(w.(map[string]interface{}))
 				}
 			} else if mountType == mount.TypeTmpfs {
 				mountInstance.TmpfsOptions = &mount.TmpfsOptions{}
 
-				if w, ok := d.GetOk("tmpfs_size_bytes"); ok {
+				if w, ok := rawMount["tmpfs_size_bytes"]; ok {
 					mountInstance.TmpfsOptions.SizeBytes = w.(int64)
 				}
 
-				if w, ok := d.GetOk("tmpfs_mode"); ok {
+				if w, ok := rawMount["tmpfs_mode"]; ok {
 					mountInstance.TmpfsOptions.Mode = os.FileMode(w.(int))
 				}
 			}
@@ -866,6 +937,7 @@ func createUpdateOrRollbackConfig(config []interface{}) (*swarm.UpdateConfig, er
 			updateConfig.Monitor, _ = time.ParseDuration(v.(string))
 		}
 		if v, ok := sc["max_failure_ratio"]; ok {
+			log.Printf("[INFO] --> setting: %v", float32(v.(float64)))
 			updateConfig.MaxFailureRatio = float32(v.(float64))
 		}
 		if v, ok := sc["order"]; ok {
@@ -905,7 +977,10 @@ func portSetToServicePorts(ports *schema.Set) []swarm.PortConfig {
 		port := portInt.(map[string]interface{})
 		internal := port["internal"].(int)
 		protocol := port["protocol"].(string)
-		external := port["external"].(int)
+		external := internal
+		if externalPort, ok := port["external"]; ok {
+			external = externalPort.(int)
+		}
 
 		portConfig := swarm.PortConfig{
 			TargetPort:    uint32(internal),

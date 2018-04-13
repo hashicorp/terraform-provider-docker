@@ -181,10 +181,9 @@ func resourceDockerService() *schema.Resource {
 							Optional: true,
 						},
 						"volume_driver_options": &schema.Schema{
-							Type:     schema.TypeSet,
+							Type:     schema.TypeMap,
 							Optional: true,
 							Elem:     &schema.Schema{Type: schema.TypeString},
-							Set:      schema.HashString,
 						},
 						"tmpfs_size_bytes": &schema.Schema{
 							Type:     schema.TypeInt,
@@ -258,7 +257,7 @@ func resourceDockerService() *schema.Resource {
 							Type:         schema.TypeString,
 							Default:      "vip",
 							Optional:     true,
-							ValidateFunc: validateStringMatchesPattern(`^(vip|dnsrr)$`),
+							ValidateFunc: validateStringMatchesPattern(`^(vip|dnsrr|ingress)$`),
 						},
 						"protocol": &schema.Schema{
 							Type:         schema.TypeString,
@@ -368,6 +367,7 @@ func resourceDockerService() *schema.Resource {
 				},
 			},
 
+			// TODO wrap into placement to match API
 			"constraints": &schema.Schema{
 				Type:     schema.TypeSet,
 				Optional: true,
