@@ -17,13 +17,15 @@ func resourceDockerSecret() *schema.Resource {
 
 		Schema: map[string]*schema.Schema{
 			"name": &schema.Schema{
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:        schema.TypeString,
+				Description: "User-defined name of the secret",
+				Required:    true,
+				ForceNew:    true,
 			},
 
 			"data": &schema.Schema{
 				Type:         schema.TypeString,
+				Description:  "User-defined name of the secret",
 				Required:     true,
 				Sensitive:    true,
 				ForceNew:     true,
