@@ -186,8 +186,7 @@ func TestAccDockerService_GlobalWithConvergeConfig(t *testing.T) {
 						global = true
 					}
 					converge_config {
-						interval = "500ms"
-						monitor  = "5s"
+						delay    = "7s"
 						timeout  = "20s"
 					}
 				}
@@ -620,8 +619,7 @@ func TestAccDockerService_nonExistingPrivateImageConverge(t *testing.T) {
 					}
 
 					converge_config {
-						interval = "500ms"
-						monitor  = "5s"
+						delay    = "7s"
 						timeout  = "20s"
 					}
 				}
@@ -651,8 +649,7 @@ func TestAccDockerService_nonExistingPublicImageConverge(t *testing.T) {
 					}
 
 					converge_config {
-						interval = "500ms"
-						monitor  = "5s"
+						delay    = "7s"
 						timeout  = "10s"
 					}
 				}
@@ -799,9 +796,8 @@ func TestAccDockerService_fullConverge(t *testing.T) {
 					}
 					
 					converge_config {
-						interval = "500ms"
-						monitor  = "10s"
-						timeout  = "1m"
+						delay    = "7s"
+						timeout  = "3m"
 					}
 				}
 				`,
@@ -937,8 +933,7 @@ func TestAccDockerService_updateFailsAndRollbackConverge(t *testing.T) {
 					}
 
 					converge_config {
-						interval = "500ms"
-						monitor  = "10s"
+						delay    = "7s"
 						timeout  = "3m"
 					}
 
@@ -1029,8 +1024,7 @@ func TestAccDockerService_updateFailsAndRollbackConverge(t *testing.T) {
 					}
 
 					converge_config {
-						interval = "500ms"
-						monitor  = "10s"
+						delay    = "7s"
 						timeout  = "3m"
 					}
 
@@ -1101,8 +1095,8 @@ func TestAccDockerService_updateNetworksConverge(t *testing.T) {
 					endpoint_mode = "vip"
 
 					converge_config {
-						interval = "500ms"
-						monitor  = "10s"
+						delay    = "7s"
+						timeout  = "3m"
 					}
 
 					destroy_grace_seconds = "10"
@@ -1143,8 +1137,8 @@ func TestAccDockerService_updateNetworksConverge(t *testing.T) {
 					endpoint_mode = "vip"
 
 					converge_config {
-						interval = "500ms"
-						monitor  = "10s"
+						delay    = "7s"
+						timeout  = "3m"
 					}
 
 					destroy_grace_seconds = "10"
@@ -1188,8 +1182,8 @@ func TestAccDockerService_updateNetworksConverge(t *testing.T) {
 					endpoint_mode = "vip"
 
 					converge_config {
-						interval = "500ms"
-						monitor  = "10s"
+						delay    = "7s"
+						timeout  = "3m"
 					}
 
 					destroy_grace_seconds = "10"
@@ -1245,8 +1239,8 @@ func TestAccDockerService_updateMountsConverge(t *testing.T) {
 					]
 
 					converge_config {
-						interval = "500ms"
-						monitor  = "10s"
+						delay    = "7s"
+						timeout  = "3m"
 					}
 
 					destroy_grace_seconds = "10"
@@ -1304,8 +1298,8 @@ func TestAccDockerService_updateMountsConverge(t *testing.T) {
 					]
 
 					converge_config {
-						interval = "500ms"
-						monitor  = "10s"
+						delay    = "7s"
+						timeout  = "3m"
 					}
 
 					destroy_grace_seconds = "10"
@@ -1346,8 +1340,8 @@ func TestAccDockerService_updateHostsConverge(t *testing.T) {
 					]
 
 					converge_config {
-						interval = "500ms"
-						monitor  = "10s"
+						delay    = "7s"
+						timeout  = "3m"
 					}
 					
 					destroy_grace_seconds = "10"
@@ -1380,8 +1374,8 @@ func TestAccDockerService_updateHostsConverge(t *testing.T) {
 					]
 
 					converge_config {
-						interval = "500ms"
-						monitor  = "10s"
+						delay    = "7s"
+						timeout  = "3m"
 					}
 
 					destroy_grace_seconds = "10"
@@ -1418,8 +1412,8 @@ func TestAccDockerService_updateHostsConverge(t *testing.T) {
 					]
 
 					converge_config {
-						interval = "500ms"
-						monitor  = "10s"
+						delay    = "7s"
+						timeout  = "3m"
 					}
 
 					destroy_grace_seconds = "10"
@@ -1462,8 +1456,8 @@ func TestAccDockerService_updateLoggingConverge(t *testing.T) {
 					}
 
 					converge_config {
-						interval = "500ms"
-						monitor  = "10s"
+						delay    = "7s"
+						timeout  = "3m"
 					}
 
 					destroy_grace_seconds = "10"
@@ -1501,8 +1495,8 @@ func TestAccDockerService_updateLoggingConverge(t *testing.T) {
 					}
 
 					converge_config {
-						interval = "500ms"
-						monitor  = "10s"
+						delay    = "7s"
+						timeout  = "3m"
 					}
 
 					destroy_grace_seconds = "10"
@@ -1531,8 +1525,8 @@ func TestAccDockerService_updateLoggingConverge(t *testing.T) {
 					}
 
 					converge_config {
-						interval = "500ms"
-						monitor  = "10s"
+						delay    = "7s"
+						timeout  = "3m"
 					}
 
 					destroy_grace_seconds = "10"
@@ -1600,8 +1594,8 @@ func TestAccDockerService_updateHealthcheckConverge(t *testing.T) {
 					}
 
 					converge_config {
-						interval = "500ms"
-						monitor  = "10s"
+						delay    = "7s"
+						timeout  = "3m"
 					}
 
 					destroy_grace_seconds = "10"
@@ -1676,8 +1670,8 @@ func TestAccDockerService_updateHealthcheckConverge(t *testing.T) {
 					}
 
 					converge_config {
-						interval = "500ms"
-						monitor  = "10s"
+						delay    = "7s"
+						timeout  = "3m"
 					}
 
 					destroy_grace_seconds = "10"
@@ -1761,8 +1755,8 @@ func TestAccDockerService_updateIncreaseReplicasConverge(t *testing.T) {
 					}
 
 					converge_config {
-						interval = "500ms"
-						monitor  = "10s"
+						delay    = "7s"
+						timeout  = "3m"
 					}
 
 					destroy_grace_seconds = "10"
@@ -1837,8 +1831,8 @@ func TestAccDockerService_updateIncreaseReplicasConverge(t *testing.T) {
 					}
 
 					converge_config {
-						interval = "500ms"
-						monitor  = "10s"
+						delay    = "7s"
+						timeout  = "3m"
 					}
 
 					destroy_grace_seconds = "10"
@@ -1921,8 +1915,8 @@ func TestAccDockerService_updateDecreaseReplicasConverge(t *testing.T) {
 					}
 
 					converge_config {
-						interval = "500ms"
-						monitor  = "10s"
+						delay    = "7s"
+						timeout  = "3m"
 					}
 
 					destroy_grace_seconds = "10"
@@ -1997,8 +1991,8 @@ func TestAccDockerService_updateDecreaseReplicasConverge(t *testing.T) {
 					}
 
 					converge_config {
-						interval = "500ms"
-						monitor  = "10s"
+						delay    = "7s"
+						timeout  = "3m"
 					}
 
 					destroy_grace_seconds = "10"
@@ -2082,8 +2076,8 @@ func TestAccDockerService_updateImageConverge(t *testing.T) {
 					}
 
 					converge_config {
-						interval = "500ms"
-						monitor  = "10s"
+						delay    = "7s"
+						timeout  = "3m"
 					}
 
 					destroy_grace_seconds = "10"
@@ -2158,8 +2152,8 @@ func TestAccDockerService_updateImageConverge(t *testing.T) {
 					}
 
 					converge_config {
-						interval = "500ms"
-						monitor  = "10s"
+						delay    = "7s"
+						timeout  = "3m"
 					}
 
 					destroy_grace_seconds = "10"
@@ -2248,8 +2242,8 @@ func TestAccDockerService_updateConfigConverge(t *testing.T) {
 					}
 
 					converge_config {
-						interval = "500ms"
-						monitor  = "10s"
+						delay    = "7s"
+						timeout  = "3m"
 					}
 
 					destroy_grace_seconds = "10"
@@ -2329,8 +2323,8 @@ func TestAccDockerService_updateConfigConverge(t *testing.T) {
 					}
 
 					converge_config {
-						interval = "500ms"
-						monitor  = "10s"
+						delay    = "7s"
+						timeout  = "3m"
 					}
 
 					destroy_grace_seconds = "10"
@@ -2436,8 +2430,8 @@ func TestAccDockerService_updateConfigAndSecretConverge(t *testing.T) {
 					}
 
 					converge_config {
-						interval = "500ms"
-						monitor  = "10s"
+						delay    = "7s"
+						timeout  = "3m"
 					}
 
 					destroy_grace_seconds = "10"
@@ -2537,8 +2531,8 @@ func TestAccDockerService_updateConfigAndSecretConverge(t *testing.T) {
 					}
 
 					converge_config {
-						interval = "500ms"
-						monitor  = "10s"
+						delay    = "7s"
+						timeout  = "3m"
 					}
 
 					destroy_grace_seconds = "10"
@@ -2623,8 +2617,8 @@ func TestAccDockerService_updatePortConverge(t *testing.T) {
 					}
 
 					converge_config {
-						interval = "500ms"
-						monitor  = "10s"
+						delay    = "7s"
+						timeout  = "3m"
 					}
 
 					destroy_grace_seconds = "10"
@@ -2705,8 +2699,8 @@ func TestAccDockerService_updatePortConverge(t *testing.T) {
 					}
 
 					converge_config {
-						interval = "500ms"
-						monitor  = "10s"
+						delay    = "7s"
+						timeout  = "3m"
 					}
 
 					destroy_grace_seconds = "10"
@@ -2796,8 +2790,8 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthConverge(t *testing.
 					}
 
 					converge_config {
-						interval = "500ms"
-						monitor  = "10s"
+						delay    = "7s"
+						timeout  = "3m"
 					}
 
 					destroy_grace_seconds = "10"
@@ -2883,8 +2877,8 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthConverge(t *testing.
 					}
 
 					converge_config {
-						interval = "500ms"
-						monitor  = "10s"
+						delay    = "7s"
+						timeout  = "3m"
 					}
 
 					destroy_grace_seconds = "10"
@@ -2974,8 +2968,8 @@ func TestAccDockerService_updateConfigAndDecreaseReplicasConverge(t *testing.T) 
 					}
 
 					converge_config {
-						interval = "500ms"
-						monitor  = "10s"
+						delay    = "7s"
+						timeout  = "3m"
 					}
 
 					destroy_grace_seconds = "10"
@@ -3055,8 +3049,8 @@ func TestAccDockerService_updateConfigAndDecreaseReplicasConverge(t *testing.T) 
 					}
 
 					converge_config {
-						interval = "500ms"
-						monitor  = "10s"
+						delay    = "7s"
+						timeout  = "3m"
 					}
 
 					destroy_grace_seconds = "10"
@@ -3144,8 +3138,8 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 					}
 
 					converge_config {
-						interval = "500ms"
-						monitor  = "10s"
+						delay    = "7s"
+						timeout  = "3m"
 					}
 
 					destroy_grace_seconds = "10"
@@ -3231,8 +3225,8 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 					}
 
 					converge_config {
-						interval = "500ms"
-						monitor  = "10s"
+						delay    = "7s"
+						timeout  = "3m"
 					}
 
 					destroy_grace_seconds = "10"
@@ -3320,8 +3314,8 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 					}
 
 					converge_config {
-						interval = "500ms"
-						monitor  = "10s"
+						delay    = "7s"
+						timeout  = "3m"
 					}
 
 					destroy_grace_seconds = "10"

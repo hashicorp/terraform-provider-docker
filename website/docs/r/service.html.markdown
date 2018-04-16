@@ -122,8 +122,7 @@ The following arguments are supported:
 * `host` - (Optional, list of strings) Each host is a string with the ip, the canonical hostname, and its aliases separated with whitespace: `IP_address canonical_hostname [aliases...]` e.g. `10.10.10.10 host1`. 
 * `destroy_grace_seconds` - (Optional, string) Amount of seconds to wait for the container to terminate before forcefully stopping it. This setting also ensures that all containers of a service are shut down successfully.
 * `endpoint_mode` - (Optional, string) The mode of resolution to use for internal load balancing between tasks. (vip|dnsrr). Defaults to `vip`.
-* `networks` - (Optional, set of strings) Id of the networks in which the
-  container is.
+* `networks` - (Optional, set of strings) Ids of the networks in which the  container will be put in.
 * `mounts` - (Optional, set of blocks) See [Mounts](#mounts) below for details.
 * `configs` - (Optional, set of blocks) See [Configs](#configs) below for details.
 * `secrets` - (Optional, set of blocks) See [Secrets](#secrets) below for details.
@@ -307,10 +306,9 @@ given interval that, e.g. all tasks/replicas of a service are up and healthy
 
 The `converge_config` block supports the following:
 
-* `interval` - (Optional, string) Time between each the check to check docker endpoint (ms|s|m|h). For example, to check if
-all tasks are up when a service is created, or to check if all tasks are successfully updated on an update. Default 500ms.
-* `monitor` - (Optional, string) Maximum time to allow one check to run (ms|s|m|h). Default 5s. This setting is only applied
-if no [UpdateConfig](#update-rollback-config) is set. Otherwise, the `monitor` setting of the Update Config is used.
+* `delay` - (Optional, string) Time between each the check to check docker endpoint (ms|s|m|h). For example, to check if
+all tasks are up when a service is created, or to check if all tasks are successfully updated on an update. Default 7s.
+* `timeout` - (Optional, string) The timeout of the service to reach the desired state (s|m). Default: 3m.
 
 
 ## Attributes Reference

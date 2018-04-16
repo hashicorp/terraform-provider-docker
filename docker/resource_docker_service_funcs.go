@@ -19,10 +19,9 @@ import (
 )
 
 type convergeConfig struct {
-	interval   time.Duration
-	monitor    time.Duration
 	timeout    time.Duration
 	timeoutRaw string
+	delay      time.Duration
 }
 
 /////////////////
@@ -88,7 +87,7 @@ func resourceDockerServiceCreate(d *schema.ResourceData, meta interface{}) error
 			Refresh:    resourceDockerServiceCreateRefreshFunc(service.ID, meta),
 			Timeout:    timeout,
 			MinTimeout: 5 * time.Second,
-			Delay:      7 * time.Second,
+			Delay:      convergeConfig.delay,
 		}
 
 		// Wait, catching any errors
@@ -994,11 +993,8 @@ func createConvergeConfig(config []interface{}) *convergeConfig {
 	if len(config) > 0 {
 		for _, rawConvergeConfig := range config {
 			rawConvergeConfig := rawConvergeConfig.(map[string]interface{})
-			if interval, ok := rawConvergeConfig["interval"]; ok {
-				plainConvergeConfig.interval, _ = time.ParseDuration(interval.(string))
-			}
-			if monitor, ok := rawConvergeConfig["monitor"]; ok {
-				plainConvergeConfig.monitor, _ = time.ParseDuration(monitor.(string))
+			if delay, ok := rawConvergeConfig["delay"]; ok {
+				plainConvergeConfig.delay, _ = time.ParseDuration(delay.(string))
 			}
 			if timeout, ok := rawConvergeConfig["timeout"]; ok {
 				plainConvergeConfig.timeoutRaw, _ = timeout.(string)
