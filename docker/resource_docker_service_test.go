@@ -198,107 +198,6 @@ func TestAccDockerService_GlobalWithConvergeConfig(t *testing.T) {
 	})
 }
 
-func TestAccDockerService_replicatedConvergedToGlobal(t *testing.T) {
-	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testAccPreCheck(t) },
-		Providers: testAccProviders,
-		Steps: []resource.TestStep{
-			resource.TestStep{
-				Config: `
-				resource "docker_service" "foo" {
-					name     = "tftest-service-basic"
-					image    = "stovogel/friendlyhello:part2"
-					mode {
-						replicated {
-							replicas = 2
-						}
-					}
-
-					converge_config {
-						interval = "500ms"
-						monitor  = "5s"
-						timeout  = "20s"
-					}
-				}
-				`,
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
-					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-basic"),
-					resource.TestCheckResourceAttr("docker_service.foo", "image", "stovogel/friendlyhello:part2"),
-					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.3052477333.replicas", "2"),
-				),
-			},
-			resource.TestStep{
-				Config: `
-				resource "docker_service" "foo" {
-					name     = "tftest-service-basic"
-					image    = "stovogel/friendlyhello:part2"
-					mode {
-						global = true
-					}
-				}
-				`,
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
-					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-basic"),
-					resource.TestCheckResourceAttr("docker_service.foo", "image", "stovogel/friendlyhello:part2"),
-					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.global", "true"),
-				),
-			},
-		},
-	})
-}
-func TestAccDockerService_GlobalToReplicatedConverged(t *testing.T) {
-	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testAccPreCheck(t) },
-		Providers: testAccProviders,
-		Steps: []resource.TestStep{
-			resource.TestStep{
-				Config: `
-				resource "docker_service" "foo" {
-					name     = "tftest-service-basic"
-					image    = "stovogel/friendlyhello:part2"
-					mode {
-						global = true
-					}
-				}
-				`,
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
-					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-basic"),
-					resource.TestCheckResourceAttr("docker_service.foo", "image", "stovogel/friendlyhello:part2"),
-					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.global", "true"),
-				),
-			},
-			resource.TestStep{
-				Config: `
-				resource "docker_service" "foo" {
-					name     = "tftest-service-basic"
-					image    = "stovogel/friendlyhello:part2"
-					mode {
-						replicated {
-							replicas = 2
-						}
-					}
-
-					converge_config {
-						interval = "500ms"
-						monitor  = "5s"
-						timeout  = "20s"
-					}
-				}
-				`,
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
-					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-basic"),
-					resource.TestCheckResourceAttr("docker_service.foo", "image", "stovogel/friendlyhello:part2"),
-					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.3052477333.replicas", "2"),
-				),
-			},
-		},
-	})
-}
-
 func TestAccDockerService_updateImage(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
@@ -356,7 +255,7 @@ func TestAccDockerService_updateImage(t *testing.T) {
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-fnf-service-up-image"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:15000/tftest-service:v1"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.3052477333.replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "pause"),
@@ -364,8 +263,8 @@ func TestAccDockerService_updateImage(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.order", "start-first"),
 					resource.TestCheckResourceAttr("docker_service.foo", "ports.#", "1"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.4021806484.internal", "8080"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.4021806484.external", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.1587501533.internal", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.1587501533.external", "8080"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.0", "CMD"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.1", "curl"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.2", "-f"),
@@ -427,7 +326,7 @@ func TestAccDockerService_updateImage(t *testing.T) {
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-fnf-service-up-image"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:15000/tftest-service:v2"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.3052477333.replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "pause"),
@@ -435,8 +334,8 @@ func TestAccDockerService_updateImage(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.order", "start-first"),
 					resource.TestCheckResourceAttr("docker_service.foo", "ports.#", "1"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.4021806484.internal", "8080"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.4021806484.external", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.1587501533.internal", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.1587501533.external", "8080"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.0", "CMD"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.1", "curl"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.2", "-f"),
@@ -512,7 +411,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-fnf-service-up-crihiadr"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:15000/tftest-service:v1"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.3052477333.replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "pause"),
@@ -520,8 +419,8 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.order", "start-first"),
 					resource.TestCheckResourceAttr("docker_service.foo", "ports.#", "1"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.1648302198.internal", "8080"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.1648302198.external", "8081"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.3668852780.internal", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.3668852780.external", "8081"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.0", "CMD"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.1", "curl"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.2", "-f"),
@@ -594,7 +493,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-fnf-service-up-crihiadr"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:15000/tftest-service:v2"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "replicas", "6"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.3516784273.replicas", "6"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "pause"),
@@ -602,10 +501,10 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.order", "start-first"),
 					resource.TestCheckResourceAttr("docker_service.foo", "ports.#", "2"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.1648302198.internal", "8080"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.1648302198.external", "8081"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.802625553.internal", "8080"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.802625553.external", "8082"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.3668852780.internal", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.3668852780.external", "8081"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.2374790270.internal", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.2374790270.external", "8082"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.0", "CMD"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.1", "curl"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.2", "-f"),
@@ -678,7 +577,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-fnf-service-up-crihiadr"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:15000/tftest-service:v2"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "replicas", "3"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.2901027540.replicas", "3"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "pause"),
@@ -686,10 +585,10 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.order", "start-first"),
 					resource.TestCheckResourceAttr("docker_service.foo", "ports.#", "2"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.1648302198.internal", "8080"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.1648302198.external", "8081"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.802625553.internal", "8080"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.802625553.external", "8082"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.3668852780.internal", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.3668852780.external", "8081"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.2374790270.internal", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.2374790270.external", "8082"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.0", "CMD"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.1", "curl"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.2", "-f"),
@@ -805,7 +704,7 @@ func TestAccDockerService_fullConverge(t *testing.T) {
 					hostname = "myfooservice"
 
 					networks = ["${docker_network.test_network.name}"]
-					network_mode = "vip"
+					endpoint_mode = "vip"
 
 					hosts {
 						host = "testhost"
@@ -871,10 +770,10 @@ func TestAccDockerService_fullConverge(t *testing.T) {
 					]
 
 					ports {
-						internal = "8080"
-						external = "8080"
-						mode     = "ingress"
-						protocol = "tcp"
+						internal 		 = "8080"
+						external 		 = "8080"
+						publish_mode = "ingress"
+						protocol     = "tcp"
 					}
 
 					logging {
@@ -910,11 +809,11 @@ func TestAccDockerService_fullConverge(t *testing.T) {
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-full"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:15000/tftest-service:v1"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.3052477333.replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "hostname", "myfooservice"),
 					resource.TestCheckResourceAttr("docker_service.foo", "networks.#", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "networks.2768978924", "tftest-network"),
-					resource.TestCheckResourceAttr("docker_service.foo", "network_mode", "vip"),
+					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_mode", "vip"),
 					resource.TestCheckResourceAttr("docker_service.foo", "placement.#", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "placement.0.constraints.#", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "placement.0.constraints.4248571116", "node.role==manager"),
@@ -941,27 +840,22 @@ func TestAccDockerService_fullConverge(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "10s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "pause"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.1"), TODO
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.monitor", "5s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.order", "start-first"),
 					resource.TestCheckResourceAttr("docker_service.foo", "rollback_config.0.parallelism", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "rollback_config.0.delay", "5ms"),
 					resource.TestCheckResourceAttr("docker_service.foo", "rollback_config.0.failure_action", "pause"),
 					resource.TestCheckResourceAttr("docker_service.foo", "rollback_config.0.monitor", "10h"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "rollback_config.0.max_failure_ratio", "0.9"),
+					resource.TestCheckResourceAttr("docker_service.foo", "rollback_config.0.max_failure_ratio", "0.9"),
 					resource.TestCheckResourceAttr("docker_service.foo", "rollback_config.0.order", "stop-first"),
 					resource.TestCheckResourceAttr("docker_service.foo", "configs.#", "1"),
-					//  Note: the hash changes every time due to the usage of timestamp()
-					// resource.TestCheckResourceAttr("docker_service.foo", "configs.1255247167.config_name", "tftest-myconfig"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "configs.1255247167.file_name", "/configs.json"),
 					resource.TestCheckResourceAttr("docker_service.foo", "secrets.#", "1"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "secrets.3229549426.config_name", "tftest-mysecret"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "secrets.3229549426.file_name", "/secrets.json"),
 					resource.TestCheckResourceAttr("docker_service.foo", "ports.#", "1"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.1093694028.internal", "8080"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.1093694028.external", "8080"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.1093694028.mode", "ingress"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.1093694028.protocol", "tcp"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.1587501533.internal", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.1587501533.external", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.1587501533.publish_mode", "ingress"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.1587501533.protocol", "tcp"),
 					resource.TestCheckResourceAttr("docker_service.foo", "logging.0.driver_name", "json-file"),
 					resource.TestCheckResourceAttr("docker_service.foo", "logging.0.options.%", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "logging.0.options.max-size", "10m"),
@@ -1009,7 +903,7 @@ func TestAccDockerService_updateFailsAndRollbackConverge(t *testing.T) {
 						delay             = "5s"
 						failure_action    = "rollback"
 						monitor           = "10s"
-						max_failure_ratio = "0"
+						max_failure_ratio = "0.0"
 						order             = "stop-first"
 					}
 
@@ -1018,7 +912,7 @@ func TestAccDockerService_updateFailsAndRollbackConverge(t *testing.T) {
 						delay             = "1s"
 						failure_action    = "pause"
 						monitor           = "4s"
-						max_failure_ratio = "0"
+						max_failure_ratio = "0.0"
 						order             = "stop-first"
 					}
 
@@ -1055,22 +949,22 @@ func TestAccDockerService_updateFailsAndRollbackConverge(t *testing.T) {
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-rollback"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:15000/tftest-service:v1"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "replicas", "4"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.3819682835.replicas", "4"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "5s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "rollback"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.monitor", "10s"),
-					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.0"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.order", "stop-first"),
 					resource.TestCheckResourceAttr("docker_service.foo", "rollback_config.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "rollback_config.0.delay", "1s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "rollback_config.0.failure_action", "pause"),
 					resource.TestCheckResourceAttr("docker_service.foo", "rollback_config.0.monitor", "4s"),
-					resource.TestCheckResourceAttr("docker_service.foo", "rollback_config.0.max_failure_ratio", "0"),
+					resource.TestCheckResourceAttr("docker_service.foo", "rollback_config.0.max_failure_ratio", "0.0"),
 					resource.TestCheckResourceAttr("docker_service.foo", "rollback_config.0.order", "stop-first"),
 					resource.TestCheckResourceAttr("docker_service.foo", "ports.#", "1"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.4021806484.internal", "8080"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.4021806484.external", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.1587501533.internal", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.1587501533.external", "8080"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.0", "CMD"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.1", "curl"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.2", "-f"),
@@ -1101,7 +995,7 @@ func TestAccDockerService_updateFailsAndRollbackConverge(t *testing.T) {
 						delay             = "5s"
 						failure_action    = "rollback"
 						monitor           = "10s"
-						max_failure_ratio = "0"
+						max_failure_ratio = "0.0"
 						order             = "stop-first"
 					}
 
@@ -1110,7 +1004,7 @@ func TestAccDockerService_updateFailsAndRollbackConverge(t *testing.T) {
 						delay             = "1s"
 						failure_action    = "pause"
 						monitor           = "4s"
-						max_failure_ratio = "0"
+						max_failure_ratio = "0.0"
 						order             = "stop-first"
 					}
 
@@ -1148,22 +1042,22 @@ func TestAccDockerService_updateFailsAndRollbackConverge(t *testing.T) {
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-rollback"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:15000/tftest-service:v1"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "replicas", "4"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.3819682835.replicas", "4"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "5s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "rollback"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.monitor", "10s"),
-					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.0"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.order", "stop-first"),
 					resource.TestCheckResourceAttr("docker_service.foo", "rollback_config.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "rollback_config.0.delay", "1s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "rollback_config.0.failure_action", "pause"),
 					resource.TestCheckResourceAttr("docker_service.foo", "rollback_config.0.monitor", "4s"),
-					resource.TestCheckResourceAttr("docker_service.foo", "rollback_config.0.max_failure_ratio", "0"),
+					resource.TestCheckResourceAttr("docker_service.foo", "rollback_config.0.max_failure_ratio", "0.0"),
 					resource.TestCheckResourceAttr("docker_service.foo", "rollback_config.0.order", "stop-first"),
 					resource.TestCheckResourceAttr("docker_service.foo", "ports.#", "1"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.4021806484.internal", "8080"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.4021806484.external", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.1587501533.internal", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.1587501533.external", "8080"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.0", "CMD"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.1", "curl"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.2", "-f"),
@@ -1204,7 +1098,7 @@ func TestAccDockerService_updateNetworksConverge(t *testing.T) {
 					}
 
 					networks = ["${docker_network.test_network.name}"]
-					network_mode = "vip"
+					endpoint_mode = "vip"
 
 					converge_config {
 						interval = "500ms"
@@ -1218,10 +1112,10 @@ func TestAccDockerService_updateNetworksConverge(t *testing.T) {
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-network"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "stovogel/friendlyhello:part2"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.3052477333.replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "networks.#", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "networks.2768978924", "tftest-network"),
-					resource.TestCheckResourceAttr("docker_service.foo", "network_mode", "vip"),
+					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_mode", "vip"),
 				),
 			},
 			resource.TestStep{
@@ -1246,7 +1140,7 @@ func TestAccDockerService_updateNetworksConverge(t *testing.T) {
 					}
 
 					networks = ["${docker_network.test_network2.name}"]
-					network_mode = "vip"
+					endpoint_mode = "vip"
 
 					converge_config {
 						interval = "500ms"
@@ -1260,10 +1154,10 @@ func TestAccDockerService_updateNetworksConverge(t *testing.T) {
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-network"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "stovogel/friendlyhello:part2"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.3052477333.replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "networks.#", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "networks.3016497949", "tftest-network2"),
-					resource.TestCheckResourceAttr("docker_service.foo", "network_mode", "vip"),
+					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_mode", "vip"),
 				),
 			},
 			resource.TestStep{
@@ -1291,7 +1185,7 @@ func TestAccDockerService_updateNetworksConverge(t *testing.T) {
 						"${docker_network.test_network.name}",
 						"${docker_network.test_network2.name}"
 					]
-					network_mode = "vip"
+					endpoint_mode = "vip"
 
 					converge_config {
 						interval = "500ms"
@@ -1305,9 +1199,9 @@ func TestAccDockerService_updateNetworksConverge(t *testing.T) {
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-network"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "stovogel/friendlyhello:part2"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.3052477333.replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "networks.#", "2"),
-					resource.TestCheckResourceAttr("docker_service.foo", "network_mode", "vip"),
+					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_mode", "vip"),
 				),
 			},
 		},
@@ -1363,7 +1257,7 @@ func TestAccDockerService_updateMountsConverge(t *testing.T) {
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-mounts"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "stovogel/friendlyhello:part2"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.3052477333.replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "mounts.#", "1"),
 				),
 			},
@@ -1421,7 +1315,7 @@ func TestAccDockerService_updateMountsConverge(t *testing.T) {
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-mounts"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "stovogel/friendlyhello:part2"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.3052477333.replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "mounts.#", "2"),
 				),
 			},
@@ -1463,7 +1357,7 @@ func TestAccDockerService_updateHostsConverge(t *testing.T) {
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-hosts"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "stovogel/friendlyhello:part2"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.3052477333.replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "hosts.#", "1"),
 				),
 			},
@@ -1497,7 +1391,7 @@ func TestAccDockerService_updateHostsConverge(t *testing.T) {
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-hosts"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "stovogel/friendlyhello:part2"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.3052477333.replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "hosts.#", "1"),
 				),
 			},
@@ -1535,7 +1429,7 @@ func TestAccDockerService_updateHostsConverge(t *testing.T) {
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-hosts"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "stovogel/friendlyhello:part2"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.3052477333.replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "hosts.#", "2"),
 				),
 			},
@@ -1579,7 +1473,7 @@ func TestAccDockerService_updateLoggingConverge(t *testing.T) {
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-logging"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "stovogel/friendlyhello:part2"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.3052477333.replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "logging.0.driver_name", "json-file"),
 					resource.TestCheckResourceAttr("docker_service.foo", "logging.0.options.%", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "logging.0.options.max-size", "10m"),
@@ -1618,7 +1512,7 @@ func TestAccDockerService_updateLoggingConverge(t *testing.T) {
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-logging"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "stovogel/friendlyhello:part2"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.3052477333.replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "logging.0.driver_name", "json-file"),
 					resource.TestCheckResourceAttr("docker_service.foo", "logging.0.options.%", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "logging.0.options.max-size", "15m"),
@@ -1648,7 +1542,7 @@ func TestAccDockerService_updateLoggingConverge(t *testing.T) {
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-logging"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "stovogel/friendlyhello:part2"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.3052477333.replicas", "2"),
 				),
 			},
 		},
@@ -1717,7 +1611,7 @@ func TestAccDockerService_updateHealthcheckConverge(t *testing.T) {
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-healthcheck"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:15000/tftest-service:v1"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.3052477333.replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "pause"),
@@ -1725,8 +1619,8 @@ func TestAccDockerService_updateHealthcheckConverge(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.order", "start-first"),
 					resource.TestCheckResourceAttr("docker_service.foo", "ports.#", "1"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.4021806484.internal", "8080"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.4021806484.external", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.1587501533.internal", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.1587501533.external", "8080"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.0", "CMD"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.1", "curl"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.2", "-f"),
@@ -1793,7 +1687,7 @@ func TestAccDockerService_updateHealthcheckConverge(t *testing.T) {
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-healthcheck"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:15000/tftest-service:v1"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.3052477333.replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "pause"),
@@ -1801,8 +1695,8 @@ func TestAccDockerService_updateHealthcheckConverge(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.order", "start-first"),
 					resource.TestCheckResourceAttr("docker_service.foo", "ports.#", "1"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.4021806484.internal", "8080"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.4021806484.external", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.1587501533.internal", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.1587501533.external", "8080"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.0", "CMD"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.1", "curl"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.2", "-f"),
@@ -1886,8 +1780,8 @@ func TestAccDockerService_updateIncreaseReplicasConverge(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.order", "start-first"),
 					resource.TestCheckResourceAttr("docker_service.foo", "ports.#", "1"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.4021806484.internal", "8080"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.4021806484.external", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.1587501533.internal", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.1587501533.external", "8080"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.0", "CMD"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.1", "curl"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.2", "-f"),
@@ -1954,7 +1848,7 @@ func TestAccDockerService_updateIncreaseReplicasConverge(t *testing.T) {
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-increase-replicas"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:15000/tftest-service:v1"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "replicas", "3"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.2901027540.replicas", "3"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "pause"),
@@ -1962,8 +1856,8 @@ func TestAccDockerService_updateIncreaseReplicasConverge(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.order", "start-first"),
 					resource.TestCheckResourceAttr("docker_service.foo", "ports.#", "1"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.4021806484.internal", "8080"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.4021806484.external", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.1587501533.internal", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.1587501533.external", "8080"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.0", "CMD"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.1", "curl"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.2", "-f"),
@@ -2038,7 +1932,7 @@ func TestAccDockerService_updateDecreaseReplicasConverge(t *testing.T) {
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-decrease-replicas"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:15000/tftest-service:v1"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "replicas", "5"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.4205874514.replicas", "5"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "pause"),
@@ -2046,8 +1940,8 @@ func TestAccDockerService_updateDecreaseReplicasConverge(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.order", "start-first"),
 					resource.TestCheckResourceAttr("docker_service.foo", "ports.#", "1"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.4021806484.internal", "8080"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.4021806484.external", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.1587501533.internal", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.1587501533.external", "8080"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.0", "CMD"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.1", "curl"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.2", "-f"),
@@ -2122,8 +2016,8 @@ func TestAccDockerService_updateDecreaseReplicasConverge(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.order", "start-first"),
 					resource.TestCheckResourceAttr("docker_service.foo", "ports.#", "1"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.4021806484.internal", "8080"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.4021806484.external", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.1587501533.internal", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.1587501533.external", "8080"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.0", "CMD"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.1", "curl"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.2", "-f"),
@@ -2199,7 +2093,7 @@ func TestAccDockerService_updateImageConverge(t *testing.T) {
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-image"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:15000/tftest-service:v1"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.3052477333.replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "pause"),
@@ -2207,8 +2101,8 @@ func TestAccDockerService_updateImageConverge(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.order", "start-first"),
 					resource.TestCheckResourceAttr("docker_service.foo", "ports.#", "1"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.4021806484.internal", "8080"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.4021806484.external", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.1587501533.internal", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.1587501533.external", "8080"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.0", "CMD"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.1", "curl"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.2", "-f"),
@@ -2275,7 +2169,7 @@ func TestAccDockerService_updateImageConverge(t *testing.T) {
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-image"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:15000/tftest-service:v2"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.3052477333.replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "pause"),
@@ -2283,8 +2177,8 @@ func TestAccDockerService_updateImageConverge(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.order", "start-first"),
 					resource.TestCheckResourceAttr("docker_service.foo", "ports.#", "1"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.4021806484.internal", "8080"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.4021806484.external", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.1587501533.internal", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.1587501533.external", "8080"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.0", "CMD"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.1", "curl"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.2", "-f"),
@@ -2365,7 +2259,7 @@ func TestAccDockerService_updateConfigConverge(t *testing.T) {
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-config"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:15000/tftest-service:v1"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.3052477333.replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "pause"),
@@ -2373,8 +2267,8 @@ func TestAccDockerService_updateConfigConverge(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.order", "start-first"),
 					resource.TestCheckResourceAttr("docker_service.foo", "ports.#", "1"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.4021806484.internal", "8080"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.4021806484.external", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.1587501533.internal", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.1587501533.external", "8080"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.0", "CMD"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.1", "curl"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.2", "-f"),
@@ -2446,7 +2340,7 @@ func TestAccDockerService_updateConfigConverge(t *testing.T) {
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-config"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:15000/tftest-service:v1"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.3052477333.replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "pause"),
@@ -2454,8 +2348,8 @@ func TestAccDockerService_updateConfigConverge(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.order", "start-first"),
 					resource.TestCheckResourceAttr("docker_service.foo", "ports.#", "1"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.4021806484.internal", "8080"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.4021806484.external", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.1587501533.internal", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.1587501533.external", "8080"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.0", "CMD"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.1", "curl"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.2", "-f"),
@@ -2553,7 +2447,7 @@ func TestAccDockerService_updateConfigAndSecretConverge(t *testing.T) {
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-config-secret"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:15000/tftest-service:v1"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.3052477333.replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "pause"),
@@ -2563,8 +2457,8 @@ func TestAccDockerService_updateConfigAndSecretConverge(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_service.foo", "configs.#", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "secrets.#", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "ports.#", "1"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.4021806484.internal", "8080"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.4021806484.external", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.1587501533.internal", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.1587501533.external", "8080"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.0", "CMD"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.1", "curl"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.2", "-f"),
@@ -2654,7 +2548,7 @@ func TestAccDockerService_updateConfigAndSecretConverge(t *testing.T) {
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-config-secret"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:15000/tftest-service:v1"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.3052477333.replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "pause"),
@@ -2664,8 +2558,8 @@ func TestAccDockerService_updateConfigAndSecretConverge(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_service.foo", "configs.#", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "secrets.#", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "ports.#", "1"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.4021806484.internal", "8080"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.4021806484.external", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.1587501533.internal", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.1587501533.external", "8080"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.0", "CMD"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.1", "curl"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.2", "-f"),
@@ -2740,7 +2634,7 @@ func TestAccDockerService_updatePortConverge(t *testing.T) {
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-port"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:15000/tftest-service:v1"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.3052477333.replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "pause"),
@@ -2748,8 +2642,8 @@ func TestAccDockerService_updatePortConverge(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.order", "start-first"),
 					resource.TestCheckResourceAttr("docker_service.foo", "ports.#", "1"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.1648302198.internal", "8080"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.1648302198.external", "8081"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.3668852780.internal", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.3668852780.external", "8081"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.0", "CMD"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.1", "curl"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.2", "-f"),
@@ -2822,7 +2716,7 @@ func TestAccDockerService_updatePortConverge(t *testing.T) {
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-port"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:15000/tftest-service:v1"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "replicas", "4"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.3819682835.replicas", "4"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "pause"),
@@ -2830,10 +2724,10 @@ func TestAccDockerService_updatePortConverge(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.order", "start-first"),
 					resource.TestCheckResourceAttr("docker_service.foo", "ports.#", "2"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.1648302198.internal", "8080"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.1648302198.external", "8081"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.802625553.internal", "8080"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.802625553.external", "8082"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.3668852780.internal", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.3668852780.external", "8081"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.2374790270.internal", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.2374790270.external", "8082"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.0", "CMD"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.1", "curl"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.2", "-f"),
@@ -2913,7 +2807,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthConverge(t *testing.
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-crihc"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:15000/tftest-service:v1"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.3052477333.replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "pause"),
@@ -2921,8 +2815,8 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthConverge(t *testing.
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.order", "start-first"),
 					resource.TestCheckResourceAttr("docker_service.foo", "ports.#", "1"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.1648302198.internal", "8080"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.1648302198.external", "8081"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.3668852780.internal", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.3668852780.external", "8081"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.0", "CMD"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.1", "curl"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.2", "-f"),
@@ -3000,7 +2894,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthConverge(t *testing.
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-crihc"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:15000/tftest-service:v2"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "replicas", "4"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.3819682835.replicas", "4"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "pause"),
@@ -3008,10 +2902,10 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthConverge(t *testing.
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.order", "start-first"),
 					resource.TestCheckResourceAttr("docker_service.foo", "ports.#", "2"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.1648302198.internal", "8080"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.1648302198.external", "8081"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.802625553.internal", "8080"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.802625553.external", "8082"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.3668852780.internal", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.3668852780.external", "8081"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.2374790270.internal", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.2374790270.external", "8082"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.0", "CMD"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.1", "curl"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.2", "-f"),
@@ -3091,7 +2985,7 @@ func TestAccDockerService_updateConfigAndDecreaseReplicasConverge(t *testing.T) 
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-config-dec-repl"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:15000/tftest-service:v1"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "replicas", "5"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.4205874514.replicas", "5"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "pause"),
@@ -3099,8 +2993,8 @@ func TestAccDockerService_updateConfigAndDecreaseReplicasConverge(t *testing.T) 
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.order", "start-first"),
 					resource.TestCheckResourceAttr("docker_service.foo", "ports.#", "1"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.4021806484.internal", "8080"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.4021806484.external", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.1587501533.internal", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.1587501533.external", "8080"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.0", "CMD"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.1", "curl"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.2", "-f"),
@@ -3180,8 +3074,8 @@ func TestAccDockerService_updateConfigAndDecreaseReplicasConverge(t *testing.T) 
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.order", "start-first"),
 					resource.TestCheckResourceAttr("docker_service.foo", "ports.#", "1"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.4021806484.internal", "8080"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.4021806484.external", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.1587501533.internal", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.1587501533.external", "8080"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.0", "CMD"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.1", "curl"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.2", "-f"),
@@ -3261,7 +3155,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-crihiadr"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:15000/tftest-service:v1"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "replicas", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.3052477333.replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "pause"),
@@ -3269,8 +3163,8 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.order", "start-first"),
 					resource.TestCheckResourceAttr("docker_service.foo", "ports.#", "1"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.1648302198.internal", "8080"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.1648302198.external", "8081"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.3668852780.internal", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.3668852780.external", "8081"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.0", "CMD"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.1", "curl"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.2", "-f"),
@@ -3348,7 +3242,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-crihiadr"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:15000/tftest-service:v2"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "replicas", "6"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.3516784273.replicas", "6"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "pause"),
@@ -3356,10 +3250,10 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.order", "start-first"),
 					resource.TestCheckResourceAttr("docker_service.foo", "ports.#", "2"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.1648302198.internal", "8080"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.1648302198.external", "8081"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.802625553.internal", "8080"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.802625553.external", "8082"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.3668852780.internal", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.3668852780.external", "8081"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.2374790270.internal", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.2374790270.external", "8082"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.0", "CMD"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.1", "curl"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.2", "-f"),
@@ -3437,7 +3331,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-crihiadr"),
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:15000/tftest-service:v2"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "replicas", "3"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.2901027540.replicas", "3"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "pause"),
@@ -3445,10 +3339,10 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.order", "start-first"),
 					resource.TestCheckResourceAttr("docker_service.foo", "ports.#", "2"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.1648302198.internal", "8080"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.1648302198.external", "8081"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.802625553.internal", "8080"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.802625553.external", "8082"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.3668852780.internal", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.3668852780.external", "8081"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.2374790270.internal", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "ports.2374790270.external", "8082"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.0", "CMD"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.1", "curl"),
 					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.2", "-f"),

@@ -158,7 +158,7 @@ func resourceDockerServiceRead(d *schema.ResourceData, meta interface{}) error {
 		}
 	}
 	if len(service.Endpoint.Spec.Mode) > 0 {
-		err = d.Set("network_mode", service.Endpoint.Spec.Mode)
+		err = d.Set("endpoint_mode", service.Endpoint.Spec.Mode)
 		if err != nil {
 			return err
 		}
@@ -685,25 +685,35 @@ func createServiceSpec(d *schema.ResourceData) (swarm.ServiceSpec, error) {
 				// with a map
 				rawMode := rawMode.(map[string]interface{})
 
-				if rawReplicatedMode, ok := rawMode["replicated"]; ok {
+				if rawReplicatedMode, replModeOk := rawMode["replicated"]; replModeOk {
 					// with a set
 					rawReplicatedModeSet := rawReplicatedMode.(*schema.Set)
 					for _, rawReplicatedModeInt := range rawReplicatedModeSet.List() {
 						// which is a map
 						rawReplicatedModeMap := rawReplicatedModeInt.(map[string]interface{})
+						log.Printf("[INFO] Setting service mode to 'replicated'")
 						serviceSpec.Mode.Replicated = &swarm.ReplicatedService{}
-						if testReplicas, ok := rawReplicatedModeMap["replicas"]; ok {
+						if testReplicas, testReplicasOk := rawReplicatedModeMap["replicas"]; testReplicasOk {
+							// if testReplicas.(int) != 0 {
+							log.Printf("[INFO] Setting %v replicas", testReplicas)
 							replicas := uint64(testReplicas.(int))
 							serviceSpec.Mode.Replicated.Replicas = &replicas
+							// }
 						}
 					}
-				} else {
-					if _, ok := rawMode["global"]; ok {
-						serviceSpec.Mode.Global = &swarm.GlobalService{}
-					}
+				}
+				if rawGlobalMode, globalModeOk := rawMode["global"]; globalModeOk && rawGlobalMode.(bool) {
+					log.Printf("[INFO] Setting service mode to 'global' is %v", rawGlobalMode)
+					serviceSpec.Mode.Global = &swarm.GlobalService{}
 				}
 			}
 		}
+	} else {
+		log.Printf("[INFO] No service mode given. Setting to 1 replica as default")
+		serviceSpec.Mode = swarm.ServiceMode{}
+		serviceSpec.Mode.Replicated = &swarm.ReplicatedService{}
+		replicas := uint64(1)
+		serviceSpec.Mode.Replicated.Replicas = &replicas
 	}
 
 	// == start Container Spec

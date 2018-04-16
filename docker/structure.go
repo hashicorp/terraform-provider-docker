@@ -16,11 +16,12 @@ func flattenServiceMode(in swarm.ServiceMode) []interface{} {
 
 	if in.Replicated != nil {
 		att["replicated"] = flattenReplicated(in.Replicated)
-	}
-	if in.Global != nil {
-		att["global"] = true
 	} else {
-		att["global"] = false
+		if in.Global != nil {
+			att["global"] = true
+		} else {
+			att["global"] = false
+		}
 	}
 
 	return []interface{}{att}
@@ -128,7 +129,7 @@ func flattenServicePorts(in []swarm.PortConfig) []interface{} {
 		if v.PublishedPort > 0 {
 			m["external"] = v.PublishedPort
 		}
-		m["mode"] = v.PublishMode
+		m["publish_mode"] = v.PublishMode
 		m["protocol"] = v.Protocol
 		out[i] = m
 	}
@@ -223,12 +224,6 @@ func flattenServiceDNSConfig(in *swarm.DNSConfig) []interface{} {
 	out[0] = m
 	return out
 }
-
-// func flattenPlacementPrefs(in []swarm.PlacementPreference) map[string]interface{} {
-// 	m := make(map[string]interface{})
-// 	m["TODO"] = "TODO"
-// 	return m
-// }
 
 // HELPERS
 func shortDur(d time.Duration) string {

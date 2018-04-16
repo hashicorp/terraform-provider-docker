@@ -121,7 +121,7 @@ The following arguments are supported:
 * `env` - (Optional, set of strings) Environment variables to set.
 * `host` - (Optional, list of strings) Each host is a string with the ip, the canonical hostname, and its aliases separated with whitespace: `IP_address canonical_hostname [aliases...]` e.g. `10.10.10.10 host1`. 
 * `destroy_grace_seconds` - (Optional, string) Amount of seconds to wait for the container to terminate before forcefully stopping it. This setting also ensures that all containers of a service are shut down successfully.
-* `network_mode` - (Optional, string) Network mode of the containers of the service (vip|dnsrr).
+* `endpoint_mode` - (Optional, string) The mode of resolution to use for internal load balancing between tasks. (vip|dnsrr). Defaults to `vip`.
 * `networks` - (Optional, set of strings) Id of the networks in which the
   container is.
 * `mounts` - (Optional, set of blocks) See [Mounts](#mounts) below for details.
@@ -174,7 +174,9 @@ resource "docker_service" "foo" {
 ```
 
 ~> **NOTE on `mode`:** if neither `global` nor `replicated` is specified, the service
-will be started in `replicated` mode with 1 replica.
+will be started in `replicated` mode with 1 replica. A change of service mode 
+is not possible. The service has to be destroyed an recreated in the new 
+mode.
 
 
 <a id="mounts"></a>
@@ -228,8 +230,8 @@ the following:
 
 * `internal` - (Required, int) Port within the container.
 * `external` - (Required, int) Port exposed out of the container.
-* `ip` - (Optional, string) IP address/mask that can access this port.
-* `protocol` - (Optional, string) Protocol that can be used over this port defaults to TCP.
+* `publish_mode` - (Optional, string) mode in which the port is to be published.
+* `protocol` - (Optional, string) Protocol that can be used over this port defaults to `tcp`.
 
 <a id="update-rollback-config"></a>
 ### UpdateConfig and RollbackConfig
@@ -241,7 +243,7 @@ the following:
 * `failure_action` - (Optional, int) Action on update failure: pause | continue | rollback.
 * `monitor` - (Optional, int) Duration after each task update to monitor for failure (ns|us|ms|s|m|h)
 * `max_failure_ratio` - (Optional, string) The failure rate to tolerate during an update as `float`. **Important:** the `float`need to be wrapped in a `string` to avoid internal
-casting and precision errors. 
+casting and precision errors.
 * `order` - (Optional, int) Update order either 'stop-first' or 'start-first'.
 
 <a id="placement"></a>

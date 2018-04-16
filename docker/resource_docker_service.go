@@ -68,7 +68,6 @@ func resourceDockerService() *schema.Resource {
 									"replicas": &schema.Schema{
 										Type:         schema.TypeInt,
 										Optional:     true,
-										Default:      1,
 										ValidateFunc: validateIntegerGeqThan(1),
 									},
 								},
@@ -77,7 +76,6 @@ func resourceDockerService() *schema.Resource {
 						"global": &schema.Schema{
 							Type:          schema.TypeBool,
 							Optional:      true,
-							Default:       false,
 							ConflictsWith: []string{"mode.0.replicated", "converge_config"},
 						},
 					},
@@ -124,9 +122,10 @@ func resourceDockerService() *schema.Resource {
 					},
 				},
 			},
-			"network_mode": &schema.Schema{
+			"endpoint_mode": &schema.Schema{
 				Type:         schema.TypeString,
 				Optional:     true,
+				Default:      "vip",
 				ValidateFunc: validateStringMatchesPattern(`^(vip|dnsrr)$`),
 			},
 			"networks": &schema.Schema{
@@ -253,16 +252,16 @@ func resourceDockerService() *schema.Resource {
 							Type:     schema.TypeInt,
 							Optional: true,
 						},
-						"mode": &schema.Schema{
+						"publish_mode": &schema.Schema{
 							Type:         schema.TypeString,
-							Default:      "vip",
 							Optional:     true,
-							ValidateFunc: validateStringMatchesPattern(`^(vip|dnsrr|ingress)$`),
+							Default:      "ingress",
+							ValidateFunc: validateStringMatchesPattern(`^(host|ingress)$`),
 						},
 						"protocol": &schema.Schema{
 							Type:         schema.TypeString,
-							Default:      "tcp",
 							Optional:     true,
+							Default:      "tcp",
 							ValidateFunc: validateStringMatchesPattern(`^(tcp|udp)$`),
 						},
 					},
