@@ -5,10 +5,11 @@
 package docker
 
 import (
-	"context"
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+
+	"golang.org/x/net/context"
 )
 
 // PluginPrivilege represents a privilege for a plugin.
