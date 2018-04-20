@@ -1,10 +1,16 @@
 @echo off
 setlocal
 
-set DOCKER_REGISTRY_ADDRESS="127.0.0.1:15000"
-set DOCKER_REGISTRY_USER="testuser"
-set DOCKER_REGISTRY_PASS="testpwd"
-set DOCKER_PRIVATE_IMAGE="127.0.0.1:15000/tftest-service:v1"
+:: As of `go-dockerclient` v1.2.0, the default endpoint to the Docker daemon
+:: is a UNIX socket.  We need to force it to use the Windows named pipe when
+:: running against Docker for Windows.
+set DOCKER_HOST=npipe:////.//pipe//docker_engine
+
+:: Note: quoting these values breaks the tests!
+set DOCKER_REGISTRY_ADDRESS=127.0.0.1:15000
+set DOCKER_REGISTRY_USER=testuser
+set DOCKER_REGISTRY_PASS=testpwd
+set DOCKER_PRIVATE_IMAGE=127.0.0.1:15000/tftest-service:v1
 set TF_ACC=1
 
 call:setup
