@@ -4,7 +4,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"fmt"
-  "os"
+        "os"
 	"strconv"
 	"strings"
 	"testing"
