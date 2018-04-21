@@ -70,7 +70,7 @@ exit /b %outcome%
   call:print "### unsetted env ###"
   for /F %%p in ('docker container ls -f "name=private_registry" -q') do (
     call docker stop %%p
-    call docker rm -f %%p
+    call docker rm -f -v %%p
   )
   call:print "### stopped private registry ###"
   rmdir /q /s %~dp0testing\auth
@@ -78,9 +78,13 @@ exit /b %outcome%
   call:print "### removed auth and certs ###"
   for %%r in ("container" "volume") do (
     call docker %%r ls -f "name=tftest-" -q
+    for /F %%i in ('docker %%r ls -f "name=tf-test" -q') do (
+      echo Deleting %%r %%i
+      call docker %%r rm -f -v %%i
+    )
     for /F %%i in ('docker %%r ls -f "name=tftest-" -q') do (
       echo Deleting %%r %%i
-      call docker %%r rm -f %%i
+      call docker %%r rm -f -v %%i
     )
     call:print "### removed %%r ###"
   )
