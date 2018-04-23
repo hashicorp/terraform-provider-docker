@@ -70,13 +70,10 @@ func resourceDockerServiceCreate(d *schema.ResourceData, meta interface{}) error
 	if v, ok := d.GetOk("rollback_config"); ok {
 		createOpts.RollbackConfig, _ = createUpdateOrRollbackConfig(v.([]interface{}))
 	}
-
 	service, err := client.CreateService(createOpts)
 	if err != nil {
 		return err
 	}
-	d.SetId(service.ID)
-
 	if v, ok := d.GetOk("converge_config"); ok {
 		convergeConfig := createConvergeConfig(v.([]interface{}))
 		log.Printf("[INFO] Waiting for Service '%s' to be created with timeout: %v", service.ID, convergeConfig.timeoutRaw)
@@ -124,112 +121,68 @@ func resourceDockerServiceRead(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("Error inspecting service %s: %s", apiService.ID, err)
 	}
 
+	d.SetId(service.ID)
 	d.Set("name", service.Spec.Name)
 	d.Set("image", service.Spec.TaskTemplate.ContainerSpec.Image)
+
 	if _, ok := d.GetOk("mode"); ok {
 		err = d.Set("mode", flattenServiceMode(service.Spec.Mode))
 		if err != nil {
 			return err
 		}
 	}
-	if len(service.Spec.TaskTemplate.ContainerSpec.Hostname) > 0 {
-		err = d.Set("hostname", service.Spec.TaskTemplate.ContainerSpec.Hostname)
-		if err != nil {
-			return err
-		}
+	// TODO
+	// if err = d.Set("mode", flattenServiceMode(service.Spec.Mode)); err != nil {
+	// 	log.Printf("[WARN] #### failed to set update_config from API: %s", err)
+	// }
+	if err = d.Set("hostname", service.Spec.TaskTemplate.ContainerSpec.Hostname); err != nil {
+		log.Printf("[WARN] failed to set hostname from API: %s", err)
 	}
-	if len(service.Spec.TaskTemplate.ContainerSpec.Command) > 0 {
-		err = d.Set("command", service.Spec.TaskTemplate.ContainerSpec.Command)
-		if err != nil {
-			return err
-		}
+	if err = d.Set("command", service.Spec.TaskTemplate.ContainerSpec.Command); err != nil {
+		log.Printf("[WARN] failed to set command from API: %s", err)
 	}
-	if len(service.Spec.TaskTemplate.ContainerSpec.Env) > 0 {
-		err = d.Set("env", service.Spec.TaskTemplate.ContainerSpec.Env)
-		if err != nil {
-			return err
-		}
+	if err = d.Set("env", service.Spec.TaskTemplate.ContainerSpec.Env); err != nil {
+		log.Printf("[WARN] failed to set env from API: %s", err)
 	}
-	if len(service.Spec.TaskTemplate.ContainerSpec.Hosts) > 0 {
-		err = d.Set("hosts", flattenServiceHosts(service.Spec.TaskTemplate.ContainerSpec.Hosts))
-		if err != nil {
-			return err
-		}
+	if err = d.Set("hosts", flattenServiceHosts(service.Spec.TaskTemplate.ContainerSpec.Hosts)); err != nil {
+		log.Printf("[WARN] failed to set hosts from API: %s", err)
 	}
-	if len(service.Endpoint.Spec.Mode) > 0 {
-		err = d.Set("endpoint_mode", service.Endpoint.Spec.Mode)
-		if err != nil {
-			return err
-		}
+	if err = d.Set("endpoint_mode", service.Endpoint.Spec.Mode); err != nil {
+		log.Printf("[WARN] failed to set endpoint_mode from API: %s", err)
 	}
-	if len(service.Spec.Networks) > 0 {
-		err = d.Set("networks", flattenServiceNetworks(service.Spec.Networks))
-		if err != nil {
-			return err
-		}
+	if err = d.Set("networks", flattenServiceNetworks(service.Spec.Networks)); err != nil {
+		log.Printf("[WARN] failed to set networks from API: %s", err)
 	}
-	if len(service.Spec.TaskTemplate.ContainerSpec.Mounts) > 0 {
-		err = d.Set("mounts", flattenServiceMounts(service.Spec.TaskTemplate.ContainerSpec.Mounts))
-		if err != nil {
-			return err
-		}
+	if err = d.Set("mounts", flattenServiceMounts(service.Spec.TaskTemplate.ContainerSpec.Mounts)); err != nil {
+		log.Printf("[WARN] failed to set mounts from API: %s", err)
 	}
-	if len(service.Spec.TaskTemplate.ContainerSpec.Configs) > 0 {
-		err = d.Set("configs", flattenServiceConfigs(service.Spec.TaskTemplate.ContainerSpec.Configs))
-		if err != nil {
-			return err
-		}
+	if err = d.Set("configs", flattenServiceConfigs(service.Spec.TaskTemplate.ContainerSpec.Configs)); err != nil {
+		log.Printf("[WARN] failed to set configs from API: %s", err)
 	}
-	if len(service.Spec.TaskTemplate.ContainerSpec.Secrets) > 0 {
-		err = d.Set("secrets", flattenServiceSecrets(service.Spec.TaskTemplate.ContainerSpec.Secrets))
-		if err != nil {
-			return err
-		}
+	if err = d.Set("secrets", flattenServiceSecrets(service.Spec.TaskTemplate.ContainerSpec.Secrets)); err != nil {
+		log.Printf("[WARN] failed to set secrets from API: %s", err)
 	}
-	if len(service.Endpoint.Spec.Ports) > 0 {
-		err = d.Set("ports", flattenServicePorts(service.Endpoint.Spec.Ports))
-		if err != nil {
-			return err
-		}
+	if err = d.Set("ports", flattenServicePorts(service.Endpoint.Spec.Ports)); err != nil {
+		log.Printf("[WARN] failed to set ports from API: %s", err)
 	}
-	if service.Spec.UpdateConfig != nil {
-		err = d.Set("update_config", flattenServiceUpdateOrRollbackConfig(service.Spec.UpdateConfig))
-		if err != nil {
-			return err
-		}
+	if err := d.Set("update_config", flattenServiceUpdateOrRollbackConfig(service.Spec.UpdateConfig)); err != nil {
+		log.Printf("[WARN] failed to set update_config from API: %s", err)
 	}
-	if service.Spec.RollbackConfig != nil {
-		err = d.Set("rollback_config", flattenServiceUpdateOrRollbackConfig(service.Spec.RollbackConfig))
-		if err != nil {
-			return err
-		}
+	if err = d.Set("rollback_config", flattenServiceUpdateOrRollbackConfig(service.Spec.RollbackConfig)); err != nil {
+		log.Printf("[WARN] failed to set rollback_config from API: %s", err)
 	}
-	if service.Spec.TaskTemplate.Placement != nil {
-		err = d.Set("placement", flattenServicePlacement(service.Spec.TaskTemplate.Placement))
-		if err != nil {
-			return err
-		}
+	if err = d.Set("placement", flattenServicePlacement(service.Spec.TaskTemplate.Placement)); err != nil {
+		log.Printf("[WARN] failed to set placement from API: %s", err)
 	}
-	if service.Spec.TaskTemplate.LogDriver != nil {
-		err = d.Set("logging", flattenServiceLogging(service.Spec.TaskTemplate.LogDriver))
-		if err != nil {
-			return err
-		}
+	if err = d.Set("logging", flattenServiceLogging(service.Spec.TaskTemplate.LogDriver)); err != nil {
+		log.Printf("[WARN] failed to set logging from API: %s", err)
 	}
-	if service.Spec.TaskTemplate.ContainerSpec.Healthcheck != nil {
-		err = d.Set("healthcheck", flattenServiceHealthcheck(service.Spec.TaskTemplate.ContainerSpec.Healthcheck))
-		if err != nil {
-			return err
-		}
+	if err = d.Set("healthcheck", flattenServiceHealthcheck(service.Spec.TaskTemplate.ContainerSpec.Healthcheck)); err != nil {
+		log.Printf("[WARN] failed to set healthcheck from API: %s", err)
 	}
-	if service.Spec.TaskTemplate.ContainerSpec.DNSConfig != nil {
-		err = d.Set("dns_config", flattenServiceDNSConfig(service.Spec.TaskTemplate.ContainerSpec.DNSConfig))
-		if err != nil {
-			return err
-		}
+	if err = d.Set("dns_config", flattenServiceDNSConfig(service.Spec.TaskTemplate.ContainerSpec.DNSConfig)); err != nil {
+		log.Printf("[WARN] failed to set dns_config from API: %s", err)
 	}
-
-	d.SetId(service.ID)
 
 	return nil
 }
@@ -707,13 +660,14 @@ func createServiceSpec(d *schema.ResourceData) (swarm.ServiceSpec, error) {
 				}
 			}
 		}
-	} else {
-		log.Printf("[INFO] No service mode given. Setting to 1 replica as default")
-		serviceSpec.Mode = swarm.ServiceMode{}
-		serviceSpec.Mode.Replicated = &swarm.ReplicatedService{}
-		replicas := uint64(1)
-		serviceSpec.Mode.Replicated.Replicas = &replicas
 	}
+	// else {
+	// 	log.Printf("[INFO] ##### No service mode given. Setting to 1 replica as default")
+	// 	serviceSpec.Mode = swarm.ServiceMode{}
+	// 	serviceSpec.Mode.Replicated = &swarm.ReplicatedService{}
+	// 	replicas := uint64(1)
+	// 	serviceSpec.Mode.Replicated.Replicas = &replicas
+	// }
 
 	// == start Container Spec
 	containerSpec := swarm.ContainerSpec{

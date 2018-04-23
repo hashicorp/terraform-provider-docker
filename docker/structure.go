@@ -13,15 +13,12 @@ import (
 
 func flattenServiceMode(in swarm.ServiceMode) []interface{} {
 	att := make(map[string]interface{})
-
 	if in.Replicated != nil {
 		att["replicated"] = flattenReplicated(in.Replicated)
+	} else if in.Global != nil {
+		att["global"] = true
 	} else {
-		if in.Global != nil {
-			att["global"] = true
-		} else {
-			att["global"] = false
-		}
+		att["global"] = false
 	}
 
 	return []interface{}{att}
@@ -29,8 +26,10 @@ func flattenServiceMode(in swarm.ServiceMode) []interface{} {
 
 func flattenReplicated(in *swarm.ReplicatedService) *schema.Set {
 	var out = make([]interface{}, 1, 1)
+
 	m := make(map[string]interface{})
-	m["replicas"] = int(*in.Replicas)
+	replicas := int(*in.Replicas)
+	m["replicas"] = replicas
 	out[0] = m
 	modeResource := resourceDockerService().Schema["mode"].Elem.(*schema.Resource)
 	replicatedResource := modeResource.Schema["replicated"].Elem.(*schema.Resource)
@@ -39,6 +38,10 @@ func flattenReplicated(in *swarm.ReplicatedService) *schema.Set {
 }
 
 func flattenServiceHosts(in []string) []interface{} {
+	if in == nil || len(in) == 0 {
+		return make([]interface{}, 0, 0)
+	}
+
 	var out = make([]interface{}, len(in), len(in))
 	for i, v := range in {
 		m := make(map[string]interface{})
@@ -51,6 +54,10 @@ func flattenServiceHosts(in []string) []interface{} {
 }
 
 func flattenServiceNetworks(in []swarm.NetworkAttachmentConfig) []interface{} {
+	if in == nil || len(in) == 0 {
+		return make([]interface{}, 0, 0)
+	}
+
 	var out = make([]interface{}, len(in), len(in))
 	for i, v := range in {
 		out[i] = v.Target
@@ -59,6 +66,10 @@ func flattenServiceNetworks(in []swarm.NetworkAttachmentConfig) []interface{} {
 }
 
 func flattenServiceMounts(in []mount.Mount) []interface{} {
+	if in == nil || len(in) == 0 {
+		return make([]interface{}, 0, 0)
+	}
+
 	var out = make([]interface{}, len(in), len(in))
 	for i, v := range in {
 		m := make(map[string]interface{})
@@ -90,6 +101,10 @@ func flattenServiceMounts(in []mount.Mount) []interface{} {
 }
 
 func flattenServiceConfigs(in []*swarm.ConfigReference) []interface{} {
+	if in == nil || len(in) == 0 {
+		return make([]interface{}, 0, 0)
+	}
+
 	var out = make([]interface{}, len(in), len(in))
 	for i, v := range in {
 		m := make(map[string]interface{})
@@ -106,6 +121,10 @@ func flattenServiceConfigs(in []*swarm.ConfigReference) []interface{} {
 }
 
 func flattenServiceSecrets(in []*swarm.SecretReference) []interface{} {
+	if in == nil || len(in) == 0 {
+		return make([]interface{}, 0, 0)
+	}
+
 	var out = make([]interface{}, len(in), len(in))
 	for i, v := range in {
 		m := make(map[string]interface{})
@@ -122,6 +141,10 @@ func flattenServiceSecrets(in []*swarm.SecretReference) []interface{} {
 }
 
 func flattenServicePorts(in []swarm.PortConfig) []interface{} {
+	if in == nil || len(in) == 0 {
+		return make([]interface{}, 0, 0)
+	}
+
 	var out = make([]interface{}, len(in), len(in))
 	for i, v := range in {
 		m := make(map[string]interface{})
@@ -137,7 +160,11 @@ func flattenServicePorts(in []swarm.PortConfig) []interface{} {
 }
 
 func flattenServiceUpdateOrRollbackConfig(in *swarm.UpdateConfig) []interface{} {
-	var out = make([]interface{}, 1, 1)
+	var out = make([]interface{}, 0, 0)
+	if in == nil {
+		return out
+	}
+
 	m := make(map[string]interface{})
 	m["parallelism"] = in.Parallelism
 	m["delay"] = shortDur(in.Delay)
@@ -145,11 +172,15 @@ func flattenServiceUpdateOrRollbackConfig(in *swarm.UpdateConfig) []interface{} 
 	m["monitor"] = shortDur(in.Monitor)
 	m["max_failure_ratio"] = strconv.FormatFloat(float64(in.MaxFailureRatio), 'f', 1, 64)
 	m["order"] = in.Order
-	out[0] = m
+	out = append(out, m)
 	return out
 }
 
 func flattenServicePlacement(in *swarm.Placement) []interface{} {
+	if in == nil {
+		return make([]interface{}, 0, 0)
+	}
+
 	var out = make([]interface{}, 1, 1)
 	m := make(map[string]interface{})
 	if len(in.Constraints) > 0 {
@@ -166,6 +197,10 @@ func flattenServicePlacement(in *swarm.Placement) []interface{} {
 }
 
 func flattenPlacementPrefs(in []swarm.PlacementPreference) *schema.Set {
+	if in == nil || len(in) == 0 {
+		return schema.NewSet(schema.HashString, make([]interface{}, 0, 0))
+	}
+
 	var out = make([]interface{}, len(in), len(in))
 	for i, v := range in {
 		out[i] = v.Spread.SpreadDescriptor
@@ -174,6 +209,10 @@ func flattenPlacementPrefs(in []swarm.PlacementPreference) *schema.Set {
 }
 
 func flattenPlacementPlatforms(in []swarm.Platform) *schema.Set {
+	if in == nil || len(in) == 0 {
+		return schema.NewSet(schema.HashString, make([]interface{}, 0, 0))
+	}
+
 	var out = make([]interface{}, len(in), len(in))
 	for i, v := range in {
 		m := make(map[string]interface{})
@@ -185,6 +224,10 @@ func flattenPlacementPlatforms(in []swarm.Platform) *schema.Set {
 }
 
 func flattenServiceLogging(in *swarm.Driver) []interface{} {
+	if in == nil {
+		return make([]interface{}, 0, 0)
+	}
+
 	var out = make([]interface{}, 1, 1)
 	m := make(map[string]interface{})
 	m["driver_name"] = in.Name
@@ -196,6 +239,10 @@ func flattenServiceLogging(in *swarm.Driver) []interface{} {
 }
 
 func flattenServiceHealthcheck(in *container.HealthConfig) []interface{} {
+	if in == nil {
+		return make([]interface{}, 0, 0)
+	}
+
 	var out = make([]interface{}, 1, 1)
 	m := make(map[string]interface{})
 	if len(in.Test) > 0 {
@@ -210,6 +257,10 @@ func flattenServiceHealthcheck(in *container.HealthConfig) []interface{} {
 }
 
 func flattenServiceDNSConfig(in *swarm.DNSConfig) []interface{} {
+	if in == nil {
+		return make([]interface{}, 0, 0)
+	}
+
 	var out = make([]interface{}, 1, 1)
 	m := make(map[string]interface{})
 	if len(in.Nameservers) > 0 {

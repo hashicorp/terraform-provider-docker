@@ -136,7 +136,6 @@ func resourceDockerService() *schema.Resource {
 				Type:         schema.TypeString,
 				Description:  "The mode of resolution to use for internal load balancing between tasks",
 				Optional:     true,
-				Default:      "vip",
 				ValidateFunc: validateStringMatchesPattern(`^(vip|dnsrr)$`),
 			},
 			"networks": &schema.Schema{
