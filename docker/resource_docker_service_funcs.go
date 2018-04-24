@@ -4,11 +4,10 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"strconv"
 	"strings"
 	"time"
-
-	"os"
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
@@ -63,13 +62,6 @@ func resourceDockerServiceCreate(d *schema.ResourceData, meta interface{}) error
 		createOpts.Auth = fromRegistryAuth(d.Get("image").(string), meta.(*ProviderConfig).AuthConfigs.Configs)
 	}
 
-	if v, ok := d.GetOk("update_config"); ok {
-		createOpts.UpdateConfig, _ = createUpdateOrRollbackConfig(v.([]interface{}))
-	}
-
-	if v, ok := d.GetOk("rollback_config"); ok {
-		createOpts.RollbackConfig, _ = createUpdateOrRollbackConfig(v.([]interface{}))
-	}
 	service, err := client.CreateService(createOpts)
 	if err != nil {
 		return err
@@ -206,14 +198,6 @@ func resourceDockerServiceUpdate(d *schema.ResourceData, meta interface{}) error
 		updateOpts.Auth = authToServiceAuth(v.(map[string]interface{}))
 	} else {
 		updateOpts.Auth = fromRegistryAuth(d.Get("image").(string), meta.(*ProviderConfig).AuthConfigs.Configs)
-	}
-
-	if v, ok := d.GetOk("update_config"); ok {
-		updateOpts.UpdateConfig, _ = createUpdateOrRollbackConfig(v.([]interface{}))
-	}
-
-	if v, ok := d.GetOk("rollback_config"); ok {
-		updateOpts.RollbackConfig, _ = createUpdateOrRollbackConfig(v.([]interface{}))
 	}
 
 	if err = client.UpdateService(d.Id(), updateOpts); err != nil {
@@ -616,49 +600,123 @@ func terminalState(state swarm.TaskState) bool {
 }
 
 //////// Mappers
-// createServiceSpec creates the service spec
+// createServiceSpec creates the service spec: https://docs.docker.com/engine/api/v1.32/#operation/ServiceCreate
 func createServiceSpec(d *schema.ResourceData) (swarm.ServiceSpec, error) {
 
 	serviceSpec := swarm.ServiceSpec{
 		Annotations: swarm.Annotations{
 			Name: d.Get("name").(string),
 		},
-		TaskTemplate: swarm.TaskSpec{},
 	}
 
-	if v, ok := d.GetOk("mode"); ok {
-		serviceSpec.Mode = swarm.ServiceMode{}
-		// because its a list
-		if len(v.([]interface{})) > 0 {
-			for _, rawMode := range v.([]interface{}) {
-				// with a map
-				rawMode := rawMode.(map[string]interface{})
-
-				if rawReplicatedMode, replModeOk := rawMode["replicated"]; replModeOk {
-					// with a list
-					if len(rawReplicatedMode.([]interface{})) > 0 {
-						for _, rawReplicatedModeInt := range rawReplicatedMode.([]interface{}) {
-							// which is a map
-							rawReplicatedModeMap := rawReplicatedModeInt.(map[string]interface{})
-							log.Printf("[INFO] Setting service mode to 'replicated'")
-							serviceSpec.Mode.Replicated = &swarm.ReplicatedService{}
-							if testReplicas, testReplicasOk := rawReplicatedModeMap["replicas"]; testReplicasOk {
-								log.Printf("[INFO] Setting %v replicas", testReplicas)
-								replicas := uint64(testReplicas.(int))
-								serviceSpec.Mode.Replicated.Replicas = &replicas
-							}
-						}
-					}
-				}
-				if rawGlobalMode, globalModeOk := rawMode["global"]; globalModeOk && rawGlobalMode.(bool) {
-					log.Printf("[INFO] Setting service mode to 'global' is %v", rawGlobalMode)
-					serviceSpec.Mode.Global = &swarm.GlobalService{}
-				}
-			}
-		}
+	labels, err := createServiceLabels(d)
+	if err != nil {
+		return serviceSpec, err
 	}
+	serviceSpec.Labels = labels
 
-	// == start Container Spec
+	taskTemplate, err := createServiceTaskTemplate(d)
+	if err != nil {
+		return serviceSpec, err
+	}
+	serviceSpec.TaskTemplate = taskTemplate
+
+	mode, err := createServiceMode(d)
+	if err != nil {
+		return serviceSpec, err
+	}
+	serviceSpec.Mode = mode
+
+	updateConfig, err := createServiceUpdateConfig(d)
+	if err != nil {
+		return serviceSpec, err
+	}
+	serviceSpec.UpdateConfig = updateConfig
+
+	rollbackConfig, err := createServiceRollbackConfig(d)
+	if err != nil {
+		return serviceSpec, err
+	}
+	serviceSpec.RollbackConfig = rollbackConfig
+
+	networks, err := createServiceNetworks(d)
+	if err != nil {
+		return serviceSpec, err
+	}
+	serviceSpec.Networks = networks
+
+	endpointSpec, err := createServiceEndpointSpec(d)
+	if err != nil {
+		return serviceSpec, err
+	}
+	serviceSpec.EndpointSpec = endpointSpec
+
+	return serviceSpec, nil
+}
+
+// createServiceLabels creates the labels for the service
+func createServiceLabels(d *schema.ResourceData) (map[string]string, error) {
+	if v, ok := d.GetOk("labels"); ok {
+		return mapTypeMapValsToString(v.(map[string]interface{})), nil
+	}
+	return nil, nil
+}
+
+// == start taskTemplate
+// createServiceTaskTemplate creates the task template for the service
+func createServiceTaskTemplate(d *schema.ResourceData) (swarm.TaskSpec, error) {
+	taskSpec := swarm.TaskSpec{}
+
+	containerSpec, err := createContainerSpec(d)
+	if err != nil {
+		return taskSpec, err
+	}
+	taskSpec.ContainerSpec = containerSpec
+
+	resources, err := createResources(d)
+	if err != nil {
+		return taskSpec, err
+	}
+	taskSpec.Resources = resources
+
+	restartPolicy, err := createRestartPolicy(d)
+	if err != nil {
+		return taskSpec, err
+	}
+	taskSpec.RestartPolicy = restartPolicy
+
+	placement, err := createPlacement(d)
+	if err != nil {
+		return taskSpec, err
+	}
+	taskSpec.Placement = placement
+	//forceUpdate?
+
+	runtime, err := createRuntime(d)
+	if err != nil {
+		return taskSpec, err
+	}
+	taskSpec.Runtime = runtime
+
+	// TODO network at tasks make sense?
+	// YEP: API error (501): rpc error: code = Unimplemented desc = networks must be migrated to TaskSpec before being changed
+	networks, err := createServiceNetworks(d)
+	if err != nil {
+		return taskSpec, err
+	}
+	taskSpec.Networks = networks
+
+	logDriver, err := createLogDriver(d)
+	if err != nil {
+		return taskSpec, err
+	}
+	taskSpec.LogDriver = logDriver
+
+	return taskSpec, nil
+}
+
+// createContainerSpec creates the container spec
+func createContainerSpec(d *schema.ResourceData) (*swarm.ContainerSpec, error) {
 	containerSpec := swarm.ContainerSpec{
 		Image: d.Get("image").(string),
 	}
@@ -676,7 +734,7 @@ func createServiceSpec(d *schema.ResourceData) (swarm.ServiceSpec, error) {
 		containerSpec.Command = stringListToStringSlice(v.([]interface{}))
 		for _, v := range containerSpec.Command {
 			if v == "" {
-				return swarm.ServiceSpec{}, fmt.Errorf("values for command may not be empty")
+				return &swarm.ContainerSpec{}, fmt.Errorf("values for command may not be empty")
 			}
 		}
 	}
@@ -689,25 +747,11 @@ func createServiceSpec(d *schema.ResourceData) (swarm.ServiceSpec, error) {
 		containerSpec.Hosts = extraHostsSetToDockerExtraHosts(v.(*schema.Set))
 	}
 
+	// FIXME
 	endpointSpec := swarm.EndpointSpec{}
 
 	if v, ok := d.GetOk("network_mode"); ok {
 		endpointSpec.Mode = swarm.ResolutionMode(v.(string))
-	}
-
-	portBindings := []swarm.PortConfig{}
-
-	if v, ok := d.GetOk("networks"); ok {
-		networks := []swarm.NetworkAttachmentConfig{}
-
-		for _, rawNetwork := range v.(*schema.Set).List() {
-			network := swarm.NetworkAttachmentConfig{
-				Target: rawNetwork.(string),
-			}
-			networks = append(networks, network)
-		}
-		serviceSpec.TaskTemplate.Networks = networks
-		serviceSpec.Networks = networks
 	}
 
 	if v, ok := d.GetOk("mounts"); ok {
@@ -768,8 +812,6 @@ func createServiceSpec(d *schema.ResourceData) (swarm.ServiceSpec, error) {
 		containerSpec.Mounts = mounts
 	}
 
-	serviceSpec.TaskTemplate.ContainerSpec = &containerSpec
-
 	if v, ok := d.GetOk("configs"); ok {
 		configs := []*swarm.ConfigReference{}
 
@@ -787,7 +829,7 @@ func createServiceSpec(d *schema.ResourceData) (swarm.ServiceSpec, error) {
 			}
 			configs = append(configs, &config)
 		}
-		serviceSpec.TaskTemplate.ContainerSpec.Configs = configs
+		containerSpec.Configs = configs
 	}
 
 	if v, ok := d.GetOk("secrets"); ok {
@@ -807,55 +849,7 @@ func createServiceSpec(d *schema.ResourceData) (swarm.ServiceSpec, error) {
 			}
 			secrets = append(secrets, &secret)
 		}
-		serviceSpec.TaskTemplate.ContainerSpec.Secrets = secrets
-	}
-	// == end Container Spec
-
-	// == start Endpoint Spec
-	if v, ok := d.GetOk("ports"); ok {
-		portBindings = portSetToServicePorts(v.(*schema.Set))
-	}
-	if len(portBindings) != 0 {
-		endpointSpec.Ports = portBindings
-	}
-
-	if v, ok := d.GetOk("endpoint_mode"); ok {
-		endpointSpec.Mode = swarm.ResolutionMode(v.(string))
-	}
-
-	serviceSpec.EndpointSpec = &endpointSpec
-	// == end Endpoint Spec
-
-	// == start TaskTemplate Spec
-	if v, ok := d.GetOk("placement"); ok {
-		placement := swarm.Placement{}
-		for _, rawPlacement := range v.([]interface{}) {
-			rawPlacement := rawPlacement.(map[string]interface{})
-			if v, ok := rawPlacement["constraints"]; ok {
-				placement.Constraints = stringSetToStringSlice(v.(*schema.Set))
-			}
-
-			if v, ok := rawPlacement["prefs"]; ok {
-				placement.Preferences = stringSetToPlacementPrefs(v.(*schema.Set))
-			}
-
-			if v, ok := rawPlacement["platforms"]; ok {
-				placement.Platforms = mapSetToPlacementPlatforms(v.(*schema.Set))
-			}
-		}
-		serviceSpec.TaskTemplate.Placement = &placement
-	}
-
-	if v, ok := d.GetOk("logging"); ok {
-		serviceSpec.TaskTemplate.LogDriver = &swarm.Driver{}
-		for _, rawLogging := range v.([]interface{}) {
-			rawLogging := rawLogging.(map[string]interface{})
-			serviceSpec.TaskTemplate.LogDriver.Name = rawLogging["driver_name"].(string)
-
-			if rawOptions, ok := rawLogging["options"]; ok {
-				serviceSpec.TaskTemplate.LogDriver.Options = mapTypeMapValsToString(rawOptions.(map[string]interface{}))
-			}
-		}
+		containerSpec.Secrets = secrets
 	}
 
 	if v, ok := d.GetOk("healthcheck"); ok {
@@ -900,9 +894,153 @@ func createServiceSpec(d *schema.ResourceData) (swarm.ServiceSpec, error) {
 		}
 	}
 
-	// == end TaskTemplate Spec
+	return &containerSpec, nil
+}
 
-	return serviceSpec, nil
+// createResources creates the resource requirements for the service
+func createResources(d *schema.ResourceData) (*swarm.ResourceRequirements, error) {
+	resources := swarm.ResourceRequirements{}
+
+	return &resources, nil
+}
+
+// createRestartPolicy creates the restart poliyc of the service FIXME
+func createRestartPolicy(d *schema.ResourceData) (*swarm.RestartPolicy, error) {
+	restartPolicy := swarm.RestartPolicy{}
+
+	return &restartPolicy, nil
+}
+
+// createPlacement creates the placement strategy for the service
+func createPlacement(d *schema.ResourceData) (*swarm.Placement, error) {
+	if v, ok := d.GetOk("placement"); ok {
+		placement := swarm.Placement{}
+		for _, rawPlacement := range v.([]interface{}) {
+			rawPlacement := rawPlacement.(map[string]interface{})
+			if v, ok := rawPlacement["constraints"]; ok {
+				placement.Constraints = stringSetToStringSlice(v.(*schema.Set))
+			}
+
+			if v, ok := rawPlacement["prefs"]; ok {
+				placement.Preferences = stringSetToPlacementPrefs(v.(*schema.Set))
+			}
+
+			if v, ok := rawPlacement["platforms"]; ok {
+				placement.Platforms = mapSetToPlacementPlatforms(v.(*schema.Set))
+			}
+		}
+		return &placement, nil
+	}
+	return nil, nil
+}
+
+// createRuntime creates the runtime type for the task executor FIXME
+func createRuntime(d *schema.ResourceData) (swarm.RuntimeType, error) {
+	runtime := "container" // plugin
+
+	return swarm.RuntimeType(runtime), nil
+}
+
+// createLogDriver creates the log driver for the service
+func createLogDriver(d *schema.ResourceData) (*swarm.Driver, error) {
+	if v, ok := d.GetOk("logging"); ok {
+		logDriver := swarm.Driver{}
+		for _, rawLogging := range v.([]interface{}) {
+			rawLogging := rawLogging.(map[string]interface{})
+			logDriver.Name = rawLogging["driver_name"].(string)
+
+			if rawOptions, ok := rawLogging["options"]; ok {
+				logDriver.Options = mapTypeMapValsToString(rawOptions.(map[string]interface{}))
+			}
+		}
+		return &logDriver, nil
+	}
+	return nil, nil
+}
+
+// == end taskTemplate
+
+// createServiceMode creates the mode the service will run in
+func createServiceMode(d *schema.ResourceData) (swarm.ServiceMode, error) {
+	serviceMode := swarm.ServiceMode{}
+	if v, ok := d.GetOk("mode"); ok {
+		// because its a list
+		if len(v.([]interface{})) > 0 {
+			for _, rawMode := range v.([]interface{}) {
+				// with a map
+				rawMode := rawMode.(map[string]interface{})
+
+				if rawReplicatedMode, replModeOk := rawMode["replicated"]; replModeOk {
+					// with a list
+					if len(rawReplicatedMode.([]interface{})) > 0 {
+						for _, rawReplicatedModeInt := range rawReplicatedMode.([]interface{}) {
+							// which is a map
+							rawReplicatedModeMap := rawReplicatedModeInt.(map[string]interface{})
+							log.Printf("[INFO] Setting service mode to 'replicated'")
+							serviceMode.Replicated = &swarm.ReplicatedService{}
+							if testReplicas, testReplicasOk := rawReplicatedModeMap["replicas"]; testReplicasOk {
+								log.Printf("[INFO] Setting %v replicas", testReplicas)
+								replicas := uint64(testReplicas.(int))
+								serviceMode.Replicated.Replicas = &replicas
+							}
+						}
+					}
+				}
+				if rawGlobalMode, globalModeOk := rawMode["global"]; globalModeOk && rawGlobalMode.(bool) {
+					log.Printf("[INFO] Setting service mode to 'global' is %v", rawGlobalMode)
+					serviceMode.Global = &swarm.GlobalService{}
+				}
+			}
+		}
+	}
+	return serviceMode, nil
+}
+
+// createServiceUpdateConfig creates the service update config
+func createServiceUpdateConfig(d *schema.ResourceData) (*swarm.UpdateConfig, error) {
+	if v, ok := d.GetOk("update_config"); ok {
+		return createUpdateOrRollbackConfig(v.([]interface{}))
+	}
+	return nil, nil
+}
+
+// createServiceRollbackConfig create the service rollback config
+func createServiceRollbackConfig(d *schema.ResourceData) (*swarm.UpdateConfig, error) {
+	if v, ok := d.GetOk("rollback_config"); ok {
+		return createUpdateOrRollbackConfig(v.([]interface{}))
+	}
+	return nil, nil
+}
+
+// createServiceNetworks creates the networks the service will be attachted to
+func createServiceNetworks(d *schema.ResourceData) ([]swarm.NetworkAttachmentConfig, error) {
+	networks := []swarm.NetworkAttachmentConfig{}
+	if v, ok := d.GetOk("networks"); ok {
+		for _, rawNetwork := range v.(*schema.Set).List() {
+			network := swarm.NetworkAttachmentConfig{
+				Target: rawNetwork.(string),
+			}
+			networks = append(networks, network)
+		}
+	}
+	return networks, nil
+}
+
+// createServiceEndpointSpec creates the spec for the endpoint
+func createServiceEndpointSpec(d *schema.ResourceData) (*swarm.EndpointSpec, error) {
+	endpointSpec := swarm.EndpointSpec{} // FIXME
+	if v, ok := d.GetOk("ports"); ok {
+		portBindings := portSetToServicePorts(v.(*schema.Set))
+		if len(portBindings) != 0 {
+			endpointSpec.Ports = portBindings
+		}
+	}
+
+	if v, ok := d.GetOk("endpoint_mode"); ok {
+		endpointSpec.Mode = swarm.ResolutionMode(v.(string))
+	}
+
+	return &endpointSpec, nil
 }
 
 // createUpdateOrRollbackConfig create the configuration for and update or rollback

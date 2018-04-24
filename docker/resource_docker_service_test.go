@@ -748,7 +748,7 @@ func TestAccDockerService_fullConverge(t *testing.T) {
 					
 					hostname = "myfooservice"
 
-					networks = ["${docker_network.test_network.name}"]
+					networks = ["${docker_network.test_network.id}"]
 					endpoint_mode = "vip"
 
 					hosts {
@@ -856,7 +856,6 @@ func TestAccDockerService_fullConverge(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.0.replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "hostname", "myfooservice"),
 					resource.TestCheckResourceAttr("docker_service.foo", "networks.#", "1"),
-					resource.TestCheckResourceAttr("docker_service.foo", "networks.2768978924", "tftest-network"),
 					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_mode", "vip"),
 					resource.TestCheckResourceAttr("docker_service.foo", "placement.#", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "placement.0.constraints.#", "1"),
@@ -1139,7 +1138,7 @@ func TestAccDockerService_updateNetworksConverge(t *testing.T) {
 						}
 					}
 
-					networks = ["${docker_network.test_network.name}"]
+					networks = ["${docker_network.test_network.id}"]
 					endpoint_mode = "vip"
 
 					converge_config {
@@ -1156,7 +1155,6 @@ func TestAccDockerService_updateNetworksConverge(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "stovogel/friendlyhello:part2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.0.replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "networks.#", "1"),
-					resource.TestCheckResourceAttr("docker_service.foo", "networks.2768978924", "tftest-network"),
 					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_mode", "vip"),
 				),
 			},
@@ -1181,7 +1179,7 @@ func TestAccDockerService_updateNetworksConverge(t *testing.T) {
 						}
 					}
 
-					networks = ["${docker_network.test_network2.name}"]
+					networks = ["${docker_network.test_network2.id}"]
 					endpoint_mode = "vip"
 
 					converge_config {
@@ -1198,7 +1196,6 @@ func TestAccDockerService_updateNetworksConverge(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_service.foo", "image", "stovogel/friendlyhello:part2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.0.replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "networks.#", "1"),
-					resource.TestCheckResourceAttr("docker_service.foo", "networks.3016497949", "tftest-network2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_mode", "vip"),
 				),
 			},
@@ -1224,8 +1221,8 @@ func TestAccDockerService_updateNetworksConverge(t *testing.T) {
 					}
 
 					networks = [
-						"${docker_network.test_network.name}",
-						"${docker_network.test_network2.name}"
+						"${docker_network.test_network.id}",
+						"${docker_network.test_network2.id}"
 					]
 					endpoint_mode = "vip"
 
