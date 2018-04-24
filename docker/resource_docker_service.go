@@ -73,6 +73,7 @@ func resourceDockerService() *schema.Resource {
 										Type:         schema.TypeInt,
 										Description:  "The amount of replicas of the service",
 										Optional:     true,
+										Default:      1,
 										ValidateFunc: validateIntegerGeqThan(1),
 									},
 								},
@@ -136,6 +137,7 @@ func resourceDockerService() *schema.Resource {
 				Type:         schema.TypeString,
 				Description:  "The mode of resolution to use for internal load balancing between tasks",
 				Optional:     true,
+				Default:      "vip",
 				ValidateFunc: validateStringMatchesPattern(`^(vip|dnsrr)$`),
 			},
 			"networks": &schema.Schema{

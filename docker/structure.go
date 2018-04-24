@@ -15,22 +15,25 @@ func flattenServiceMode(in swarm.ServiceMode) []interface{} {
 	att := make(map[string]interface{})
 	if in.Replicated != nil {
 		att["replicated"] = flattenReplicated(in.Replicated)
-	} else if in.Global != nil {
-		att["global"] = true
 	} else {
-		att["global"] = false
+		if in.Global != nil {
+			att["global"] = true
+		} else {
+			att["global"] = false
+		}
 	}
 
 	return []interface{}{att}
 }
 
 func flattenReplicated(in *swarm.ReplicatedService) *schema.Set {
-	var out = make([]interface{}, 1, 1)
-
-	m := make(map[string]interface{})
-	replicas := int(*in.Replicas)
-	m["replicas"] = replicas
-	out[0] = m
+	var out = make([]interface{}, 0, 0)
+	if in != nil {
+		m := make(map[string]interface{})
+		replicas := int(*in.Replicas)
+		m["replicas"] = replicas
+		out = append(out, m)
+	}
 	modeResource := resourceDockerService().Schema["mode"].Elem.(*schema.Resource)
 	replicatedResource := modeResource.Schema["replicated"].Elem.(*schema.Resource)
 	f := schema.HashResource(replicatedResource)
