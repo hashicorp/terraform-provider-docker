@@ -125,15 +125,9 @@ func resourceDockerServiceRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("name", service.Spec.Name)
 	d.Set("image", service.Spec.TaskTemplate.ContainerSpec.Image)
 
-	// if service.Spec.Mode.Replicated != nil {
-	// Note: 'mode'
-	if _, ok := d.GetOk("mode"); ok {
-		if err = d.Set("mode", flattenServiceMode(service.Spec.Mode)); err != nil {
-			log.Printf("[WARN] failed to set mode from API: %s", err)
-		}
+	if err = d.Set("mode", flattenServiceMode(service.Spec.Mode)); err != nil {
+		log.Printf("[WARN] failed to set mode from API: %s", err)
 	}
-	log.Printf("#### read   endpoint_mode '%v'", service.Endpoint.Spec.Mode)
-	log.Printf("#### read   port length   '%v'", len(service.Endpoint.Spec.Ports))
 	// endpoint_mode is only present if Ports are set
 	// https://docs.docker.com/network/overlay/#bypass-the-routing-mesh-for-a-swarm-service
 	if len(service.Endpoint.Spec.Ports) > 0 {
@@ -649,11 +643,9 @@ func createServiceSpec(d *schema.ResourceData) (swarm.ServiceSpec, error) {
 						log.Printf("[INFO] Setting service mode to 'replicated'")
 						serviceSpec.Mode.Replicated = &swarm.ReplicatedService{}
 						if testReplicas, testReplicasOk := rawReplicatedModeMap["replicas"]; testReplicasOk {
-							// if testReplicas.(int) != 0 {
 							log.Printf("[INFO] Setting %v replicas", testReplicas)
 							replicas := uint64(testReplicas.(int))
 							serviceSpec.Mode.Replicated.Replicas = &replicas
-							// }
 						}
 					}
 				}
@@ -827,7 +819,6 @@ func createServiceSpec(d *schema.ResourceData) (swarm.ServiceSpec, error) {
 	}
 
 	if v, ok := d.GetOk("endpoint_mode"); ok {
-		log.Printf("#### create endpoint_mode '%v'", v.(string))
 		endpointSpec.Mode = swarm.ResolutionMode(v.(string))
 	}
 

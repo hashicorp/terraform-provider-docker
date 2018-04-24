@@ -58,7 +58,7 @@ func resourceDockerService() *schema.Resource {
 				Type:        schema.TypeList,
 				Description: "Scheduling mode for the service",
 				MaxItems:    1,
-				Optional:    true,
+				Required:    true,
 				ForceNew:    true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
@@ -83,6 +83,7 @@ func resourceDockerService() *schema.Resource {
 							Type:          schema.TypeBool,
 							Description:   "The global service mode",
 							Optional:      true,
+							Default:       false,
 							ConflictsWith: []string{"mode.0.replicated", "converge_config"},
 						},
 					},

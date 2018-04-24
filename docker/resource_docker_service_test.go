@@ -84,6 +84,9 @@ func TestAccDockerService_plain(t *testing.T) {
 				resource "docker_service" "foo" {
 					name     = "tftest-service-basic"
 					image    = "stovogel/friendlyhello:part2"
+					mode {
+						replicated {}
+					}
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
