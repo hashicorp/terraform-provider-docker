@@ -1,7 +1,6 @@
 package docker
 
 import (
-	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -13,40 +12,30 @@ import (
 )
 
 func flattenServiceMode(in swarm.ServiceMode) []interface{} {
-	att := make(map[string]interface{})
+	m := make(map[string]interface{})
 	if in.Replicated != nil {
-		log.Printf("[DEBUG] read   flattenServiceMode replicated")
-		att["replicated"] = flattenReplicated(in.Replicated)
+		m["replicated"] = flattenReplicated(in.Replicated)
 	}
 	if in.Global != nil {
-		log.Printf("[DEBUG] read   flattenServiceMode Global=true")
-		att["global"] = true
+		m["global"] = true
 	} else {
-		log.Printf("[DEBUG] read   flattenServiceMode Global=false")
-		att["global"] = false
+		m["global"] = false
 	}
 
-	log.Printf("[DEBUG] read   flattenServiceMode replicated out: %v", att)
-	return []interface{}{att}
+	return []interface{}{m}
 }
 
-func flattenReplicated(in *swarm.ReplicatedService) *schema.Set {
+func flattenReplicated(in *swarm.ReplicatedService) []interface{} {
 	var out = make([]interface{}, 0, 0)
+	m := make(map[string]interface{})
 	if in != nil {
-		log.Printf("[DEBUG] read   flattenReplicated replicated")
-		m := make(map[string]interface{})
-		replicas := int(*in.Replicas)
-		m["replicas"] = replicas
-		out = append(out, m)
-	} else {
-		log.Printf("[DEBUG] read   flattenReplicated replicated NIL")
+		if in.Replicas != nil {
+			replicas := int(*in.Replicas)
+			m["replicas"] = replicas
+		}
 	}
-	modeResource := resourceDockerService().Schema["mode"].Elem.(*schema.Resource)
-	log.Printf("[DEBUG] read   flattenReplicated modeResource: %v", modeResource)
-	replicatedResource := modeResource.Schema["replicated"].Elem.(*schema.Resource)
-	log.Printf("[DEBUG] read   flattenReplicated replicatedResource: %v", replicatedResource)
-	f := schema.HashResource(replicatedResource)
-	return schema.NewSet(f, out)
+	out = append(out, m)
+	return out
 }
 
 func flattenServiceHosts(in []string) []interface{} {

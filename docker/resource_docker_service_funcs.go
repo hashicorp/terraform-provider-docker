@@ -635,17 +635,18 @@ func createServiceSpec(d *schema.ResourceData) (swarm.ServiceSpec, error) {
 				rawMode := rawMode.(map[string]interface{})
 
 				if rawReplicatedMode, replModeOk := rawMode["replicated"]; replModeOk {
-					// with a set
-					rawReplicatedModeSet := rawReplicatedMode.(*schema.Set)
-					for _, rawReplicatedModeInt := range rawReplicatedModeSet.List() {
-						// which is a map
-						rawReplicatedModeMap := rawReplicatedModeInt.(map[string]interface{})
-						log.Printf("[INFO] Setting service mode to 'replicated'")
-						serviceSpec.Mode.Replicated = &swarm.ReplicatedService{}
-						if testReplicas, testReplicasOk := rawReplicatedModeMap["replicas"]; testReplicasOk {
-							log.Printf("[INFO] Setting %v replicas", testReplicas)
-							replicas := uint64(testReplicas.(int))
-							serviceSpec.Mode.Replicated.Replicas = &replicas
+					// with a list
+					if len(rawReplicatedMode.([]interface{})) > 0 {
+						for _, rawReplicatedModeInt := range rawReplicatedMode.([]interface{}) {
+							// which is a map
+							rawReplicatedModeMap := rawReplicatedModeInt.(map[string]interface{})
+							log.Printf("[INFO] Setting service mode to 'replicated'")
+							serviceSpec.Mode.Replicated = &swarm.ReplicatedService{}
+							if testReplicas, testReplicasOk := rawReplicatedModeMap["replicas"]; testReplicasOk {
+								log.Printf("[INFO] Setting %v replicas", testReplicas)
+								replicas := uint64(testReplicas.(int))
+								serviceSpec.Mode.Replicated.Replicas = &replicas
+							}
 						}
 					}
 				}

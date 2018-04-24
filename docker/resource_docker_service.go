@@ -58,14 +58,17 @@ func resourceDockerService() *schema.Resource {
 				Type:        schema.TypeList,
 				Description: "Scheduling mode for the service",
 				MaxItems:    1,
-				Required:    true,
+				Optional:    true,
+				Computed:    true,
 				ForceNew:    true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"replicated": &schema.Schema{
-							Type:          schema.TypeSet,
+							Type:          schema.TypeList,
 							Description:   "The replicated service mode",
+							MaxItems:      1,
 							Optional:      true,
+							Computed:      true,
 							ConflictsWith: []string{"mode.0.global"},
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
