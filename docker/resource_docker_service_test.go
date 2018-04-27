@@ -739,6 +739,11 @@ func TestAccDockerService_fullConverge(t *testing.T) {
 
 				resource "docker_service" "foo" {
 					name     = "tftest-service-full"
+
+					labels {
+						foo = "bar"
+					}
+
 					image    = "127.0.0.1:15000/tftest-service:v1"
 					mode {
 						replicated {
