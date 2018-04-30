@@ -54,18 +54,18 @@ func resourceDockerService() *schema.Resource {
 				Optional:    true,
 				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
-			"task_template": &schema.Schema{
-				Type:        schema.TypeMap,
+			"task_spec": &schema.Schema{
+				Type:        schema.TypeList,
 				Description: "User modifiable task configuration",
-				Optional:    true,
-				Computed:    true,
-				ForceNew:    true,
+				MaxItems:    1,
+				Required:    true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"container_spec": &schema.Schema{
-							Type:        schema.TypeMap,
-							Description: "The replicated service mode",
-							Optional:    true,
+							Type:        schema.TypeList,
+							Description: "The spec for each container",
+							Required:    true,
+							MaxItems:    1,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"image": &schema.Schema{
@@ -119,35 +119,36 @@ func resourceDockerService() *schema.Resource {
 										Elem:        &schema.Schema{Type: schema.TypeString},
 									},
 									"privileges": &schema.Schema{
-										Type:        schema.TypeMap,
+										Type:        schema.TypeList,
 										Description: "The replicated service mode",
+										MaxItems:    1,
 										Optional:    true,
 										Elem: &schema.Resource{
 											Schema: map[string]*schema.Schema{
 												"credential_spec": &schema.Schema{
-													Type:        schema.TypeMap,
+													Type:        schema.TypeList,
 													Description: "CredentialSpec for managed service account (Windows only)",
+													MaxItems:    1,
 													Optional:    true,
 													Elem: &schema.Resource{
 														Schema: map[string]*schema.Schema{
 															"file": &schema.Schema{
-																Type:          schema.TypeString,
-																Description:   "Load credential spec from this file",
-																Optional:      true,
-																ConflictsWith: []string{"container_spec.0.privileges.credential_spec.registry"},
+																Type:        schema.TypeString,
+																Description: "Load credential spec from this file",
+																Optional:    true,
 															},
 															"registry": &schema.Schema{
-																Type:          schema.TypeString,
-																Description:   "Load credential spec from this value in the Windows registry",
-																Optional:      true,
-																ConflictsWith: []string{"container_spec.0.privileges.credential_spec.file"},
+																Type:        schema.TypeString,
+																Description: "Load credential spec from this value in the Windows registry",
+																Optional:    true,
 															},
 														},
 													},
 												},
 												"se_linux_context": &schema.Schema{
-													Type:        schema.TypeMap,
+													Type:        schema.TypeList,
 													Description: "SELinux labels of the container",
+													MaxItems:    1,
 													Optional:    true,
 													Elem: &schema.Resource{
 														Schema: map[string]*schema.Schema{
@@ -207,7 +208,7 @@ func resourceDockerService() *schema.Resource {
 													Type:         schema.TypeString,
 													Description:  "The mount type",
 													Required:     true,
-													ValidateFunc: validateStringMatchesPattern(`^(bind|volume|tmpf)$`),
+													ValidateFunc: validateStringMatchesPattern(`^(bind|volume|tmpfs)$`),
 												},
 												"read_only": &schema.Schema{
 													Type:        schema.TypeBool,
@@ -221,9 +222,10 @@ func resourceDockerService() *schema.Resource {
 													ValidateFunc: validateStringMatchesPattern(`^(default|consistent|cached|delegated)$`),
 												},
 												"bind_options": &schema.Schema{
-													Type:        schema.TypeMap,
+													Type:        schema.TypeList,
 													Description: "Optional configuration for the bind type",
 													Optional:    true,
+													MaxItems:    1,
 													Elem: &schema.Resource{
 														Schema: map[string]*schema.Schema{
 															"bind_propagation": &schema.Schema{
@@ -236,9 +238,10 @@ func resourceDockerService() *schema.Resource {
 													},
 												},
 												"volume_options": &schema.Schema{
-													Type:        schema.TypeMap,
+													Type:        schema.TypeList,
 													Description: "Optional configuration for the bind type",
 													Optional:    true,
+													MaxItems:    1,
 													Elem: &schema.Resource{
 														Schema: map[string]*schema.Schema{
 															"no_copy": &schema.Schema{
@@ -276,9 +279,10 @@ func resourceDockerService() *schema.Resource {
 													},
 												},
 												"tmpf_options": &schema.Schema{
-													Type:        schema.TypeMap,
+													Type:        schema.TypeList,
 													Description: "Optional configuration for the tmpfs type",
 													Optional:    true,
+													MaxItems:    1,
 													Elem: &schema.Resource{
 														Schema: map[string]*schema.Schema{
 															"size_bytes": &schema.Schema{
@@ -303,10 +307,10 @@ func resourceDockerService() *schema.Resource {
 										Optional:    true,
 									},
 									"stop_grace_period": &schema.Schema{
-										Type:         schema.TypeInt,
+										Type:         schema.TypeString,
 										Description:  "Amount of time to wait for the container to terminate before forcefully removing it",
 										Optional:     true,
-										ValidateFunc: validateIntegerGeqThan(0),
+										ValidateFunc: validateDurationGeq0(),
 									},
 									"healthcheck": &schema.Schema{
 										Type:        schema.TypeList,
@@ -401,6 +405,57 @@ func resourceDockerService() *schema.Resource {
 											},
 										},
 									},
+									"secrets": &schema.Schema{
+										Type:        schema.TypeSet,
+										Description: "References to zero or more secrets that will be exposed to the service",
+										Optional:    true,
+										Elem: &schema.Resource{
+											Schema: map[string]*schema.Schema{
+												"file": &schema.Schema{
+													Type:        schema.TypeMap,
+													Description: "File represents a specific target that is backed by a file",
+													Required:    true,
+													Elem: &schema.Resource{
+														Schema: map[string]*schema.Schema{
+															"name": &schema.Schema{
+																Type:        schema.TypeString,
+																Description: "Represents the final filename in the filesystem",
+																Required:    true,
+															},
+															"uid": &schema.Schema{
+																Type:        schema.TypeString,
+																Description: "Represents the file UID",
+																Optional:    true,
+																Default:     "0",
+															},
+															"gid": &schema.Schema{
+																Type:        schema.TypeString,
+																Description: "Represents the file GID",
+																Optional:    true,
+																Default:     "0",
+															},
+															"mode": &schema.Schema{
+																Type:        schema.TypeString,
+																Description: "Represents the FileMode of the file",
+																Optional:    true,
+																Default:     0444,
+															},
+														},
+													},
+												},
+												"secret_id": &schema.Schema{
+													Type:        schema.TypeString,
+													Description: "ID of the specific secret that we're referencing",
+													Required:    true,
+												},
+												"secret_name": &schema.Schema{
+													Type:        schema.TypeString,
+													Description: "Name of the secret that this references, but this is just provided for lookup/display purposes. The config in the reference will be identified by its ID",
+													Optional:    true,
+												},
+											},
+										},
+									},
 									"configs": &schema.Schema{
 										Type:        schema.TypeSet,
 										Description: "References to zero or more configs that will be exposed to the service",
@@ -408,9 +463,36 @@ func resourceDockerService() *schema.Resource {
 										Elem: &schema.Resource{
 											Schema: map[string]*schema.Schema{
 												"file": &schema.Schema{
-													Type:        schema.TypeString,
+													Type:        schema.TypeMap,
 													Description: "File represents a specific target that is backed by a file",
-													Optional:    true,
+													Required:    true,
+													Elem: &schema.Resource{
+														Schema: map[string]*schema.Schema{
+															"name": &schema.Schema{
+																Type:        schema.TypeString,
+																Description: "Represents the final filename in the filesystem",
+																Required:    true,
+															},
+															"uid": &schema.Schema{
+																Type:        schema.TypeString,
+																Description: "Represents the file UID",
+																Optional:    true,
+																Default:     "0",
+															},
+															"gid": &schema.Schema{
+																Type:        schema.TypeString,
+																Description: "Represents the file GID",
+																Optional:    true,
+																Default:     "0",
+															},
+															"mode": &schema.Schema{
+																Type:        schema.TypeString,
+																Description: "Represents the FileMode of the file",
+																Optional:    true,
+																Default:     0444,
+															},
+														},
+													},
 												},
 												"config_id": &schema.Schema{
 													Type:        schema.TypeString,
@@ -425,68 +507,50 @@ func resourceDockerService() *schema.Resource {
 											},
 										},
 									},
-									"secrets": &schema.Schema{
-										Type:        schema.TypeSet,
-										Description: "References to zero or more secrets that will be exposed to the service",
-										Optional:    true,
-										Elem: &schema.Resource{
-											Schema: map[string]*schema.Schema{
-												"file": &schema.Schema{
-													Type:        schema.TypeString,
-													Description: "File represents a specific target that is backed by a file",
-													Optional:    true,
-												},
-												"secret_id": &schema.Schema{
-													Type:        schema.TypeString,
-													Description: "ID of the specific config that we're referencing",
-													Required:    true,
-												},
-												"secret_name": &schema.Schema{
-													Type:        schema.TypeString,
-													Description: "name of the secret that this references, but this is just provided for lookup/display purposes. The secret in the reference will be identified by its ID",
-													Required:    true,
-												},
-											},
-										},
-									},
 								},
 							},
 						},
 						"resources": &schema.Schema{
-							Type:        schema.TypeMap,
+							Type:        schema.TypeList,
 							Description: "Resource requirements which apply to each individual container created as part of the service",
 							Optional:    true,
+							MaxItems:    1,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"limits": &schema.Schema{
-										Type:        schema.TypeMap,
+										Type:        schema.TypeList,
 										Description: "Describes the resources which can be advertised by a node and requested by a task",
 										Optional:    true,
+										MaxItems:    1,
 										Elem: &schema.Resource{
 											Schema: map[string]*schema.Schema{
 												"nano_cpus": &schema.Schema{
-													Type:     schema.TypeInt,
-													Optional: true,
+													Type:        schema.TypeInt,
+													Description: "CPU shares in units of 1/1e9 (or 10^-9) of the CPU. Should be at least 1000000",
+													Optional:    true,
 												},
 												"memory_bytes": &schema.Schema{
-													Type:     schema.TypeInt,
-													Optional: true,
+													Type:        schema.TypeInt,
+													Description: "The amounf of memory in bytes the container allocates",
+													Optional:    true,
 												},
 												"generic_resources": &schema.Schema{
-													Type:        schema.TypeMap,
+													Type:        schema.TypeList,
 													Description: "User-defined resources can be either Integer resources (e.g, SSD=3) or String resources (e.g, GPU=UUID1)",
 													Optional:    true,
 													Elem: &schema.Resource{
 														Schema: map[string]*schema.Schema{
 															"named_resources_spec": &schema.Schema{
-																Type:     schema.TypeMap,
-																Optional: true,
-																Elem:     &schema.Schema{Type: schema.TypeString},
+																Type:        schema.TypeMap,
+																Description: "The String resources",
+																Optional:    true,
+																Elem:        &schema.Schema{Type: schema.TypeString},
 															},
 															"discrete_resources_spec": &schema.Schema{
-																Type:     schema.TypeMap,
-																Optional: true,
-																Elem:     &schema.Schema{Type: schema.TypeString},
+																Type:        schema.TypeMap,
+																Description: "The Integer resources",
+																Optional:    true,
+																Elem:        &schema.Schema{Type: schema.TypeString},
 															},
 														},
 													},
@@ -495,34 +559,39 @@ func resourceDockerService() *schema.Resource {
 										},
 									},
 									"reservation": &schema.Schema{
-										Type:        schema.TypeMap,
+										Type:        schema.TypeList,
 										Description: "An object describing the resources which can be advertised by a node and requested by a task",
 										Optional:    true,
+										MaxItems:    1,
 										Elem: &schema.Resource{
 											Schema: map[string]*schema.Schema{
 												"nano_cpus": &schema.Schema{
-													Type:     schema.TypeInt,
-													Optional: true,
+													Description: "CPU shares in units of 1/1e9 (or 10^-9) of the CPU. Should be at least 1000000",
+													Type:        schema.TypeInt,
+													Optional:    true,
 												},
 												"memory_bytes": &schema.Schema{
-													Type:     schema.TypeInt,
-													Optional: true,
+													Type:        schema.TypeInt,
+													Description: "The amounf of memory in bytes the container allocates",
+													Optional:    true,
 												},
 												"generic_resources": &schema.Schema{
-													Type:        schema.TypeMap,
+													Type:        schema.TypeList,
 													Description: "User-defined resources can be either Integer resources (e.g, SSD=3) or String resources (e.g, GPU=UUID1)",
 													Optional:    true,
 													Elem: &schema.Resource{
 														Schema: map[string]*schema.Schema{
 															"named_resources_spec": &schema.Schema{
-																Type:     schema.TypeMap,
-																Optional: true,
-																Elem:     &schema.Schema{Type: schema.TypeString},
+																Type:        schema.TypeMap,
+																Description: "The String resources",
+																Optional:    true,
+																Elem:        &schema.Schema{Type: schema.TypeString},
 															},
 															"discrete_resources_spec": &schema.Schema{
-																Type:     schema.TypeMap,
-																Optional: true,
-																Elem:     &schema.Schema{Type: schema.TypeString},
+																Type:        schema.TypeMap,
+																Description: "The Integer resources",
+																Optional:    true,
+																Elem:        &schema.Schema{Type: schema.TypeString},
 															},
 														},
 													},
@@ -546,9 +615,10 @@ func resourceDockerService() *schema.Resource {
 										ValidateFunc: validateStringMatchesPattern(`^(none|on-failure|any)$`),
 									},
 									"delay": &schema.Schema{
-										Type:        schema.TypeInt,
-										Description: "Delay between restart attempts",
-										Optional:    true,
+										Type:         schema.TypeString,
+										Description:  "Delay between restart attempts",
+										Optional:     true,
+										ValidateFunc: validateDurationGeq0(),
 									},
 									"max_attempts": &schema.Schema{
 										Type:        schema.TypeInt,
@@ -556,9 +626,10 @@ func resourceDockerService() *schema.Resource {
 										Optional:    true,
 									},
 									"window": &schema.Schema{
-										Type:        schema.TypeInt,
-										Description: "The time window used to evaluate the restart policy (default value is 0, which is unbounded)",
-										Optional:    true,
+										Type:         schema.TypeInt,
+										Description:  "The time window used to evaluate the restart policy (default value is 0, which is unbounded)",
+										Optional:     true,
+										ValidateFunc: validateDurationGeq0(),
 									},
 								},
 							},
@@ -605,14 +676,16 @@ func resourceDockerService() *schema.Resource {
 							},
 						},
 						"force_update": &schema.Schema{
-							Type:        schema.TypeInt,
-							Description: "A counter that triggers an update even if no relevant parameters have been changed",
-							Optional:    true,
+							Type:         schema.TypeInt,
+							Description:  "A counter that triggers an update even if no relevant parameters have been changed. See https://github.com/docker/swarmkit/blob/master/api/specs.proto#L126",
+							Optional:     true,
+							ValidateFunc: validateIntegerGeqThan(0),
 						},
 						"runtime": &schema.Schema{
-							Type:        schema.TypeString,
-							Description: "Runtime is the type of runtime specified for the task executor",
-							Optional:    true,
+							Type:         schema.TypeString,
+							Description:  "Runtime is the type of runtime specified for the task executor. See https://github.com/moby/moby/blob/master/api/types/swarm/runtime.go",
+							Optional:     true,
+							ValidateFunc: validateStringMatchesPattern("^(container|plugin)$"),
 						},
 						"networks": &schema.Schema{
 							Type:        schema.TypeSet,
@@ -789,12 +862,13 @@ func resourceDockerService() *schema.Resource {
 				},
 			},
 			"endpoint_spec": &schema.Schema{
-				Type:        schema.TypeMap,
+				Type:        schema.TypeList,
 				Description: "Properties that can be configured to access and load balance a service",
 				Optional:    true,
+				MaxItems:    1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"endpoint_mode": &schema.Schema{
+						"mode": &schema.Schema{
 							Type:         schema.TypeString,
 							Description:  "The mode of resolution to use for internal load balancing between tasks",
 							Optional:     true,
@@ -803,32 +877,38 @@ func resourceDockerService() *schema.Resource {
 						},
 						"ports": &schema.Schema{
 							Type:        schema.TypeSet,
-							Description: "List of exposed ports that this service is accessible on from the outside. Ports can only be provided if vip resolution mode is used.",
+							Description: "List of exposed ports that this service is accessible on from the outside. Ports can only be provided if 'vip' resolution mode is used.",
 							Optional:    true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
-									"internal": &schema.Schema{
+									"name": &schema.Schema{
+										Type:        schema.TypeString,
+										Description: "A random name for the port",
+										Optional:    true,
+									},
+									"protocol": &schema.Schema{
+										Type:         schema.TypeString,
+										Description:  "Rrepresents the protocol of a port: 'tcp' or 'udp'",
+										Optional:     true,
+										Default:      "tcp",
+										ValidateFunc: validateStringMatchesPattern(`^(tcp|udp)$`),
+									},
+									"target_port": &schema.Schema{
 										Type:        schema.TypeInt,
 										Description: "The port inside the container",
 										Required:    true,
 									},
-									"external": &schema.Schema{
+									"published_port": &schema.Schema{
 										Type:        schema.TypeInt,
-										Description: "The port on the swarm hosts",
+										Description: "The port on the swarm hosts. If not set the value of 'target_port' will be used",
 										Optional:    true,
 									},
 									"publish_mode": &schema.Schema{
 										Type:         schema.TypeString,
+										Description:  "Represents the mode in which the port is to be published: 'ingress' or 'host'",
 										Optional:     true,
 										Default:      "ingress",
 										ValidateFunc: validateStringMatchesPattern(`^(host|ingress)$`),
-									},
-									"protocol": &schema.Schema{
-										Type:         schema.TypeString,
-										Description:  "tcp or udp",
-										Optional:     true,
-										Default:      "tcp",
-										ValidateFunc: validateStringMatchesPattern(`^(tcp|udp)$`),
 									},
 								},
 							},

@@ -370,6 +370,15 @@ func mapTypeMapValsToString(typeMap map[string]interface{}) map[string]string {
 	return mapped
 }
 
+// mapTypeMapValsToStringSlice maps a map to a slice with '=': e.g. foo = "bar" -> 'foo=bar'
+func mapTypeMapValsToStringSlice(typeMap map[string]interface{}) []string {
+	mapped := make([]string, len(typeMap))
+	for k, v := range typeMap {
+		mapped = append(mapped, k+"="+v.(string))
+	}
+	return mapped
+}
+
 func fetchDockerContainer(ID string, client *dc.Client) (*dc.APIContainers, error) {
 	apiContainers, err := client.ListContainers(dc.ListContainersOptions{All: true})
 

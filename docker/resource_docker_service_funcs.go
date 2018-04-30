@@ -59,7 +59,8 @@ func resourceDockerServiceCreate(d *schema.ResourceData, meta interface{}) error
 	if v, ok := d.GetOk("auth"); ok {
 		createOpts.Auth = authToServiceAuth(v.(map[string]interface{}))
 	} else {
-		createOpts.Auth = fromRegistryAuth(d.Get("image").(string), meta.(*ProviderConfig).AuthConfigs.Configs)
+		// FIXME mavogel
+		// createOpts.Auth = fromRegistryAuth(d.Get("image").(string), meta.(*ProviderConfig).AuthConfigs.Configs)
 	}
 
 	service, err := client.CreateService(createOpts)
@@ -615,7 +616,7 @@ func createServiceSpec(d *schema.ResourceData) (swarm.ServiceSpec, error) {
 	}
 	serviceSpec.Labels = labels
 
-	taskTemplate, err := createServiceTaskTemplate(d)
+	taskTemplate, err := createServiceTaskSpec(d)
 	if err != nil {
 		return serviceSpec, err
 	}
@@ -639,11 +640,12 @@ func createServiceSpec(d *schema.ResourceData) (swarm.ServiceSpec, error) {
 	}
 	serviceSpec.RollbackConfig = rollbackConfig
 
-	networks, err := createServiceNetworks(d)
-	if err != nil {
-		return serviceSpec, err
-	}
-	serviceSpec.Networks = networks
+	// FIXME mavogel
+	// networks, err := createServiceNetworks(d)
+	// if err != nil {
+	// 	return serviceSpec, err
+	// }
+	// serviceSpec.Networks = networks
 
 	endpointSpec, err := createServiceEndpointSpec(d)
 	if err != nil {
@@ -662,303 +664,515 @@ func createServiceLabels(d *schema.ResourceData) (map[string]string, error) {
 	return nil, nil
 }
 
-// == start taskTemplate
-// createServiceTaskTemplate creates the task template for the service
-func createServiceTaskTemplate(d *schema.ResourceData) (swarm.TaskSpec, error) {
+// == start taskSpec
+// createServiceTaskSpec creates the task template for the service
+func createServiceTaskSpec(d *schema.ResourceData) (swarm.TaskSpec, error) {
 	taskSpec := swarm.TaskSpec{}
+	if v, ok := d.GetOk("task_spec"); ok {
+		if len(v.([]interface{})) > 0 {
+			for _, rawTaskSpec := range v.([]interface{}) {
+				rawTaskSpec := rawTaskSpec.(map[string]interface{})
 
-	containerSpec, err := createContainerSpec(d)
-	if err != nil {
-		return taskSpec, err
+				if rawContainerSpec, ok := rawTaskSpec["container_spec"]; ok {
+					containerSpec, err := createContainerSpec(rawContainerSpec)
+					if err != nil {
+						return taskSpec, err
+					}
+					taskSpec.ContainerSpec = containerSpec
+				}
+
+				if rawResourcesSpec, ok := rawTaskSpec["resources"]; ok {
+					resources, err := createResources(rawResourcesSpec)
+					if err != nil {
+						return taskSpec, err
+					}
+					taskSpec.Resources = resources
+				}
+				if rawRestartPolicySpec, ok := rawTaskSpec["resources"]; ok {
+					restartPolicy, err := createRestartPolicy(rawRestartPolicySpec)
+					if err != nil {
+						return taskSpec, err
+					}
+					taskSpec.RestartPolicy = restartPolicy
+				}
+				if rawPlacementSpec, ok := rawTaskSpec["resources"]; ok {
+					placement, err := createPlacement(rawPlacementSpec)
+					if err != nil {
+						return taskSpec, err
+					}
+					taskSpec.Placement = placement
+				}
+				if rawForceUpdate, ok := rawTaskSpec["force_update"]; ok {
+					taskSpec.ForceUpdate = uint64(rawForceUpdate.(int))
+				}
+				if rawRuntimeSpec, ok := rawTaskSpec["runtime"]; ok {
+					taskSpec.Runtime = swarm.RuntimeType(rawRuntimeSpec.(string))
+				}
+				if rawNetworksSpec, ok := rawTaskSpec["networks"]; ok {
+					networks, err := createServiceNetworks(rawNetworksSpec)
+					if err != nil {
+						return taskSpec, err
+					}
+					taskSpec.Networks = networks
+				}
+				if rawLogDriverSpec, ok := rawTaskSpec["log_driver"]; ok {
+					logDriver, err := createLogDriver(rawLogDriverSpec)
+					if err != nil {
+						return taskSpec, err
+					}
+					taskSpec.LogDriver = logDriver
+				}
+			}
+		}
 	}
-	taskSpec.ContainerSpec = containerSpec
-
-	resources, err := createResources(d)
-	if err != nil {
-		return taskSpec, err
-	}
-	taskSpec.Resources = resources
-
-	restartPolicy, err := createRestartPolicy(d)
-	if err != nil {
-		return taskSpec, err
-	}
-	taskSpec.RestartPolicy = restartPolicy
-
-	placement, err := createPlacement(d)
-	if err != nil {
-		return taskSpec, err
-	}
-	taskSpec.Placement = placement
-	//forceUpdate?
-
-	runtime, err := createRuntime(d)
-	if err != nil {
-		return taskSpec, err
-	}
-	taskSpec.Runtime = runtime
-
-	// TODO network at tasks make sense?
-	// YEP: API error (501): rpc error: code = Unimplemented desc = networks must be migrated to TaskSpec before being changed
-	networks, err := createServiceNetworks(d)
-	if err != nil {
-		return taskSpec, err
-	}
-	taskSpec.Networks = networks
-
-	logDriver, err := createLogDriver(d)
-	if err != nil {
-		return taskSpec, err
-	}
-	taskSpec.LogDriver = logDriver
-
 	return taskSpec, nil
 }
 
 // createContainerSpec creates the container spec
-func createContainerSpec(d *schema.ResourceData) (*swarm.ContainerSpec, error) {
-	containerSpec := swarm.ContainerSpec{
-		Image: d.Get("image").(string),
-	}
-
-	if v, ok := d.GetOk("hostname"); ok {
-		containerSpec.Hostname = v.(string)
-	}
-
-	if v, ok := d.GetOk("stop_grace_period"); ok {
-		parsed, _ := time.ParseDuration(v.(string))
-		containerSpec.StopGracePeriod = &parsed
-	}
-
-	if v, ok := d.GetOk("command"); ok {
-		containerSpec.Command = stringListToStringSlice(v.([]interface{}))
-		for _, v := range containerSpec.Command {
-			if v == "" {
-				return &swarm.ContainerSpec{}, fmt.Errorf("values for command may not be empty")
+func createContainerSpec(v interface{}) (*swarm.ContainerSpec, error) {
+	containerSpec := swarm.ContainerSpec{}
+	if len(v.([]interface{})) > 0 {
+		for _, rawContainerSpec := range v.([]interface{}) {
+			rawContainerSpec := rawContainerSpec.(map[string]interface{})
+			if value, ok := rawContainerSpec["image"]; ok {
+				containerSpec.Image = value.(string)
 			}
-		}
-	}
-
-	if v, ok := d.GetOk("env"); ok {
-		containerSpec.Env = stringSetToStringSlice(v.(*schema.Set))
-	}
-
-	if v, ok := d.GetOk("hosts"); ok {
-		containerSpec.Hosts = extraHostsSetToDockerExtraHosts(v.(*schema.Set))
-	}
-
-	// FIXME
-	endpointSpec := swarm.EndpointSpec{}
-
-	if v, ok := d.GetOk("network_mode"); ok {
-		endpointSpec.Mode = swarm.ResolutionMode(v.(string))
-	}
-
-	if v, ok := d.GetOk("mounts"); ok {
-		mounts := []mount.Mount{}
-
-		for _, rawMount := range v.(*schema.Set).List() {
-			rawMount := rawMount.(map[string]interface{})
-			mountType := mount.Type(rawMount["type"].(string))
-			mountInstance := mount.Mount{
-				Type:     mountType,
-				Source:   rawMount["source"].(string),
-				Target:   rawMount["target"].(string),
-				ReadOnly: rawMount["read_only"].(bool),
+			if value, ok := rawContainerSpec["labels"]; ok {
+				containerSpec.Labels = mapTypeMapValsToString(value.(map[string]interface{}))
 			}
-			if w, ok := rawMount["consistency"]; ok {
-				mountInstance.Consistency = mount.Consistency(w.(string))
+			if value, ok := rawContainerSpec["command"]; ok {
+				containerSpec.Command = stringListToStringSlice(value.([]interface{}))
+				// TODO valudate https://github.com/hashicorp/terraform/blob/master/helper/schema/schema.go
 			}
-
-			mountInstance.VolumeOptions = &mount.VolumeOptions{}
-			if w, ok := rawMount["volume_labels"]; ok {
-				mountInstance.VolumeOptions.Labels = mapTypeMapValsToString(w.(map[string]interface{}))
+			if value, ok := rawContainerSpec["args"]; ok {
+				containerSpec.Args = stringListToStringSlice(value.([]interface{}))
+				// TODO valudate https://github.com/hashicorp/terraform/blob/master/helper/schema/schema.go
 			}
+			if value, ok := rawContainerSpec["hostname"]; ok {
+				containerSpec.Hostname = value.(string)
+			}
+			if value, ok := rawContainerSpec["env"]; ok {
+				containerSpec.Env = mapTypeMapValsToStringSlice(value.(map[string]interface{}))
+			}
+			if value, ok := rawContainerSpec["dir"]; ok {
+				containerSpec.Dir = value.(string)
+			}
+			if value, ok := rawContainerSpec["user"]; ok {
+				containerSpec.User = value.(string)
+			}
+			if value, ok := rawContainerSpec["groups"]; ok {
+				containerSpec.Groups = stringListToStringSlice(value.([]interface{}))
+			}
+			if value, ok := rawContainerSpec["privileges"]; ok {
+				if len(value.([]interface{})) > 0 {
+					containerSpec.Privileges = &swarm.Privileges{}
 
-			if mountType == mount.TypeBind {
-				if w, ok := rawMount["bind_propagation"]; ok {
-					mountInstance.BindOptions = &mount.BindOptions{
-						Propagation: mount.Propagation(w.(string)),
+					for _, rawPrivilegesSpec := range value.([]interface{}) {
+						rawPrivilegesSpec := rawPrivilegesSpec.(map[string]interface{})
+
+						if value, ok := rawPrivilegesSpec["credential_spec"]; ok {
+							if len(value.([]interface{})) > 0 {
+								containerSpec.Privileges.CredentialSpec = &swarm.CredentialSpec{}
+								for _, rawCredentialSpec := range value.([]interface{}) {
+									rawCredentialSpec := rawCredentialSpec.(map[string]interface{})
+									if value, ok := rawCredentialSpec["file"]; ok {
+										containerSpec.Privileges.CredentialSpec.File = value.(string)
+									}
+									if value, ok := rawCredentialSpec["registry"]; ok {
+										containerSpec.Privileges.CredentialSpec.File = value.(string)
+									}
+								}
+							}
+						}
+						if value, ok := rawPrivilegesSpec["se_linux_context"]; ok {
+							if len(value.([]interface{})) > 0 {
+								containerSpec.Privileges.SELinuxContext = &swarm.SELinuxContext{}
+								for _, rawSELinuxContext := range value.([]interface{}) {
+									rawSELinuxContext := rawSELinuxContext.(map[string]interface{})
+									if value, ok := rawSELinuxContext["disable"]; ok {
+										containerSpec.Privileges.SELinuxContext.Disable = value.(bool)
+									}
+									if value, ok := rawSELinuxContext["user"]; ok {
+										containerSpec.Privileges.SELinuxContext.User = value.(string)
+									}
+									if value, ok := rawSELinuxContext["role"]; ok {
+										containerSpec.Privileges.SELinuxContext.Role = value.(string)
+									}
+									if value, ok := rawSELinuxContext["type"]; ok {
+										containerSpec.Privileges.SELinuxContext.Type = value.(string)
+									}
+									if value, ok := rawSELinuxContext["level"]; ok {
+										containerSpec.Privileges.SELinuxContext.Level = value.(string)
+									}
+								}
+							}
+						}
 					}
 				}
-			} else if mountType == mount.TypeVolume {
-				if w, ok := rawMount["volume_no_copy"]; ok {
-					mountInstance.VolumeOptions.NoCopy = w.(bool)
+			}
+			if value, ok := rawContainerSpec["read_only"]; ok {
+				containerSpec.ReadOnly = value.(bool)
+			}
+			if value, ok := rawContainerSpec["mounts"]; ok {
+				mounts := []mount.Mount{}
+
+				for _, rawMount := range value.(*schema.Set).List() {
+					rawMount := rawMount.(map[string]interface{})
+					mountType := mount.Type(rawMount["type"].(string))
+					mountInstance := mount.Mount{
+						Type:     mountType,
+						Target:   rawMount["target"].(string),
+						Source:   rawMount["source"].(string),
+						ReadOnly: rawMount["read_only"].(bool),
+					}
+					if value, ok := rawMount["consistency"]; ok {
+						mountInstance.Consistency = mount.Consistency(value.(string))
+					}
+
+					if mountType == mount.TypeBind {
+						if value, ok := rawMount["bind_options"]; ok {
+							if len(value.([]interface{})) > 0 {
+								mountInstance.BindOptions = &mount.BindOptions{}
+								for _, rawBindOptions := range value.([]interface{}) {
+									rawBindOptions := rawBindOptions.(map[string]interface{})
+									if value, ok := rawBindOptions["bind_propagation"]; ok {
+										mountInstance.BindOptions.Propagation = mount.Propagation(value.(string))
+									}
+								}
+							}
+						}
+					} else if mountType == mount.TypeVolume {
+						if value, ok := rawMount["volume_options"]; ok {
+							if len(value.([]interface{})) > 0 {
+								mountInstance.VolumeOptions = &mount.VolumeOptions{}
+								for _, rawVolumeOptions := range value.([]interface{}) {
+									rawVolumeOptions := rawVolumeOptions.(map[string]interface{})
+									if value, ok := rawVolumeOptions["no_copy"]; ok {
+										mountInstance.VolumeOptions.NoCopy = value.(bool)
+									}
+									if value, ok := rawVolumeOptions["labels"]; ok {
+										mountInstance.VolumeOptions.Labels = mapTypeMapValsToString(value.(map[string]interface{}))
+									}
+									if value, ok := rawVolumeOptions["driver_config"]; ok {
+										mountInstance.VolumeOptions.DriverConfig = &mount.Driver{}
+										rawVolumeOptionsDriverConfig := value.(map[string]interface{})
+										if value, ok := rawVolumeOptionsDriverConfig["name"]; ok {
+											mountInstance.VolumeOptions.DriverConfig.Name = value.(string)
+										}
+										if value, ok := rawVolumeOptionsDriverConfig["options"]; ok {
+											mountInstance.VolumeOptions.DriverConfig.Options = mapTypeMapValsToString(value.(map[string]interface{}))
+										}
+									}
+								}
+							}
+						}
+					} else if mountType == mount.TypeTmpfs {
+						if value, ok := rawMount["bind_options"]; ok {
+							if len(value.([]interface{})) > 0 {
+								mountInstance.TmpfsOptions = &mount.TmpfsOptions{}
+								for _, rawTmpfsOptions := range value.([]interface{}) {
+									rawTmpfsOptions := rawTmpfsOptions.(map[string]interface{})
+									if value, ok := rawTmpfsOptions["size_bytes"]; ok {
+										mountInstance.TmpfsOptions.SizeBytes = value.(int64)
+									}
+									if value, ok := rawTmpfsOptions["mode"]; ok {
+										mountInstance.TmpfsOptions.Mode = os.FileMode(value.(int))
+									}
+								}
+							}
+						}
+					}
+
+					mounts = append(mounts, mountInstance)
 				}
 
-				mountInstance.VolumeOptions.DriverConfig = &mount.Driver{}
-				if w, ok := rawMount["volume_driver_name"]; ok {
-					mountInstance.VolumeOptions.DriverConfig.Name = w.(string)
-				}
-
-				if w, ok := rawMount["volume_driver_options"]; ok {
-					mountInstance.VolumeOptions.DriverConfig.Options = mapTypeMapValsToString(w.(map[string]interface{}))
-				}
-			} else if mountType == mount.TypeTmpfs {
-				mountInstance.TmpfsOptions = &mount.TmpfsOptions{}
-
-				if w, ok := rawMount["tmpfs_size_bytes"]; ok {
-					mountInstance.TmpfsOptions.SizeBytes = w.(int64)
-				}
-
-				if w, ok := rawMount["tmpfs_mode"]; ok {
-					mountInstance.TmpfsOptions.Mode = os.FileMode(w.(int))
+				containerSpec.Mounts = mounts
+			}
+			if value, ok := rawContainerSpec["stop_signal"]; ok {
+				containerSpec.StopSignal = value.(string)
+			}
+			if value, ok := rawContainerSpec["stop_grace_period"]; ok {
+				parsed, _ := time.ParseDuration(value.(string))
+				containerSpec.StopGracePeriod = &parsed
+			}
+			if value, ok := rawContainerSpec["healthcheck"]; ok {
+				containerSpec.Healthcheck = &container.HealthConfig{}
+				if len(value.([]interface{})) > 0 {
+					for _, rawHealthCheck := range value.([]interface{}) {
+						rawHealthCheck := rawHealthCheck.(map[string]interface{})
+						if testCommand, ok := rawHealthCheck["test"]; ok {
+							containerSpec.Healthcheck.Test = stringListToStringSlice(testCommand.([]interface{}))
+						}
+						if rawInterval, ok := rawHealthCheck["interval"]; ok {
+							containerSpec.Healthcheck.Interval, _ = time.ParseDuration(rawInterval.(string))
+						}
+						if rawTimeout, ok := rawHealthCheck["timeout"]; ok {
+							containerSpec.Healthcheck.Timeout, _ = time.ParseDuration(rawTimeout.(string))
+						}
+						if rawStartPeriod, ok := rawHealthCheck["start_period"]; ok {
+							containerSpec.Healthcheck.StartPeriod, _ = time.ParseDuration(rawStartPeriod.(string))
+						}
+						if rawRetries, ok := rawHealthCheck["retries"]; ok {
+							containerSpec.Healthcheck.Retries, _ = rawRetries.(int)
+						}
+					}
 				}
 			}
-
-			mounts = append(mounts, mountInstance)
-		}
-
-		containerSpec.Mounts = mounts
-	}
-
-	if v, ok := d.GetOk("configs"); ok {
-		configs := []*swarm.ConfigReference{}
-
-		for _, rawConfig := range v.(*schema.Set).List() {
-			rawConfig := rawConfig.(map[string]interface{})
-			config := swarm.ConfigReference{
-				ConfigID:   rawConfig["config_id"].(string),
-				ConfigName: rawConfig["config_name"].(string),
-				File: &swarm.ConfigReferenceFileTarget{
-					Name: rawConfig["file_name"].(string),
-					GID:  "0",
-					UID:  "0",
-					Mode: os.FileMode(0444),
-				},
+			if value, ok := rawContainerSpec["hosts"]; ok {
+				containerSpec.Hosts = extraHostsSetToDockerExtraHosts(value.(*schema.Set))
 			}
-			configs = append(configs, &config)
-		}
-		containerSpec.Configs = configs
-	}
-
-	if v, ok := d.GetOk("secrets"); ok {
-		secrets := []*swarm.SecretReference{}
-
-		for _, rawSecret := range v.(*schema.Set).List() {
-			rawSecret := rawSecret.(map[string]interface{})
-			secret := swarm.SecretReference{
-				SecretID:   rawSecret["secret_id"].(string),
-				SecretName: rawSecret["secret_name"].(string),
-				File: &swarm.SecretReferenceFileTarget{
-					Name: rawSecret["file_name"].(string),
-					GID:  "0",
-					UID:  "0",
-					Mode: os.FileMode(0444),
-				},
-			}
-			secrets = append(secrets, &secret)
-		}
-		containerSpec.Secrets = secrets
-	}
-
-	if v, ok := d.GetOk("healthcheck"); ok {
-		containerSpec.Healthcheck = &container.HealthConfig{}
-		if len(v.([]interface{})) > 0 {
-			for _, rawHealthCheck := range v.([]interface{}) {
-				rawHealthCheck := rawHealthCheck.(map[string]interface{})
-				if testCommand, ok := rawHealthCheck["test"]; ok {
-					containerSpec.Healthcheck.Test = stringListToStringSlice(testCommand.([]interface{}))
-				}
-				if rawInterval, ok := rawHealthCheck["interval"]; ok {
-					containerSpec.Healthcheck.Interval, _ = time.ParseDuration(rawInterval.(string))
-				}
-				if rawTimeout, ok := rawHealthCheck["timeout"]; ok {
-					containerSpec.Healthcheck.Timeout, _ = time.ParseDuration(rawTimeout.(string))
-				}
-				if rawStartPeriod, ok := rawHealthCheck["start_period"]; ok {
-					containerSpec.Healthcheck.StartPeriod, _ = time.ParseDuration(rawStartPeriod.(string))
-				}
-				if rawRetries, ok := rawHealthCheck["retries"]; ok {
-					containerSpec.Healthcheck.Retries, _ = rawRetries.(int)
+			if value, ok := rawContainerSpec["dns_config"]; ok {
+				containerSpec.DNSConfig = &swarm.DNSConfig{}
+				if len(v.([]interface{})) > 0 {
+					for _, rawDNSConfig := range value.([]interface{}) {
+						rawDNSConfig := rawDNSConfig.(map[string]interface{})
+						if nameservers, ok := rawDNSConfig["nameservers"]; ok {
+							containerSpec.DNSConfig.Nameservers = stringListToStringSlice(nameservers.([]interface{}))
+						}
+						if search, ok := rawDNSConfig["search"]; ok {
+							containerSpec.DNSConfig.Search = stringListToStringSlice(search.([]interface{}))
+						}
+						if options, ok := rawDNSConfig["options"]; ok {
+							containerSpec.DNSConfig.Options = stringListToStringSlice(options.([]interface{}))
+						}
+					}
 				}
 			}
-		}
-	}
+			if value, ok := rawContainerSpec["secrets"]; ok {
+				secrets := []*swarm.SecretReference{}
 
-	if v, ok := d.GetOk("dns_config"); ok {
-		containerSpec.DNSConfig = &swarm.DNSConfig{}
-		if len(v.([]interface{})) > 0 {
-			for _, rawDNSConfig := range v.([]interface{}) {
-				rawDNSConfig := rawDNSConfig.(map[string]interface{})
-				if nameservers, ok := rawDNSConfig["nameservers"]; ok {
-					containerSpec.DNSConfig.Nameservers = stringListToStringSlice(nameservers.([]interface{}))
+				for _, rawSecret := range value.(*schema.Set).List() {
+					rawSecret := rawSecret.(map[string]interface{})
+					secret := swarm.SecretReference{
+						SecretID:   rawSecret["secret_id"].(string),
+						SecretName: rawSecret["secret_name"].(string),
+					}
+					if rawSecretFile, ok := rawSecret["file"]; ok {
+						rawSecretFile := rawSecretFile.(map[string]interface{})
+						secretFile := &swarm.SecretReferenceFileTarget{}
+						if value, ok := rawSecretFile["name"]; ok {
+							secretFile.Name = value.(string)
+						}
+						if value, ok := rawSecretFile["uid"]; ok {
+							secretFile.UID = value.(string)
+						}
+						if value, ok := rawSecretFile["uid"]; ok {
+							secretFile.GID = value.(string)
+						}
+						if value, ok := rawSecretFile["mode"]; ok {
+							secretFile.Mode = os.FileMode(value.(int32))
+						}
+						secret.File = secretFile
+					}
+					secrets = append(secrets, &secret)
 				}
-				if search, ok := rawDNSConfig["search"]; ok {
-					containerSpec.DNSConfig.Search = stringListToStringSlice(search.([]interface{}))
+				containerSpec.Secrets = secrets
+			}
+			if value, ok := rawContainerSpec["configs"]; ok {
+				configs := []*swarm.ConfigReference{}
+
+				for _, rawConfig := range value.(*schema.Set).List() {
+					rawConfig := rawConfig.(map[string]interface{})
+					config := swarm.ConfigReference{
+						ConfigID:   rawConfig["config_id"].(string),
+						ConfigName: rawConfig["config_name"].(string),
+					}
+					if rawConfigFile, ok := rawConfig["file"]; ok {
+						rawConfigFile := rawConfigFile.(map[string]interface{})
+						configFile := &swarm.ConfigReferenceFileTarget{}
+						if value, ok := rawConfigFile["name"]; ok {
+							configFile.Name = value.(string)
+						}
+						if value, ok := rawConfigFile["uid"]; ok {
+							configFile.UID = value.(string)
+						}
+						if value, ok := rawConfigFile["uid"]; ok {
+							configFile.GID = value.(string)
+						}
+						if value, ok := rawConfigFile["mode"]; ok {
+							configFile.Mode = os.FileMode(value.(int32))
+						}
+						config.File = configFile
+					}
+					configs = append(configs, &config)
 				}
-				if options, ok := rawDNSConfig["options"]; ok {
-					containerSpec.DNSConfig.Options = stringListToStringSlice(options.([]interface{}))
-				}
+				containerSpec.Configs = configs
 			}
 		}
 	}
+
+	// if v, ok := d.GetOk("stop_grace_period"); ok {
+	// 	parsed, _ := time.ParseDuration(v.(string))
+	// 	containerSpec.StopGracePeriod = &parsed
+	// }
+
+	// // FIXME
+	// endpointSpec := swarm.EndpointSpec{}
+
+	// if v, ok := d.GetOk("network_mode"); ok {
+	// 	endpointSpec.Mode = swarm.ResolutionMode(v.(string))
+	// }
 
 	return &containerSpec, nil
 }
 
 // createResources creates the resource requirements for the service
-func createResources(d *schema.ResourceData) (*swarm.ResourceRequirements, error) {
+func createResources(v interface{}) (*swarm.ResourceRequirements, error) {
 	resources := swarm.ResourceRequirements{}
-
+	if len(v.([]interface{})) > 0 {
+		for _, rawResourcesSpec := range v.([]interface{}) {
+			rawResourcesSpec := rawResourcesSpec.(map[string]interface{})
+			if value, ok := rawResourcesSpec["limits"]; ok {
+				if len(value.([]interface{})) > 0 {
+					resources.Limits = &swarm.Resources{}
+					for _, rawLimitsSpec := range value.([]interface{}) {
+						rawLimitsSpec := rawLimitsSpec.(map[string]interface{})
+						if value, ok := rawLimitsSpec["nano_cpus"]; ok {
+							resources.Limits.NanoCPUs = int64(value.(int))
+						}
+						if value, ok := rawLimitsSpec["memory_bytes"]; ok {
+							resources.Limits.MemoryBytes = int64(value.(int))
+						}
+						if value, ok := rawLimitsSpec["generic_resources"]; ok {
+							resources.Limits.GenericResources, _ = createGenericResources(value)
+						}
+					}
+				}
+			}
+			if value, ok := rawResourcesSpec["reservation"]; ok {
+				if len(value.([]interface{})) > 0 {
+					resources.Reservations = &swarm.Resources{}
+					for _, rawLimitsSpec := range value.([]interface{}) {
+						rawLimitsSpec := rawLimitsSpec.(map[string]interface{})
+						if value, ok := rawLimitsSpec["nano_cpus"]; ok {
+							resources.Limits.NanoCPUs = int64(value.(int))
+						}
+						if value, ok := rawLimitsSpec["memory_bytes"]; ok {
+							resources.Limits.MemoryBytes = int64(value.(int))
+						}
+						if value, ok := rawLimitsSpec["generic_resources"]; ok {
+							resources.Reservations.GenericResources, _ = createGenericResources(value)
+						}
+					}
+				}
+			}
+		}
+	}
 	return &resources, nil
 }
 
-// createRestartPolicy creates the restart poliyc of the service FIXME
-func createRestartPolicy(d *schema.ResourceData) (*swarm.RestartPolicy, error) {
-	restartPolicy := swarm.RestartPolicy{}
+// createGenericResources creates generic resources for a container
+func createGenericResources(value interface{}) ([]swarm.GenericResource, error) {
+	genericResources := []swarm.GenericResource{}
+	if len(value.([]interface{})) > 0 {
+		for _, rawGenericResource := range value.([]interface{}) {
+			rawGenericResource := rawGenericResource.(map[string]interface{})
+			genericResource := swarm.GenericResource{}
+			if value, ok := rawGenericResource["named_resources_spec"]; ok {
+				typeMap := value.(map[string]interface{})
+				namedGenericResource := &swarm.NamedGenericResource{}
+				for k, v := range typeMap {
+					namedGenericResource.Kind = k
+					namedGenericResource.Value = v.(string)
+				}
+				genericResource.NamedResourceSpec = namedGenericResource
+			}
+			if value, ok := rawGenericResource["discrete_resources_spec"]; ok {
+				typeMap := value.(map[string]interface{})
+				discreteGenericResource := &swarm.DiscreteGenericResource{}
+				for k, v := range typeMap {
+					discreteGenericResource.Kind = k
+					discreteGenericResource.Value, _ = strconv.ParseInt(v.(string), 10, 64)
+					// FIXME check type
+				}
+				genericResource.DiscreteResourceSpec = discreteGenericResource
+			}
+			genericResources = append(genericResources, genericResource)
+		}
+	}
+	return genericResources, nil
+}
 
+// createRestartPolicy creates the restart poliyc of the service FIXME
+func createRestartPolicy(v interface{}) (*swarm.RestartPolicy, error) {
+	restartPolicy := swarm.RestartPolicy{}
+	if len(v.([]interface{})) > 0 {
+		for _, rawRestartPolicy := range v.([]interface{}) {
+			rawRestartPolicy := rawRestartPolicy.(map[string]interface{})
+
+			if v, ok := rawRestartPolicy["condition"]; ok {
+				restartPolicy.Condition = swarm.RestartPolicyCondition(v.(string))
+			}
+			if v, ok := rawRestartPolicy["delay"]; ok {
+				parsed, _ := time.ParseDuration(v.(string))
+				restartPolicy.Delay = &parsed
+			}
+			if v, ok := rawRestartPolicy["max_attempts"]; ok {
+				parsed := uint64(v.(int))
+				restartPolicy.MaxAttempts = &parsed
+			}
+			if v, ok := rawRestartPolicy["window"]; ok {
+				parsed, _ := time.ParseDuration(v.(string))
+				restartPolicy.Window = &parsed
+			}
+		}
+	}
 	return &restartPolicy, nil
 }
 
 // createPlacement creates the placement strategy for the service
-func createPlacement(d *schema.ResourceData) (*swarm.Placement, error) {
-	if v, ok := d.GetOk("placement"); ok {
-		placement := swarm.Placement{}
+func createPlacement(v interface{}) (*swarm.Placement, error) {
+	placement := swarm.Placement{}
+	if len(v.([]interface{})) > 0 {
 		for _, rawPlacement := range v.([]interface{}) {
 			rawPlacement := rawPlacement.(map[string]interface{})
 			if v, ok := rawPlacement["constraints"]; ok {
 				placement.Constraints = stringSetToStringSlice(v.(*schema.Set))
 			}
-
 			if v, ok := rawPlacement["prefs"]; ok {
 				placement.Preferences = stringSetToPlacementPrefs(v.(*schema.Set))
 			}
-
 			if v, ok := rawPlacement["platforms"]; ok {
 				placement.Platforms = mapSetToPlacementPlatforms(v.(*schema.Set))
 			}
 		}
-		return &placement, nil
 	}
-	return nil, nil
+	return &placement, nil
 }
 
-// createRuntime creates the runtime type for the task executor FIXME
-func createRuntime(d *schema.ResourceData) (swarm.RuntimeType, error) {
-	runtime := "container" // plugin
-
-	return swarm.RuntimeType(runtime), nil
+// createServiceNetworks creates the networks the service will be attachted to
+func createServiceNetworks(v interface{}) ([]swarm.NetworkAttachmentConfig, error) {
+	networks := []swarm.NetworkAttachmentConfig{}
+	if len(v.(*schema.Set).List()) > 0 {
+		for _, rawNetwork := range v.(*schema.Set).List() {
+			network := swarm.NetworkAttachmentConfig{
+				Target: rawNetwork.(string),
+			}
+			networks = append(networks, network)
+		}
+	}
+	return networks, nil
 }
 
 // createLogDriver creates the log driver for the service
-func createLogDriver(d *schema.ResourceData) (*swarm.Driver, error) {
-	if v, ok := d.GetOk("logging"); ok {
-		logDriver := swarm.Driver{}
+func createLogDriver(v interface{}) (*swarm.Driver, error) {
+	logDriver := swarm.Driver{}
+	if len(v.([]interface{})) > 0 {
 		for _, rawLogging := range v.([]interface{}) {
 			rawLogging := rawLogging.(map[string]interface{})
-			logDriver.Name = rawLogging["driver_name"].(string)
-
+			if rawName, ok := rawLogging["name"]; ok {
+				logDriver.Name = rawName.(string)
+			}
 			if rawOptions, ok := rawLogging["options"]; ok {
 				logDriver.Options = mapTypeMapValsToString(rawOptions.(map[string]interface{}))
 			}
+			return &logDriver, nil
 		}
-		return &logDriver, nil
 	}
 	return nil, nil
 }
 
-// == end taskTemplate
+// == end taskSpec
 
 // createServiceMode creates the mode the service will run in
 func createServiceMode(d *schema.ResourceData) (swarm.ServiceMode, error) {
@@ -1012,36 +1226,61 @@ func createServiceRollbackConfig(d *schema.ResourceData) (*swarm.UpdateConfig, e
 	return nil, nil
 }
 
-// createServiceNetworks creates the networks the service will be attachted to
-func createServiceNetworks(d *schema.ResourceData) ([]swarm.NetworkAttachmentConfig, error) {
-	networks := []swarm.NetworkAttachmentConfig{}
-	if v, ok := d.GetOk("networks"); ok {
-		for _, rawNetwork := range v.(*schema.Set).List() {
-			network := swarm.NetworkAttachmentConfig{
-				Target: rawNetwork.(string),
-			}
-			networks = append(networks, network)
-		}
-	}
-	return networks, nil
-}
-
+// == start endpointSpec
 // createServiceEndpointSpec creates the spec for the endpoint
 func createServiceEndpointSpec(d *schema.ResourceData) (*swarm.EndpointSpec, error) {
-	endpointSpec := swarm.EndpointSpec{} // FIXME
-	if v, ok := d.GetOk("ports"); ok {
-		portBindings := portSetToServicePorts(v.(*schema.Set))
-		if len(portBindings) != 0 {
-			endpointSpec.Ports = portBindings
+	endpointSpec := swarm.EndpointSpec{}
+	if v, ok := d.GetOk("endpoint_spec"); ok {
+		if len(v.([]interface{})) > 0 {
+			for _, rawEndpointSpec := range v.([]interface{}) {
+				rawEndpointSpec := rawEndpointSpec.(map[string]interface{})
+				if value, ok := rawEndpointSpec["mode"]; ok {
+					endpointSpec.Mode = swarm.ResolutionMode(value.(string))
+				}
+				if value, ok := rawEndpointSpec["ports"]; ok {
+					endpointSpec.Ports = portSetToServicePorts(value)
+				}
+			}
 		}
-	}
-
-	if v, ok := d.GetOk("endpoint_mode"); ok {
-		endpointSpec.Mode = swarm.ResolutionMode(v.(string))
 	}
 
 	return &endpointSpec, nil
 }
+
+// portSetToServicePorts maps a set of ports to portConfig
+func portSetToServicePorts(v interface{}) []swarm.PortConfig {
+	retPortConfigs := []swarm.PortConfig{}
+	if len(v.(*schema.Set).List()) > 0 {
+		for _, portInt := range v.(*schema.Set).List() {
+			portConfig := swarm.PortConfig{}
+			rawPort := portInt.(map[string]interface{})
+			if value, ok := rawPort["name"]; ok {
+				portConfig.Name = value.(string)
+			}
+			if value, ok := rawPort["protocol"]; ok {
+				portConfig.Protocol = swarm.PortConfigProtocol(value.(string))
+			}
+			if value, ok := rawPort["target_port"]; ok {
+				portConfig.TargetPort = uint32(value.(int))
+			}
+			if externalPort, ok := rawPort["published_port"]; ok {
+				portConfig.PublishedPort = uint32(externalPort.(int))
+			} else {
+				// If the external port is not specified we use the internal port for it
+				portConfig.PublishedPort = portConfig.TargetPort
+			}
+			if value, ok := rawPort["publish_mode"]; ok {
+				portConfig.PublishMode = swarm.PortConfigPublishMode(value.(string))
+			}
+
+			retPortConfigs = append(retPortConfigs, portConfig)
+		}
+	}
+
+	return retPortConfigs
+}
+
+// == end endpointSpec
 
 // createUpdateOrRollbackConfig create the configuration for and update or rollback
 func createUpdateOrRollbackConfig(config []interface{}) (*swarm.UpdateConfig, error) {
@@ -1088,36 +1327,6 @@ func createConvergeConfig(config []interface{}) *convergeConfig {
 		}
 	}
 	return plainConvergeConfig
-}
-
-// portSetToServicePorts maps a set of ports to portConfig
-func portSetToServicePorts(ports *schema.Set) []swarm.PortConfig {
-	retPortConfigs := []swarm.PortConfig{}
-
-	for _, portInt := range ports.List() {
-		port := portInt.(map[string]interface{})
-		internal := port["internal"].(int)
-		protocol := port["protocol"].(string)
-		external := internal
-		if externalPort, ok := port["external"]; ok {
-			external = externalPort.(int)
-		}
-
-		portConfig := swarm.PortConfig{
-			TargetPort:    uint32(internal),
-			PublishedPort: uint32(external),
-			Protocol:      swarm.PortConfigProtocol(protocol),
-		}
-
-		mode, modeOk := port["mode"].(string)
-		if modeOk {
-			portConfig.PublishMode = swarm.PortConfigPublishMode(mode)
-		}
-
-		retPortConfigs = append(retPortConfigs, portConfig)
-	}
-
-	return retPortConfigs
 }
 
 // authToServiceAuth maps the auth to AuthConfiguration

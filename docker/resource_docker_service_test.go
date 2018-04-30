@@ -83,13 +83,286 @@ func TestAccDockerService_plain(t *testing.T) {
 				Config: `
 				resource "docker_service" "foo" {
 					name     = "tftest-service-basic"
-					image    = "stovogel/friendlyhello:part2"
+					task_spec {
+						container_spec {
+							image = "stovogel/friendlyhello:part2"
+						}
+					}
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-basic"),
-					resource.TestCheckResourceAttr("docker_service.foo", "image", "stovogel/friendlyhello:part2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image", "stovogel/friendlyhello:part2"),
+				),
+			},
+		},
+	})
+}
+func TestAccDockerService_full(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:  func() { testAccPreCheck(t) },
+		Providers: testAccProviders,
+		Steps: []resource.TestStep{
+			resource.TestStep{
+				Config: `
+				resource "docker_volume" "test_volume" {
+					name = "tftest-volume"
+				}
+
+				resource "docker_config" "service_config" {
+					name = "tftest-full-myconfig"
+					data = "ewogICJwcmVmaXgiOiAiMTIzIgp9"
+				}
+				
+				resource "docker_secret" "service_secret" {
+					name = "tftest-mysecret"
+					data = "ewogICJrZXkiOiAiUVdFUlRZIgp9"
+				}
+
+				resource "docker_network" "test_network" {
+					name   = "tftest-network"
+					driver = "overlay"
+				}
+
+				resource "docker_service" "foo" {
+					name     = "tftest-service-basic"
+					task_spec {
+						container_spec {
+							image = "127.0.0.1:15000/tftest-service:v1"
+							labels {
+								foo = "bar"
+							}
+							command = ["ls"]
+							args = ["-las"]
+							hostname = "my-fancy-service" 
+							env {
+								MYFOO = "BAR"
+							}
+							dir = "/root"
+							user = "root"
+							groups = ["docker", "foogroup"]
+							privileges {
+								se_linux_context {
+									disable = true
+									user = "user-label"
+									role = "role-label"
+									type = "type-label"
+									level = "level-label"
+								}
+							}
+							read_only = true
+							mounts = [
+								{
+									target = "/mount/test"
+									source = "${docker_volume.test_volume.name}"
+									type   = "volume"
+									read_only = true
+									consistency = "consistent"
+									bind_options {
+										bind_propagation = "private"
+									}
+								}
+							]
+							stop_signal	 = "SIGTERM"
+							stop_grace_period = "10s"
+							healthcheck {
+								test     = ["CMD", "curl", "-f", "http://localhost:8080/health"]
+								interval = "5s"
+								timeout  = "2s"
+								retries  = 4
+							}
+							hosts {
+								host = "testhost"
+								ip = "10.0.1.0"
+							}
+							dns_config {
+								nameservers = ["8.8.8.8"]
+								search = ["example.org"]
+								options = ["timeout:3"]
+							}
+							secrets = [
+								{
+									secret_id   = "${docker_secret.service_secret.id}"
+									secret_name = "${docker_secret.service_secret.name}"
+									file {
+										name   = "/secrets.json"
+									}
+								},
+							]
+							configs = [
+								{
+									config_id   = "${docker_config.service_config.id}"
+									config_name = "${docker_config.service_config.name}"
+									file {
+										name   = "/configs.json"
+									}
+								},
+							]
+						}
+						resources {
+							limits {
+								nano_cpus = 1000000
+								memory_bytes = 536870912
+								generic_resources {
+									named_resources_spec {
+										GPU="UUID1"
+									}
+									discrete_resources_spec {
+										SSD=3
+									}
+								}
+							}
+							reservation {
+								nano_cpus = 1000000
+								memory_bytes = 536870912
+								generic_resources {
+									named_resources_spec {
+										GPU="UUID1"
+									}
+									discrete_resources_spec {
+										SSD=3
+									}
+								}
+							}
+						}
+						restart_policy {
+							condition = "any"
+							delay = "3s"
+							max_attempts = 4
+							window = "10s"
+						}
+						placement {
+							constraints = [
+								"node.role==manager"
+							]
+							prefs = [
+								"spread=node.role.manager"
+							]
+						}
+						force_update = 0
+						runtime = "container"
+						networks = ["${docker_network.test_network.id}"]
+						log_driver {
+							name = "json-file"
+							options {
+								max-size = "10m"
+								max-file = "3"
+							}
+						}
+					}
+					mode {
+						replicated {
+							replicas = 2
+						}
+					}
+					update_config {
+						parallelism       = 2
+						delay             = "10s"
+						failure_action    = "pause"
+						monitor           = "5s"
+						max_failure_ratio = "0.1"
+						order             = "start-first"
+					}					
+					rollback_config {
+						parallelism       = 2
+						delay             = "5ms"
+						failure_action    = "pause"
+						monitor           = "10h"
+						max_failure_ratio = "0.9"
+						order             = "stop-first"
+					}
+					endpoint_spec {
+						mode = "vip"
+						ports {
+							name = "random"
+							protocol     = "tcp"
+							target_port 		 = "8080"
+							published_port 		 = "8080"
+							publish_mode = "ingress"
+						}
+					}
+				}
+				`,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-basic"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image", "127.0.0.1:15000/tftest-service:v1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.labels.foo", "bar"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.command.0", "ls"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.args.0", "-las"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.hostname", "my-fancy-service"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.env.MYFOO", "BAR"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.dir", "/root"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.user", "root"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.groups.0", "docker"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.groups.1", "foogroup"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.privileges.0.se_linux_context.0.disable", "true"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.privileges.0.se_linux_context.0.user", "user-label"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.privileges.0.se_linux_context.0.role", "role-label"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.privileges.0.se_linux_context.0.type", "type-label"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.privileges.0.se_linux_context.0.level", "level-label"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.read_only", "true"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.mounts.2246495311.bind_options.0.bind_propagation", "private"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.mounts.2246495311.consistency", "consistent"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.mounts.2246495311.read_only", "true"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.mounts.2246495311.source", "tftest-volume"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.mounts.2246495311.target", "/mount/test"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.mounts.2246495311.type", "volume"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.stop_signal", "SIGTERM"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.stop_grace_period", "10s"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.0", "CMD"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.1", "curl"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.2", "-f"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.3", "http://localhost:8080/health"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.interval", "5s"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.timeout", "2s"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.retries", "4"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.hosts.1878413705.host", "testhost"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.hosts.1878413705.ip", "10.0.1.0"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.dns_config.0.nameservers.0", "8.8.8.8"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.dns_config.0.search.0", "example.org"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.dns_config.0.options.0", "timeout:3"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.configs.#", "1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.secrets.#", "1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.resources.0.limits.0.nano_cpus", "1000000"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.resources.0.limits.0.memory_bytes", "536870912"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.resources.0.limits.0.generic_resources.0.named_resources_spec.GPU", "UUID1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.resources.0.limits.0.generic_resources.0.discrete_resources_spec.SSD", "3"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.resources.0.reservation.0.nano_cpus", "1000000"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.resources.0.reservation.0.memory_bytes", "536870912"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.resources.0.reservation.0.generic_resources.0.named_resources_spec.GPU", "UUID1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.resources.0.reservation.0.generic_resources.0.discrete_resources_spec.SSD", "3"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.restart_policy.condition", "any"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.restart_policy.delay", "3s"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.restart_policy.max_attempts", "4"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.restart_policy.window", "10s"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.placement.0.constraints.4248571116", "node.role==manager"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.placement.0.prefs.1751004438", "spread=node.role.manager"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.force_update", "0"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.networks.#", "1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.log_driver.0.name", "json-file"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.log_driver.0.options.max-file", "3"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.log_driver.0.options.max-size", "10m"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.0.replicas", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "10s"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "pause"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.monitor", "5s"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.order", "start-first"),
+					resource.TestCheckResourceAttr("docker_service.foo", "rollback_config.0.parallelism", "2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "rollback_config.0.delay", "5ms"),
+					resource.TestCheckResourceAttr("docker_service.foo", "rollback_config.0.failure_action", "pause"),
+					resource.TestCheckResourceAttr("docker_service.foo", "rollback_config.0.monitor", "10h"),
+					resource.TestCheckResourceAttr("docker_service.foo", "rollback_config.0.max_failure_ratio", "0.9"),
+					resource.TestCheckResourceAttr("docker_service.foo", "rollback_config.0.order", "stop-first"),
+					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.mode", "vip"),
+					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.1714132424.name", "random"),
+					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.1714132424.protocol", "tcp"),
+					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.1714132424.target_port", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.1714132424.published_port", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.1714132424.publish_mode", "ingress"),
 				),
 			},
 		},
@@ -711,143 +984,44 @@ func TestAccDockerService_nonExistingPublicImageConverge(t *testing.T) {
 	})
 }
 
-func TestAccDockerService_fullConverge(t *testing.T) {
+func TestAccDockerService_basicConverge(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
 		Providers: testAccProviders,
 		Steps: []resource.TestStep{
 			resource.TestStep{
 				Config: `
-				resource "docker_network" "test_network" {
-					name   = "tftest-network"
-					driver = "overlay"
-				}
-
-				resource "docker_volume" "test_volume" {
-					name = "tftest-volume"
-				}
-
-				resource "docker_config" "service_config" {
-					name = "tftest-full-myconfig"
-					data = "ewogICJwcmVmaXgiOiAiMTIzIgp9"
-				}
-				
-				resource "docker_secret" "service_secret" {
-					name = "tftest-mysecret"
-					data = "ewogICJrZXkiOiAiUVdFUlRZIgp9"
-				}
-
 				resource "docker_service" "foo" {
 					name     = "tftest-service-full"
-
-					labels {
-						foo = "bar"
+					task_spec {
+						container_spec {
+							image    = "127.0.0.1:15000/tftest-service:v1"
+							healthcheck {
+								test     = ["CMD", "curl", "-f", "http://localhost:8080/health"]
+								interval = "5s"
+								timeout  = "2s"
+								retries  = 4
+							}
+						}
 					}
 
-					image    = "127.0.0.1:15000/tftest-service:v1"
 					mode {
 						replicated {
 							replicas = 2
 						}
 					}
-					
-					hostname = "myfooservice"
 
-					networks = ["${docker_network.test_network.id}"]
-					endpoint_mode = "vip"
-
-					hosts {
-						host = "testhost"
-						ip = "10.0.1.0"
-					}
-
-					destroy_grace_seconds = "10"
-
-					placement {
-						constraints = [
-							"node.role==manager"
-						]
-						prefs = [
-							"spread=node.role.manager"
-						]
-					}
-
-					mounts = [
-						{
-							source = "${docker_volume.test_volume.name}"
-							target = "/mount/test"
-							type   = "volume"
-							read_only = true
-							volume_labels {
-								env = "dev"
-								terraform = "true"
-							}
-						}
-					]
-
-					update_config {
-						parallelism       = 2
-						delay             = "10s"
-						failure_action    = "pause"
-						monitor           = "5s"
-						max_failure_ratio = "0.1"
-						order             = "start-first"
-					}
-					
-					rollback_config {
-						parallelism       = 2
-						delay             = "5ms"
-						failure_action    = "pause"
-						monitor           = "10h"
-						max_failure_ratio = "0.9"
-						order             = "stop-first"
-					}
-
-					configs = [
-						{
-							config_id   = "${docker_config.service_config.id}"
-							config_name = "${docker_config.service_config.name}"
-							file_name   = "/configs.json"
-						},
-					]
-				
-					secrets = [
-						{
-							secret_id   = "${docker_secret.service_secret.id}"
-							secret_name = "${docker_secret.service_secret.name}"
-							file_name   = "/secrets.json"
-						},
-					]
-
-					ports {
-						internal 		 = "8080"
-						external 		 = "8080"
-						publish_mode = "ingress"
-						protocol     = "tcp"
-					}
-
-					logging {
-						driver_name = "json-file"
-					
-						options {
-							max-size = "10m"
-							max-file = "3"
+					endpoint_spec {
+						mode = "vip"
+						ports {
+							name = "random"
+							protocol     = "tcp"
+							target_port 		 = "8080"
+							published_port 		 = "8080"
+							publish_mode = "ingress"
 						}
 					}
 
-					healthcheck {
-						test     = ["CMD", "curl", "-f", "http://localhost:8080/health"]
-						interval = "5s"
-						timeout  = "2s"
-						retries  = 4
-					}
-
-					dns_config {
-						nameservers = ["8.8.8.8"]
-						search = ["example.org"]
-						options = ["timeout:3"]
-					}
-					
 					converge_config {
 						delay    = "7s"
 						timeout  = "3m"
@@ -857,68 +1031,8 @@ func TestAccDockerService_fullConverge(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-full"),
-					resource.TestCheckResourceAttr("docker_service.foo", "image", "127.0.0.1:15000/tftest-service:v1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image", "127.0.0.1:15000/tftest-service:v1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.0.replicas", "2"),
-					resource.TestCheckResourceAttr("docker_service.foo", "hostname", "myfooservice"),
-					resource.TestCheckResourceAttr("docker_service.foo", "networks.#", "1"),
-					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_mode", "vip"),
-					resource.TestCheckResourceAttr("docker_service.foo", "placement.#", "1"),
-					resource.TestCheckResourceAttr("docker_service.foo", "placement.0.constraints.#", "1"),
-					resource.TestCheckResourceAttr("docker_service.foo", "placement.0.constraints.4248571116", "node.role==manager"),
-					resource.TestCheckResourceAttr("docker_service.foo", "placement.0.platforms.#", "0"),
-					resource.TestCheckResourceAttr("docker_service.foo", "placement.0.prefs.#", "1"),
-					resource.TestCheckResourceAttr("docker_service.foo", "placement.0.prefs.1751004438", "spread=node.role.manager"),
-					resource.TestCheckResourceAttr("docker_service.foo", "hosts.#", "1"),
-					resource.TestCheckResourceAttr("docker_service.foo", "hosts.1878413705.host", "testhost"),
-					resource.TestCheckResourceAttr("docker_service.foo", "hosts.1878413705.ip", "10.0.1.0"),
-					resource.TestCheckResourceAttr("docker_service.foo", "destroy_grace_seconds", "10"),
-					resource.TestCheckResourceAttr("docker_service.foo", "mounts.#", "1"),
-					resource.TestCheckResourceAttr("docker_service.foo", "mounts.1197577087.bind_propagation", ""),
-					resource.TestCheckResourceAttr("docker_service.foo", "mounts.1197577087.read_only", "true"),
-					resource.TestCheckResourceAttr("docker_service.foo", "mounts.1197577087.source", "tftest-volume"),
-					resource.TestCheckResourceAttr("docker_service.foo", "mounts.1197577087.target", "/mount/test"),
-					resource.TestCheckResourceAttr("docker_service.foo", "mounts.1197577087.tmpfs_mode", "0"),
-					resource.TestCheckResourceAttr("docker_service.foo", "mounts.1197577087.type", "volume"),
-					resource.TestCheckResourceAttr("docker_service.foo", "mounts.1197577087.volume_driver_name", ""),
-					resource.TestCheckResourceAttr("docker_service.foo", "mounts.1197577087.volume_driver_options.%", "0"),
-					resource.TestCheckResourceAttr("docker_service.foo", "mounts.1197577087.volume_labels.%", "2"),
-					resource.TestCheckResourceAttr("docker_service.foo", "mounts.1197577087.volume_labels.env", "dev"),
-					resource.TestCheckResourceAttr("docker_service.foo", "mounts.1197577087.volume_labels.terraform", "true"),
-					resource.TestCheckResourceAttr("docker_service.foo", "mounts.1197577087.volume_no_copy", "false"),
-					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "2"),
-					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "10s"),
-					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "pause"),
-					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.1"),
-					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.monitor", "5s"),
-					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.order", "start-first"),
-					resource.TestCheckResourceAttr("docker_service.foo", "rollback_config.0.parallelism", "2"),
-					resource.TestCheckResourceAttr("docker_service.foo", "rollback_config.0.delay", "5ms"),
-					resource.TestCheckResourceAttr("docker_service.foo", "rollback_config.0.failure_action", "pause"),
-					resource.TestCheckResourceAttr("docker_service.foo", "rollback_config.0.monitor", "10h"),
-					resource.TestCheckResourceAttr("docker_service.foo", "rollback_config.0.max_failure_ratio", "0.9"),
-					resource.TestCheckResourceAttr("docker_service.foo", "rollback_config.0.order", "stop-first"),
-					resource.TestCheckResourceAttr("docker_service.foo", "configs.#", "1"),
-					resource.TestCheckResourceAttr("docker_service.foo", "secrets.#", "1"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.#", "1"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.1587501533.internal", "8080"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.1587501533.external", "8080"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.1587501533.publish_mode", "ingress"),
-					resource.TestCheckResourceAttr("docker_service.foo", "ports.1587501533.protocol", "tcp"),
-					resource.TestCheckResourceAttr("docker_service.foo", "logging.0.driver_name", "json-file"),
-					resource.TestCheckResourceAttr("docker_service.foo", "logging.0.options.%", "2"),
-					resource.TestCheckResourceAttr("docker_service.foo", "logging.0.options.max-size", "10m"),
-					resource.TestCheckResourceAttr("docker_service.foo", "logging.0.options.max-file", "3"),
-					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.0", "CMD"),
-					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.1", "curl"),
-					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.2", "-f"),
-					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.test.3", "http://localhost:8080/health"),
-					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.interval", "5s"),
-					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.timeout", "2s"),
-					resource.TestCheckResourceAttr("docker_service.foo", "healthcheck.0.retries", "4"),
-					resource.TestCheckResourceAttr("docker_service.foo", "dns_config.#", "1"),
-					resource.TestCheckResourceAttr("docker_service.foo", "dns_config.0.nameservers.0", "8.8.8.8"),
-					resource.TestCheckResourceAttr("docker_service.foo", "dns_config.0.search.0", "example.org"),
-					resource.TestCheckResourceAttr("docker_service.foo", "dns_config.0.options.0", "timeout:3"),
 				),
 			},
 		},
