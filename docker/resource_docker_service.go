@@ -865,6 +865,7 @@ func resourceDockerService() *schema.Resource {
 				Type:        schema.TypeList,
 				Description: "Properties that can be configured to access and load balance a service",
 				Optional:    true,
+				Computed:    true,
 				MaxItems:    1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{

@@ -116,44 +116,13 @@ func resourceDockerServiceRead(d *schema.ResourceData, meta interface{}) error {
 
 	d.SetId(service.ID)
 	d.Set("name", service.Spec.Name)
-	d.Set("image", service.Spec.TaskTemplate.ContainerSpec.Image)
+	d.Set("labels", service.Spec.Labels)
 
+	if err = d.Set("task_spec", flattenTaskSpec(service.Spec.TaskTemplate)); err != nil {
+		log.Printf("[WARN] failed to set task spec from API: %s", err)
+	}
 	if err = d.Set("mode", flattenServiceMode(service.Spec.Mode)); err != nil {
 		log.Printf("[WARN] failed to set mode from API: %s", err)
-	}
-	// endpoint_mode is only present if Ports are set
-	// https://docs.docker.com/network/overlay/#bypass-the-routing-mesh-for-a-swarm-service
-	if len(service.Endpoint.Spec.Ports) > 0 {
-		if err = d.Set("endpoint_mode", service.Endpoint.Spec.Mode); err != nil {
-			log.Printf("[WARN] failed to set endpoint_mode from API: %s", err)
-		}
-	}
-	if err = d.Set("hostname", service.Spec.TaskTemplate.ContainerSpec.Hostname); err != nil {
-		log.Printf("[WARN] failed to set hostname from API: %s", err)
-	}
-	if err = d.Set("command", service.Spec.TaskTemplate.ContainerSpec.Command); err != nil {
-		log.Printf("[WARN] failed to set command from API: %s", err)
-	}
-	if err = d.Set("env", service.Spec.TaskTemplate.ContainerSpec.Env); err != nil {
-		log.Printf("[WARN] failed to set env from API: %s", err)
-	}
-	if err = d.Set("hosts", flattenServiceHosts(service.Spec.TaskTemplate.ContainerSpec.Hosts)); err != nil {
-		log.Printf("[WARN] failed to set hosts from API: %s", err)
-	}
-	if err = d.Set("networks", flattenServiceNetworks(service.Spec.Networks)); err != nil {
-		log.Printf("[WARN] failed to set networks from API: %s", err)
-	}
-	if err = d.Set("mounts", flattenServiceMounts(service.Spec.TaskTemplate.ContainerSpec.Mounts)); err != nil {
-		log.Printf("[WARN] failed to set mounts from API: %s", err)
-	}
-	if err = d.Set("configs", flattenServiceConfigs(service.Spec.TaskTemplate.ContainerSpec.Configs)); err != nil {
-		log.Printf("[WARN] failed to set configs from API: %s", err)
-	}
-	if err = d.Set("secrets", flattenServiceSecrets(service.Spec.TaskTemplate.ContainerSpec.Secrets)); err != nil {
-		log.Printf("[WARN] failed to set secrets from API: %s", err)
-	}
-	if err = d.Set("ports", flattenServicePorts(service.Endpoint.Spec.Ports)); err != nil {
-		log.Printf("[WARN] failed to set ports from API: %s", err)
 	}
 	if err := d.Set("update_config", flattenServiceUpdateOrRollbackConfig(service.Spec.UpdateConfig)); err != nil {
 		log.Printf("[WARN] failed to set update_config from API: %s", err)
@@ -161,17 +130,8 @@ func resourceDockerServiceRead(d *schema.ResourceData, meta interface{}) error {
 	if err = d.Set("rollback_config", flattenServiceUpdateOrRollbackConfig(service.Spec.RollbackConfig)); err != nil {
 		log.Printf("[WARN] failed to set rollback_config from API: %s", err)
 	}
-	if err = d.Set("placement", flattenServicePlacement(service.Spec.TaskTemplate.Placement)); err != nil {
-		log.Printf("[WARN] failed to set placement from API: %s", err)
-	}
-	if err = d.Set("logging", flattenServiceLogging(service.Spec.TaskTemplate.LogDriver)); err != nil {
-		log.Printf("[WARN] failed to set logging from API: %s", err)
-	}
-	if err = d.Set("healthcheck", flattenServiceHealthcheck(service.Spec.TaskTemplate.ContainerSpec.Healthcheck)); err != nil {
-		log.Printf("[WARN] failed to set healthcheck from API: %s", err)
-	}
-	if err = d.Set("dns_config", flattenServiceDNSConfig(service.Spec.TaskTemplate.ContainerSpec.DNSConfig)); err != nil {
-		log.Printf("[WARN] failed to set dns_config from API: %s", err)
+	if err = d.Set("endpoint_spec", flattenServiceEndpointSpec(service.Endpoint.Spec)); err != nil {
+		log.Printf("[WARN] failed to set endpoint spec from API: %s", err)
 	}
 
 	return nil
