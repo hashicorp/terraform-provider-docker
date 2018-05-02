@@ -889,8 +889,8 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.#", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.3541714906.target_port", "8080"),
 					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.3541714906.published_port", "8081"),
-					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.2374790270.target_port", "8080"),
-					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.2374790270.published_port", "8082"),
+					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.1884078451.target_port", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.1884078451.published_port", "8082"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.0", "CMD"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.1", "curl"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.2", "-f"),
@@ -983,8 +983,8 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.#", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.3541714906.target_port", "8080"),
 					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.3541714906.published_port", "8081"),
-					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.2374790270.target_port", "8080"),
-					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.2374790270.published_port", "8082"),
+					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.1884078451.target_port", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.1884078451.published_port", "8082"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.0", "CMD"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.1", "curl"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.2", "-f"),
@@ -1790,21 +1790,28 @@ func TestAccDockerService_updateLoggingConverge(t *testing.T) {
 }
 
 func TestAccDockerService_updateHealthcheckConverge(t *testing.T) {
-	t.Skip("SKIPPED")
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
 		Providers: testAccProviders,
 		Steps: []resource.TestStep{
 			resource.TestStep{
 				Config: `
-				resource "docker_config" "service_config" {
-					name = "tftest-up-healthcheck-myconfig"
-					data = "ewogICJwcmVmaXgiOiAiMTIzIgp9"
-				}
-
 				resource "docker_service" "foo" {
 					name     = "tftest-service-up-healthcheck"
-					image    = "127.0.0.1:15000/tftest-service:v1"
+					task_spec {
+						container_spec {
+							image    = "127.0.0.1:15000/tftest-service:v1"
+							stop_grace_period = "10s"
+		
+							healthcheck {
+								test     = ["CMD", "curl", "-f", "http://localhost:8080/health"]
+								interval = "1s"
+								timeout  = "500ms"
+								retries  = 4
+							}
+						}
+					}
+
 					mode {
 						replicated {
 							replicas = 2
@@ -1820,24 +1827,11 @@ func TestAccDockerService_updateHealthcheckConverge(t *testing.T) {
 						order             = "start-first"
 					}
 
-					configs = [
-						{
-							config_id   = "${docker_config.service_config.id}"
-							config_name = "${docker_config.service_config.name}"
-							file_name   = "/configs.json"
-						},
-					]
-
-					ports {
-						target_port    = "8080"
-						published_port = "8080"
-					}
-
-					healthcheck {
-						test     = ["CMD", "curl", "-f", "http://localhost:8080/health"]
-						interval = "1s"
-						timeout  = "500ms"
-						retries  = 4
+					endpoint_spec {
+						ports {
+							target_port    = "8080"
+							published_port = "8080"
+						}
 					}
 
 					converge_config {
@@ -1845,7 +1839,6 @@ func TestAccDockerService_updateHealthcheckConverge(t *testing.T) {
 						timeout  = "3m"
 					}
 
-					stop_grace_period = "10s"
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
@@ -1873,14 +1866,20 @@ func TestAccDockerService_updateHealthcheckConverge(t *testing.T) {
 			},
 			resource.TestStep{
 				Config: `
-				resource "docker_config" "service_config" {
-					name = "tftest-up-healthcheck-myconfig"
-					data = "ewogICJwcmVmaXgiOiAiMTIzIgp9"
-				}
-
 				resource "docker_service" "foo" {
 					name     = "tftest-service-up-healthcheck"
-					image    = "127.0.0.1:15000/tftest-service:v1"
+					task_spec {
+						container_spec {
+							image    = "127.0.0.1:15000/tftest-service:v1"
+							stop_grace_period = "10s"
+							healthcheck {
+								test     = ["CMD", "curl", "-f", "http://localhost:8080/health"]
+								interval = "2s"
+								timeout  = "800ms"
+								retries  = 2
+							}
+						}
+					}
 					mode {
 						replicated {
 							replicas = 2
@@ -1896,32 +1895,18 @@ func TestAccDockerService_updateHealthcheckConverge(t *testing.T) {
 						order             = "start-first"
 					}
 
-					configs = [
-						{
-							config_id   = "${docker_config.service_config.id}"
-							config_name = "${docker_config.service_config.name}"
-							file_name   = "/configs.json"
-						},
-					]
-
-					ports {
-						target_port    = "8080"
-						published_port = "8080"
+					endpoint_spec {
+						ports {
+							target_port    = "8080"
+							published_port = "8080"
+						}
 					}
 					
-					healthcheck {
-						test     = ["CMD", "curl", "-f", "http://localhost:8080/health"]
-						interval = "2s"
-						timeout  = "800ms"
-						retries  = 2
-					}
-
 					converge_config {
 						delay    = "7s"
 						timeout  = "3m"
 					}
 
-					stop_grace_period = "10s"
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
@@ -1952,21 +1937,28 @@ func TestAccDockerService_updateHealthcheckConverge(t *testing.T) {
 }
 
 func TestAccDockerService_updateIncreaseReplicasConverge(t *testing.T) {
-	t.Skip("SKIPPED")
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
 		Providers: testAccProviders,
 		Steps: []resource.TestStep{
 			resource.TestStep{
 				Config: `
-				resource "docker_config" "service_config" {
-					name = "tftest-increase-replicas-myconfig"
-					data = "ewogICJwcmVmaXgiOiAiMTIzIgp9"
-				}
-
 				resource "docker_service" "foo" {
 					name     = "tftest-service-increase-replicas"
-					image    = "127.0.0.1:15000/tftest-service:v1"
+					task_spec {
+						container_spec {
+							image    = "127.0.0.1:15000/tftest-service:v1"
+							stop_grace_period = "10s"
+
+							healthcheck {
+								test     = ["CMD", "curl", "-f", "http://localhost:8080/health"]
+								interval = "1s"
+								timeout  = "500ms"
+								retries  = 4
+							}
+						}
+					}
+
 					mode {
 						replicated {
 							replicas = 1
@@ -1982,24 +1974,11 @@ func TestAccDockerService_updateIncreaseReplicasConverge(t *testing.T) {
 						order             = "start-first"
 					}
 
-					configs = [
-						{
-							config_id   = "${docker_config.service_config.id}"
-							config_name = "${docker_config.service_config.name}"
-							file_name   = "/configs.json"
-						},
-					]
-
-					ports {
-						target_port    = "8080"
-						published_port = "8080"
-					}
-
-					healthcheck {
-						test     = ["CMD", "curl", "-f", "http://localhost:8080/health"]
-						interval = "1s"
-						timeout  = "500ms"
-						retries  = 4
+					endpoint_spec {
+						ports {
+							target_port    = "8080"
+							published_port = "8080"
+						}
 					}
 
 					converge_config {
@@ -2007,14 +1986,13 @@ func TestAccDockerService_updateIncreaseReplicasConverge(t *testing.T) {
 						timeout  = "3m"
 					}
 
-					stop_grace_period = "10s"
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-increase-replicas"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image", "127.0.0.1:15000/tftest-service:v1"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "replicas", "1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.0.replicas", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "pause"),
@@ -2035,14 +2013,22 @@ func TestAccDockerService_updateIncreaseReplicasConverge(t *testing.T) {
 			},
 			resource.TestStep{
 				Config: `
-				resource "docker_config" "service_config" {
-					name = "tftest-increase-replicas-myconfig"
-					data = "ewogICJwcmVmaXgiOiAiMTIzIgp9"
-				}
-
 				resource "docker_service" "foo" {
 					name     = "tftest-service-increase-replicas"
-					image    = "127.0.0.1:15000/tftest-service:v1"
+					task_spec {
+						container_spec {
+							image    = "127.0.0.1:15000/tftest-service:v1"
+							stop_grace_period = "10s"
+							
+							healthcheck {
+								test     = ["CMD", "curl", "-f", "http://localhost:8080/health"]
+								interval = "1s"
+								timeout  = "500ms"
+								retries  = 4
+							}
+						}
+					}
+
 					mode {
 						replicated {
 							replicas = 3
@@ -2058,32 +2044,18 @@ func TestAccDockerService_updateIncreaseReplicasConverge(t *testing.T) {
 						order             = "start-first"
 					}
 
-					configs = [
-						{
-							config_id   = "${docker_config.service_config.id}"
-							config_name = "${docker_config.service_config.name}"
-							file_name   = "/configs.json"
-						},
-					]
-
-					ports {
-						target_port    = "8080"
-						published_port = "8080"
+					endpoint_spec {
+						ports {
+							target_port    = "8080"
+							published_port = "8080"
+						}
 					}
 					
-					healthcheck {
-						test     = ["CMD", "curl", "-f", "http://localhost:8080/health"]
-						interval = "1s"
-						timeout  = "500ms"
-						retries  = 4
-					}
-
 					converge_config {
 						delay    = "7s"
 						timeout  = "3m"
 					}
 
-					stop_grace_period = "10s"
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
@@ -2113,21 +2085,28 @@ func TestAccDockerService_updateIncreaseReplicasConverge(t *testing.T) {
 	})
 }
 func TestAccDockerService_updateDecreaseReplicasConverge(t *testing.T) {
-	t.Skip("SKIPPED")
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
 		Providers: testAccProviders,
 		Steps: []resource.TestStep{
 			resource.TestStep{
 				Config: `
-				resource "docker_config" "service_config" {
-					name = "tftest-decrease-replicas-myconfig"
-					data = "ewogICJwcmVmaXgiOiAiMTIzIgp9"
-				}
-
 				resource "docker_service" "foo" {
 					name     = "tftest-service-decrease-replicas"
-					image    = "127.0.0.1:15000/tftest-service:v1"
+					task_spec {
+						container_spec {
+							image    = "127.0.0.1:15000/tftest-service:v1"
+							stop_grace_period = "10s"
+							
+							healthcheck {
+								test     = ["CMD", "curl", "-f", "http://localhost:8080/health"]
+								interval = "1s"
+								timeout  = "500ms"
+								retries  = 4
+							}
+						}
+					}
+
 					mode {
 						replicated {
 							replicas = 5
@@ -2143,32 +2122,17 @@ func TestAccDockerService_updateDecreaseReplicasConverge(t *testing.T) {
 						order             = "start-first"
 					}
 
-					configs = [
-						{
-							config_id   = "${docker_config.service_config.id}"
-							config_name = "${docker_config.service_config.name}"
-							file_name   = "/configs.json"
-						},
-					]
-
-					ports {
-						target_port    = "8080"
-						published_port = "8080"
-					}
-
-					healthcheck {
-						test     = ["CMD", "curl", "-f", "http://localhost:8080/health"]
-						interval = "1s"
-						timeout  = "500ms"
-						retries  = 4
+					endpoint_spec {
+						ports {
+							target_port    = "8080"
+							published_port = "8080"
+						}
 					}
 
 					converge_config {
 						delay    = "7s"
 						timeout  = "3m"
 					}
-
-					stop_grace_period = "10s"
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
@@ -2196,14 +2160,22 @@ func TestAccDockerService_updateDecreaseReplicasConverge(t *testing.T) {
 			},
 			resource.TestStep{
 				Config: `
-				resource "docker_config" "service_config" {
-					name = "tftest-decrease-replicas-myconfig"
-					data = "ewogICJwcmVmaXgiOiAiMTIzIgp9"
-				}
-
 				resource "docker_service" "foo" {
 					name     = "tftest-service-decrease-replicas"
-					image    = "127.0.0.1:15000/tftest-service:v1"
+					task_spec {
+						container_spec {
+							image    = "127.0.0.1:15000/tftest-service:v1"
+
+							stop_grace_period = "10s"
+							healthcheck {
+								test     = ["CMD", "curl", "-f", "http://localhost:8080/health"]
+								interval = "1s"
+								timeout  = "500ms"
+								retries  = 4
+							}
+						}
+					}
+
 					mode {
 						replicated {
 							replicas = 1
@@ -2219,39 +2191,24 @@ func TestAccDockerService_updateDecreaseReplicasConverge(t *testing.T) {
 						order             = "start-first"
 					}
 
-					configs = [
-						{
-							config_id   = "${docker_config.service_config.id}"
-							config_name = "${docker_config.service_config.name}"
-							file_name   = "/configs.json"
-						},
-					]
-
-					ports {
-						target_port    = "8080"
-						published_port = "8080"
+					endpoint_spec {
+						ports {
+							target_port    = "8080"
+							published_port = "8080"
+						}
 					}
 					
-					healthcheck {
-						test     = ["CMD", "curl", "-f", "http://localhost:8080/health"]
-						interval = "1s"
-						timeout  = "500ms"
-						retries  = 4
-					}
-
 					converge_config {
 						delay    = "7s"
 						timeout  = "3m"
 					}
-
-					stop_grace_period = "10s"
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-decrease-replicas"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image", "127.0.0.1:15000/tftest-service:v1"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "replicas", "1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.0.replicas", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "pause"),
@@ -2275,21 +2232,27 @@ func TestAccDockerService_updateDecreaseReplicasConverge(t *testing.T) {
 }
 
 func TestAccDockerService_updateImageConverge(t *testing.T) {
-	t.Skip("SKIPPED")
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
 		Providers: testAccProviders,
 		Steps: []resource.TestStep{
 			resource.TestStep{
 				Config: `
-				resource "docker_config" "service_config" {
-					name = "tftest-up-image-myconfig"
-					data = "ewogICJwcmVmaXgiOiAiMTIzIgp9"
-				}
-
 				resource "docker_service" "foo" {
 					name     = "tftest-service-up-image"
-					image    = "127.0.0.1:15000/tftest-service:v1"
+					task_spec {
+						container_spec {
+							image    = "127.0.0.1:15000/tftest-service:v1"
+							stop_grace_period = "10s"
+							healthcheck {
+								test     = ["CMD", "curl", "-f", "http://localhost:8080/health"]
+								interval = "1s"
+								timeout  = "500ms"
+								retries  = 2
+							}
+						}
+					}
+
 					mode {
 						replicated {
 							replicas = 2
@@ -2305,24 +2268,11 @@ func TestAccDockerService_updateImageConverge(t *testing.T) {
 						order             = "start-first"
 					}
 
-					configs = [
-						{
-							config_id   = "${docker_config.service_config.id}"
-							config_name = "${docker_config.service_config.name}"
-							file_name   = "/configs.json"
-						},
-					]
-
-					ports {
-						target_port    = "8080"
-						published_port = "8080"
-					}
-
-					healthcheck {
-						test     = ["CMD", "curl", "-f", "http://localhost:8080/health"]
-						interval = "1s"
-						timeout  = "500ms"
-						retries  = 2
+					endpoint_spec {
+						ports {
+							target_port    = "8080"
+							published_port = "8080"
+						}
 					}
 
 					converge_config {
@@ -2330,7 +2280,6 @@ func TestAccDockerService_updateImageConverge(t *testing.T) {
 						timeout  = "3m"
 					}
 
-					stop_grace_period = "10s"
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
@@ -2358,14 +2307,21 @@ func TestAccDockerService_updateImageConverge(t *testing.T) {
 			},
 			resource.TestStep{
 				Config: `
-				resource "docker_config" "service_config" {
-					name = "tftest-up-image-myconfig"
-					data = "ewogICJwcmVmaXgiOiAiMTIzIgp9"
-				}
-
 				resource "docker_service" "foo" {
 					name     = "tftest-service-up-image"
-					image    = "127.0.0.1:15000/tftest-service:v2"
+					task_spec {
+						container_spec {
+							image    = "127.0.0.1:15000/tftest-service:v2"
+							stop_grace_period = "10s"
+							healthcheck {
+								test     = ["CMD", "curl", "-f", "http://localhost:8080/health"]
+								interval = "1s"
+								timeout  = "500ms"
+								retries  = 2
+							}
+						}
+					}
+
 					mode {
 						replicated {
 							replicas = 2
@@ -2381,24 +2337,11 @@ func TestAccDockerService_updateImageConverge(t *testing.T) {
 						order             = "start-first"
 					}
 
-					configs = [
-						{
-							config_id   = "${docker_config.service_config.id}"
-							config_name = "${docker_config.service_config.name}"
-							file_name   = "/configs.json"
-						},
-					]
-
-					ports {
-						target_port    = "8080"
-						published_port = "8080"
-					}
-
-					healthcheck {
-						test     = ["CMD", "curl", "-f", "http://localhost:8080/health"]
-						interval = "1s"
-						timeout  = "500ms"
-						retries  = 2
+					endpoint_spec {
+						ports {
+							target_port    = "8080"
+							published_port = "8080"
+						}
 					}
 
 					converge_config {
@@ -2406,7 +2349,6 @@ func TestAccDockerService_updateImageConverge(t *testing.T) {
 						timeout  = "3m"
 					}
 
-					stop_grace_period = "10s"
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
@@ -2457,6 +2399,8 @@ func TestAccDockerService_updateConfigConverge(t *testing.T) {
 				resource "docker_service" "foo" {
 					name     = "tftest-service-up-config"
 					image    = "127.0.0.1:15000/tftest-service:v1"
+					task_spec {
+						container_spec {
 					mode {
 						replicated {
 							replicas = 2
@@ -2537,6 +2481,8 @@ func TestAccDockerService_updateConfigConverge(t *testing.T) {
 
 				resource "docker_service" "foo" {
 					name     = "tftest-service-up-config"
+					task_spec {
+						container_spec {
 					image    = "127.0.0.1:15000/tftest-service:v1"
 					mode {
 						replicated {
@@ -2637,6 +2583,8 @@ func TestAccDockerService_updateConfigAndSecretConverge(t *testing.T) {
 
 				resource "docker_service" "foo" {
 					name     = "tftest-service-up-config-secret"
+					task_spec {
+						container_spec {
 					image    = "127.0.0.1:15000/tftest-service:v1"
 					mode {
 						replicated {
@@ -2738,6 +2686,8 @@ func TestAccDockerService_updateConfigAndSecretConverge(t *testing.T) {
 
 				resource "docker_service" "foo" {
 					name     = "tftest-service-up-config-secret"
+					task_spec {
+						container_spec {
 					image    = "127.0.0.1:15000/tftest-service:v1"
 					mode {
 						replicated {
@@ -2819,21 +2769,27 @@ func TestAccDockerService_updateConfigAndSecretConverge(t *testing.T) {
 	})
 }
 func TestAccDockerService_updatePortConverge(t *testing.T) {
-	t.Skip("SKIPPED")
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
 		Providers: testAccProviders,
 		Steps: []resource.TestStep{
 			resource.TestStep{
 				Config: `
-				resource "docker_config" "service_config" {
-					name = "tftest-up-port-myconfig"
-					data = "ewogICJwcmVmaXgiOiAiMTIzIgp9"
-				}
-
 				resource "docker_service" "foo" {
 					name     = "tftest-service-up-port"
-					image    = "127.0.0.1:15000/tftest-service:v1"
+					task_spec {
+						container_spec {
+							image    = "127.0.0.1:15000/tftest-service:v1"
+							stop_grace_period = "10s"
+							healthcheck {
+								test     = ["CMD", "curl", "-f", "http://localhost:8080/health"]
+								interval = "1s"
+								timeout  = "500ms"
+								retries  = 2
+							}
+						}
+					}
+
 					mode {
 						replicated {
 							replicas = 2
@@ -2849,24 +2805,11 @@ func TestAccDockerService_updatePortConverge(t *testing.T) {
 						order             = "start-first"
 					}
 
-					configs = [
-						{
-							config_id   = "${docker_config.service_config.id}"
-							config_name = "${docker_config.service_config.name}"
-							file_name   = "/configs.json"
-						},
-					]
-
-					ports {
-						target_port    = "8080"
-						published_port = "8081"
-					}
-
-					healthcheck {
-						test     = ["CMD", "curl", "-f", "http://localhost:8080/health"]
-						interval = "1s"
-						timeout  = "500ms"
-						retries  = 2
+					endpoint_spec {
+						ports {
+							target_port    = "8080"
+							published_port = "8081"
+						}
 					}
 
 					converge_config {
@@ -2874,7 +2817,6 @@ func TestAccDockerService_updatePortConverge(t *testing.T) {
 						timeout  = "3m"
 					}
 
-					stop_grace_period = "10s"
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
@@ -2902,14 +2844,21 @@ func TestAccDockerService_updatePortConverge(t *testing.T) {
 			},
 			resource.TestStep{
 				Config: `
-				resource "docker_config" "service_config" {
-					name = "tftest-up-port-myconfig"
-					data = "ewogICJwcmVmaXgiOiAiMTIzIgp9"
-				}
-
 				resource "docker_service" "foo" {
 					name     = "tftest-service-up-port"
-					image    = "127.0.0.1:15000/tftest-service:v1"
+					task_spec {
+						container_spec {
+							image    = "127.0.0.1:15000/tftest-service:v1"
+							stop_grace_period = "10s"
+							healthcheck {
+								test     = ["CMD", "curl", "-f", "http://localhost:8080/health"]
+								interval = "1s"
+								timeout  = "500ms"
+								retries  = 2
+							}
+						}
+					}
+
 					mode {
 						replicated {
 							replicas = 4
@@ -2925,38 +2874,23 @@ func TestAccDockerService_updatePortConverge(t *testing.T) {
 						order             = "start-first"
 					}
 
-					configs = [
-						{
-							config_id   = "${docker_config.service_config.id}"
-							config_name = "${docker_config.service_config.name}"
-							file_name   = "/configs.json"
-						},
-					]
-
-					ports = [
-						{
-							target_port    = "8080"
-							published_port = "8081"
-						},
-						{
-							target_port    = "8080"
-							published_port = "8082"
-						}
-					] 
-
-					healthcheck {
-						test     = ["CMD", "curl", "-f", "http://localhost:8080/health"]
-						interval = "1s"
-						timeout  = "500ms"
-						retries  = 2
+					endpoint_spec {
+						ports = [
+							{
+								target_port    = "8080"
+								published_port = "8081"
+							},
+							{
+								target_port    = "8080"
+								published_port = "8082"
+							}
+							] 
 					}
 
 					converge_config {
 						delay    = "7s"
 						timeout  = "3m"
 					}
-
-					stop_grace_period = "10s"
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
@@ -2973,8 +2907,8 @@ func TestAccDockerService_updatePortConverge(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.#", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.3541714906.target_port", "8080"),
 					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.3541714906.published_port", "8081"),
-					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.2374790270.target_port", "8080"),
-					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.2374790270.published_port", "8082"),
+					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.1884078451.target_port", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.1884078451.published_port", "8082"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.0", "CMD"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.1", "curl"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.2", "-f"),
@@ -3007,6 +2941,8 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthConverge(t *testing.
 
 				resource "docker_service" "foo" {
 					name     = "tftest-service-up-crihc"
+					task_spec {
+						container_spec {
 					image    = "127.0.0.1:15000/tftest-service:v1"
 					mode {
 						replicated {
@@ -3088,6 +3024,8 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthConverge(t *testing.
 
 				resource "docker_service" "foo" {
 					name     = "tftest-service-up-crihc"
+					task_spec {
+						container_spec {
 					image    = "127.0.0.1:15000/tftest-service:v2"
 					mode {
 						replicated {
@@ -3152,8 +3090,8 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthConverge(t *testing.
 					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.#", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.3541714906.target_port", "8080"),
 					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.3541714906.published_port", "8081"),
-					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.2374790270.target_port", "8080"),
-					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.2374790270.published_port", "8082"),
+					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.1884078451.target_port", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.1884078451.published_port", "8082"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.0", "CMD"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.1", "curl"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.2", "-f"),
@@ -3186,6 +3124,8 @@ func TestAccDockerService_updateConfigAndDecreaseReplicasConverge(t *testing.T) 
 
 				resource "docker_service" "foo" {
 					name     = "tftest-service-up-config-dec-repl"
+					task_spec {
+						container_spec {
 					image    = "127.0.0.1:15000/tftest-service:v1"
 					mode {
 						replicated {
@@ -3267,6 +3207,8 @@ func TestAccDockerService_updateConfigAndDecreaseReplicasConverge(t *testing.T) 
 
 				resource "docker_service" "foo" {
 					name     = "tftest-service-up-config-dec-repl"
+					task_spec {
+						container_spec {
 					image    = "127.0.0.1:15000/tftest-service:v1"
 					mode {
 						replicated {
@@ -3357,6 +3299,8 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 
 				resource "docker_service" "foo" {
 					name     = "tftest-service-up-crihiadr"
+					task_spec {
+						container_spec {
 					image    = "127.0.0.1:15000/tftest-service:v1"
 					mode {
 						replicated {
@@ -3438,6 +3382,8 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 
 				resource "docker_service" "foo" {
 					name     = "tftest-service-up-crihiadr"
+					task_spec {
+						container_spec {
 					image    = "127.0.0.1:15000/tftest-service:v2"
 					mode {
 						replicated {
@@ -3502,8 +3448,8 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.#", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.3541714906.target_port", "8080"),
 					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.3541714906.published_port", "8081"),
-					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.2374790270.target_port", "8080"),
-					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.2374790270.published_port", "8082"),
+					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.1884078451.target_port", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.1884078451.published_port", "8082"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.0", "CMD"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.1", "curl"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.2", "-f"),
@@ -3527,6 +3473,8 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 
 				resource "docker_service" "foo" {
 					name     = "tftest-service-up-crihiadr"
+					task_spec {
+						container_spec {
 					image    = "127.0.0.1:15000/tftest-service:v2"
 					mode {
 						replicated {
@@ -3591,8 +3539,8 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.#", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.3541714906.target_port", "8080"),
 					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.3541714906.published_port", "8081"),
-					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.2374790270.target_port", "8080"),
-					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.2374790270.published_port", "8082"),
+					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.1884078451.target_port", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.1884078451.published_port", "8082"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.0", "CMD"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.1", "curl"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.2", "-f"),
@@ -3607,7 +3555,6 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 }
 
 func TestAccDockerService_privateConverge(t *testing.T) {
-	t.Skip("SKIPPED")
 	registry := os.Getenv("DOCKER_REGISTRY_ADDRESS")
 	image := os.Getenv("DOCKER_PRIVATE_IMAGE")
 
@@ -3627,7 +3574,11 @@ func TestAccDockerService_privateConverge(t *testing.T) {
 					resource "docker_service" "bar" {
 						provider = "docker.private"
 						name     = "tftest-service-bar"
-						image    = "%s"
+						task_spec {
+							container_spec {
+								image    = "%s"
+							}
+						}
 						mode {
 							replicated {
 								replicas = 2
@@ -3639,7 +3590,6 @@ func TestAccDockerService_privateConverge(t *testing.T) {
 					resource.TestMatchResourceAttr("docker_service.bar", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.bar", "name", "tftest-service-bar"),
 					resource.TestCheckResourceAttr("docker_service.bar", "task_spec.0.container_spec.0.image", image),
-					// resource.TestCheckResourceAttr("docker_service.bar", "replicas", "2"),
 				),
 			},
 		},
