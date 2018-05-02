@@ -884,15 +884,17 @@ func createContainerSpec(v interface{}) (*swarm.ContainerSpec, error) {
 				containerSpec.DNSConfig = &swarm.DNSConfig{}
 				if len(v.([]interface{})) > 0 {
 					for _, rawDNSConfig := range value.([]interface{}) {
-						rawDNSConfig := rawDNSConfig.(map[string]interface{})
-						if nameservers, ok := rawDNSConfig["nameservers"]; ok {
-							containerSpec.DNSConfig.Nameservers = stringListToStringSlice(nameservers.([]interface{}))
-						}
-						if search, ok := rawDNSConfig["search"]; ok {
-							containerSpec.DNSConfig.Search = stringListToStringSlice(search.([]interface{}))
-						}
-						if options, ok := rawDNSConfig["options"]; ok {
-							containerSpec.DNSConfig.Options = stringListToStringSlice(options.([]interface{}))
+						if rawDNSConfig != nil {
+							rawDNSConfig := rawDNSConfig.(map[string]interface{})
+							if nameservers, ok := rawDNSConfig["nameservers"]; ok {
+								containerSpec.DNSConfig.Nameservers = stringListToStringSlice(nameservers.([]interface{}))
+							}
+							if search, ok := rawDNSConfig["search"]; ok {
+								containerSpec.DNSConfig.Search = stringListToStringSlice(search.([]interface{}))
+							}
+							if options, ok := rawDNSConfig["options"]; ok {
+								containerSpec.DNSConfig.Options = stringListToStringSlice(options.([]interface{}))
+							}
 						}
 					}
 				}
@@ -980,37 +982,39 @@ func createResources(v interface{}) (*swarm.ResourceRequirements, error) {
 	resources := swarm.ResourceRequirements{}
 	if len(v.([]interface{})) > 0 {
 		for _, rawResourcesSpec := range v.([]interface{}) {
-			rawResourcesSpec := rawResourcesSpec.(map[string]interface{})
-			if value, ok := rawResourcesSpec["limits"]; ok {
-				if len(value.([]interface{})) > 0 {
-					resources.Limits = &swarm.Resources{}
-					for _, rawLimitsSpec := range value.([]interface{}) {
-						rawLimitsSpec := rawLimitsSpec.(map[string]interface{})
-						if value, ok := rawLimitsSpec["nano_cpus"]; ok {
-							resources.Limits.NanoCPUs = int64(value.(int))
-						}
-						if value, ok := rawLimitsSpec["memory_bytes"]; ok {
-							resources.Limits.MemoryBytes = int64(value.(int))
-						}
-						if value, ok := rawLimitsSpec["generic_resources"]; ok {
-							resources.Limits.GenericResources, _ = createGenericResources(value)
+			if rawResourcesSpec != nil {
+				rawResourcesSpec := rawResourcesSpec.(map[string]interface{})
+				if value, ok := rawResourcesSpec["limits"]; ok {
+					if len(value.([]interface{})) > 0 {
+						resources.Limits = &swarm.Resources{}
+						for _, rawLimitsSpec := range value.([]interface{}) {
+							rawLimitsSpec := rawLimitsSpec.(map[string]interface{})
+							if value, ok := rawLimitsSpec["nano_cpus"]; ok {
+								resources.Limits.NanoCPUs = int64(value.(int))
+							}
+							if value, ok := rawLimitsSpec["memory_bytes"]; ok {
+								resources.Limits.MemoryBytes = int64(value.(int))
+							}
+							if value, ok := rawLimitsSpec["generic_resources"]; ok {
+								resources.Limits.GenericResources, _ = createGenericResources(value)
+							}
 						}
 					}
 				}
-			}
-			if value, ok := rawResourcesSpec["reservation"]; ok {
-				if len(value.([]interface{})) > 0 {
-					resources.Reservations = &swarm.Resources{}
-					for _, rawLimitsSpec := range value.([]interface{}) {
-						rawLimitsSpec := rawLimitsSpec.(map[string]interface{})
-						if value, ok := rawLimitsSpec["nano_cpus"]; ok {
-							resources.Limits.NanoCPUs = int64(value.(int))
-						}
-						if value, ok := rawLimitsSpec["memory_bytes"]; ok {
-							resources.Limits.MemoryBytes = int64(value.(int))
-						}
-						if value, ok := rawLimitsSpec["generic_resources"]; ok {
-							resources.Reservations.GenericResources, _ = createGenericResources(value)
+				if value, ok := rawResourcesSpec["reservation"]; ok {
+					if len(value.([]interface{})) > 0 {
+						resources.Reservations = &swarm.Resources{}
+						for _, rawLimitsSpec := range value.([]interface{}) {
+							rawLimitsSpec := rawLimitsSpec.(map[string]interface{})
+							if value, ok := rawLimitsSpec["nano_cpus"]; ok {
+								resources.Limits.NanoCPUs = int64(value.(int))
+							}
+							if value, ok := rawLimitsSpec["memory_bytes"]; ok {
+								resources.Limits.MemoryBytes = int64(value.(int))
+							}
+							if value, ok := rawLimitsSpec["generic_resources"]; ok {
+								resources.Reservations.GenericResources, _ = createGenericResources(value)
+							}
 						}
 					}
 				}
@@ -1081,15 +1085,17 @@ func createPlacement(v interface{}) (*swarm.Placement, error) {
 	placement := swarm.Placement{}
 	if len(v.([]interface{})) > 0 {
 		for _, rawPlacement := range v.([]interface{}) {
-			rawPlacement := rawPlacement.(map[string]interface{})
-			if v, ok := rawPlacement["constraints"]; ok {
-				placement.Constraints = stringSetToStringSlice(v.(*schema.Set))
-			}
-			if v, ok := rawPlacement["prefs"]; ok {
-				placement.Preferences = stringSetToPlacementPrefs(v.(*schema.Set))
-			}
-			if v, ok := rawPlacement["platforms"]; ok {
-				placement.Platforms = mapSetToPlacementPlatforms(v.(*schema.Set))
+			if rawPlacement != nil {
+				rawPlacement := rawPlacement.(map[string]interface{})
+				if v, ok := rawPlacement["constraints"]; ok {
+					placement.Constraints = stringSetToStringSlice(v.(*schema.Set))
+				}
+				if v, ok := rawPlacement["prefs"]; ok {
+					placement.Preferences = stringSetToPlacementPrefs(v.(*schema.Set))
+				}
+				if v, ok := rawPlacement["platforms"]; ok {
+					placement.Platforms = mapSetToPlacementPlatforms(v.(*schema.Set))
+				}
 			}
 		}
 	}
@@ -1189,12 +1195,14 @@ func createServiceEndpointSpec(d *schema.ResourceData) (*swarm.EndpointSpec, err
 	if v, ok := d.GetOk("endpoint_spec"); ok {
 		if len(v.([]interface{})) > 0 {
 			for _, rawEndpointSpec := range v.([]interface{}) {
-				rawEndpointSpec := rawEndpointSpec.(map[string]interface{})
-				if value, ok := rawEndpointSpec["mode"]; ok {
-					endpointSpec.Mode = swarm.ResolutionMode(value.(string))
-				}
-				if value, ok := rawEndpointSpec["ports"]; ok {
-					endpointSpec.Ports = portSetToServicePorts(value)
+				if rawEndpointSpec != nil {
+					rawEndpointSpec := rawEndpointSpec.(map[string]interface{})
+					if value, ok := rawEndpointSpec["mode"]; ok {
+						endpointSpec.Mode = swarm.ResolutionMode(value.(string))
+					}
+					if value, ok := rawEndpointSpec["ports"]; ok {
+						endpointSpec.Ports = portSetToServicePorts(value)
+					}
 				}
 			}
 		}
