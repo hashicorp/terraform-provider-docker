@@ -946,12 +946,18 @@ func createContainerSpec(v interface{}) (*swarm.ContainerSpec, error) {
 						}
 						if value, ok := rawConfigFile["uid"]; ok {
 							configFile.UID = value.(string)
+						} else {
+							configFile.UID = "0"
 						}
 						if value, ok := rawConfigFile["uid"]; ok {
 							configFile.GID = value.(string)
+						} else {
+							configFile.GID = "0"
 						}
 						if value, ok := rawConfigFile["mode"]; ok {
 							configFile.Mode = os.FileMode(value.(int32))
+						} else {
+							configFile.Mode = os.FileMode(0444)
 						}
 						config.File = configFile
 					}
