@@ -52,6 +52,7 @@ func resourceDockerService() *schema.Resource {
 				Type:        schema.TypeMap,
 				Description: "User-defined key/value metadata",
 				Optional:    true,
+				Computed:    true,
 				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
 			"task_spec": &schema.Schema{
@@ -310,6 +311,7 @@ func resourceDockerService() *schema.Resource {
 										Type:         schema.TypeString,
 										Description:  "Amount of time to wait for the container to terminate before forcefully removing it",
 										Optional:     true,
+										Computed:     true,
 										ValidateFunc: validateDurationGeq0(),
 									},
 									"healthcheck": &schema.Schema{
@@ -317,6 +319,7 @@ func resourceDockerService() *schema.Resource {
 										Description: "A test to perform to check that the container is healthy",
 										MaxItems:    1,
 										Optional:    true,
+										Computed:    true,
 										Elem: &schema.Resource{
 											Schema: map[string]*schema.Schema{
 												"test": &schema.Schema{
@@ -329,28 +332,24 @@ func resourceDockerService() *schema.Resource {
 													Type:         schema.TypeString,
 													Description:  "Time between running the check (ms|s|m|h)",
 													Optional:     true,
-													Default:      "10s",
 													ValidateFunc: validateDurationGeq0(),
 												},
 												"timeout": &schema.Schema{
 													Type:         schema.TypeString,
 													Description:  "Maximum time to allow one check to run (ms|s|m|h)",
 													Optional:     true,
-													Default:      "3s",
 													ValidateFunc: validateDurationGeq0(),
 												},
 												"start_period": &schema.Schema{
 													Type:         schema.TypeString,
 													Description:  "Start period for the container to initialize before counting retries towards unstable (ms|s|m|h)",
 													Optional:     true,
-													Default:      "2s",
 													ValidateFunc: validateDurationGeq0(),
 												},
 												"retries": &schema.Schema{
 													Type:         schema.TypeInt,
 													Description:  "Consecutive failures needed to report unhealthy",
 													Optional:     true,
-													Default:      1,
 													ValidateFunc: validateIntegerGeqThan(0),
 												},
 											},
@@ -382,6 +381,7 @@ func resourceDockerService() *schema.Resource {
 										Description: "Specification for DNS related configurations in resolver configuration file (resolv.conf)",
 										MaxItems:    1,
 										Optional:    true,
+										Computed:    true,
 										Elem: &schema.Resource{
 											Schema: map[string]*schema.Schema{
 												"nameservers": &schema.Schema{
@@ -514,6 +514,7 @@ func resourceDockerService() *schema.Resource {
 							Type:        schema.TypeList,
 							Description: "Resource requirements which apply to each individual container created as part of the service",
 							Optional:    true,
+							Computed:    true,
 							MaxItems:    1,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
@@ -606,6 +607,7 @@ func resourceDockerService() *schema.Resource {
 							Type:        schema.TypeMap,
 							Description: "Specification for the restart policy which applies to containers created as part of this service.",
 							Optional:    true,
+							Computed:    true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"condition": &schema.Schema{
@@ -621,7 +623,7 @@ func resourceDockerService() *schema.Resource {
 										ValidateFunc: validateDurationGeq0(),
 									},
 									"max_attempts": &schema.Schema{
-										Type:        schema.TypeInt,
+										Type:        schema.TypeString,
 										Description: "Maximum attempts to restart a given container before giving up (default value is 0, which is ignored)",
 										Optional:    true,
 									},
@@ -638,6 +640,7 @@ func resourceDockerService() *schema.Resource {
 							Type:        schema.TypeList,
 							Description: "The placement preferences",
 							Optional:    true,
+							Computed:    true,
 							MaxItems:    1,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
@@ -679,12 +682,14 @@ func resourceDockerService() *schema.Resource {
 							Type:         schema.TypeInt,
 							Description:  "A counter that triggers an update even if no relevant parameters have been changed. See https://github.com/docker/swarmkit/blob/master/api/specs.proto#L126",
 							Optional:     true,
+							Computed:     true,
 							ValidateFunc: validateIntegerGeqThan(0),
 						},
 						"runtime": &schema.Schema{
 							Type:         schema.TypeString,
 							Description:  "Runtime is the type of runtime specified for the task executor. See https://github.com/moby/moby/blob/master/api/types/swarm/runtime.go",
 							Optional:     true,
+							Computed:     true,
 							ValidateFunc: validateStringMatchesPattern("^(container|plugin)$"),
 						},
 						"networks": &schema.Schema{
@@ -916,13 +921,6 @@ func resourceDockerService() *schema.Resource {
 						},
 					},
 				},
-			},
-			// TODO moved to containerspec
-			"destroy_grace_seconds": &schema.Schema{
-				Type:         schema.TypeInt,
-				Description:  "Amount of seconds to wait for the container to terminate before forcefully removing it",
-				Optional:     true,
-				ValidateFunc: validateIntegerGeqThan(0),
 			},
 			"converge_config": &schema.Schema{
 				Type:          schema.TypeList,

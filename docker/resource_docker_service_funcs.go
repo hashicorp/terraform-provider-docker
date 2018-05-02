@@ -59,8 +59,7 @@ func resourceDockerServiceCreate(d *schema.ResourceData, meta interface{}) error
 	if v, ok := d.GetOk("auth"); ok {
 		createOpts.Auth = authToServiceAuth(v.(map[string]interface{}))
 	} else {
-		// FIXME mavogel
-		// createOpts.Auth = fromRegistryAuth(d.Get("image").(string), meta.(*ProviderConfig).AuthConfigs.Configs)
+		createOpts.Auth = fromRegistryAuth(d.Get("task_spec.0.container_spec.0.image").(string), meta.(*ProviderConfig).AuthConfigs.Configs)
 	}
 
 	service, err := client.CreateService(createOpts)
@@ -158,7 +157,7 @@ func resourceDockerServiceUpdate(d *schema.ResourceData, meta interface{}) error
 	if v, ok := d.GetOk("auth"); ok {
 		updateOpts.Auth = authToServiceAuth(v.(map[string]interface{}))
 	} else {
-		updateOpts.Auth = fromRegistryAuth(d.Get("image").(string), meta.(*ProviderConfig).AuthConfigs.Configs)
+		updateOpts.Auth = fromRegistryAuth(d.Get("task_spec.0.container_spec.0.image").(string), meta.(*ProviderConfig).AuthConfigs.Configs)
 	}
 
 	if err = client.UpdateService(d.Id(), updateOpts); err != nil {
@@ -230,7 +229,7 @@ func fetchDockerService(ID string, name string, client *dc.Client) (*swarm.Servi
 func deleteService(serviceID string, d *schema.ResourceData, client *dc.Client) error {
 	// get containerIDs of the running service because they do not exist after the service is deleted
 	serviceContainerIds := make([]string, 0)
-	if _, ok := d.GetOk("destroy_grace_seconds"); ok {
+	if _, ok := d.GetOk("task_spec.0.container_spec.stop_grace_period"); ok {
 		filter := make(map[string][]string)
 		filter["service"] = []string{d.Get("name").(string)}
 		tasks, err := client.ListTasks(dc.ListTasksOptions{
@@ -264,7 +263,7 @@ func deleteService(serviceID string, d *schema.ResourceData, client *dc.Client) 
 	}
 
 	// destroy each container after a grace period if specified
-	if v, ok := d.GetOk("destroy_grace_seconds"); ok {
+	if v, ok := d.GetOk("task_spec.0.container_spec.stop_grace_period"); ok {
 		for _, containerID := range serviceContainerIds {
 			timeout := v.(int)
 			destroyGraceSeconds := time.Duration(timeout) * time.Second
@@ -648,7 +647,7 @@ func createServiceTaskSpec(d *schema.ResourceData) (swarm.TaskSpec, error) {
 					}
 					taskSpec.Resources = resources
 				}
-				if rawRestartPolicySpec, ok := rawTaskSpec["resources"]; ok {
+				if rawRestartPolicySpec, ok := rawTaskSpec["restart_policy"]; ok {
 					restartPolicy, err := createRestartPolicy(rawRestartPolicySpec)
 					if err != nil {
 						return taskSpec, err
@@ -1056,26 +1055,23 @@ func createGenericResources(value interface{}) ([]swarm.GenericResource, error) 
 // createRestartPolicy creates the restart poliyc of the service FIXME
 func createRestartPolicy(v interface{}) (*swarm.RestartPolicy, error) {
 	restartPolicy := swarm.RestartPolicy{}
-	if len(v.([]interface{})) > 0 {
-		for _, rawRestartPolicy := range v.([]interface{}) {
-			rawRestartPolicy := rawRestartPolicy.(map[string]interface{})
+	rawRestartPolicy := make(map[string]interface{})
 
-			if v, ok := rawRestartPolicy["condition"]; ok {
-				restartPolicy.Condition = swarm.RestartPolicyCondition(v.(string))
-			}
-			if v, ok := rawRestartPolicy["delay"]; ok {
-				parsed, _ := time.ParseDuration(v.(string))
-				restartPolicy.Delay = &parsed
-			}
-			if v, ok := rawRestartPolicy["max_attempts"]; ok {
-				parsed := uint64(v.(int))
-				restartPolicy.MaxAttempts = &parsed
-			}
-			if v, ok := rawRestartPolicy["window"]; ok {
-				parsed, _ := time.ParseDuration(v.(string))
-				restartPolicy.Window = &parsed
-			}
-		}
+	if v, ok := rawRestartPolicy["condition"]; ok {
+		restartPolicy.Condition = swarm.RestartPolicyCondition(v.(string))
+	}
+	if v, ok := rawRestartPolicy["delay"]; ok {
+		parsed, _ := time.ParseDuration(v.(string))
+		restartPolicy.Delay = &parsed
+	}
+	if v, ok := rawRestartPolicy["max_attempts"]; ok {
+		parsed, _ := strconv.ParseInt(v.(string), 10, 64)
+		mapped := uint64(parsed)
+		restartPolicy.MaxAttempts = &mapped
+	}
+	if v, ok := rawRestartPolicy["window"]; ok {
+		parsed, _ := time.ParseDuration(v.(string))
+		restartPolicy.Window = &parsed
 	}
 	return &restartPolicy, nil
 }

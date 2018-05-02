@@ -23,7 +23,7 @@ func flattenTaskSpec(in swarm.TaskSpec) []interface{} {
 		m["restart_policy"] = flattenTaskRestartPolicy(in.RestartPolicy)
 	}
 	if in.Placement != nil {
-		m["placements"] = flattenTaskPlacement(in.Placement)
+		m["placement"] = flattenTaskPlacement(in.Placement)
 	}
 	if in.ForceUpdate >= 0 {
 		m["force_update"] = in.ForceUpdate
@@ -94,7 +94,7 @@ func flattenServiceEndpointSpec(in swarm.EndpointSpec) []interface{} {
 	// 		log.Printf("[WARN] failed to set endpoint_mode from API: %s", err)
 	// 	}
 	// }
-
+	var out = make([]interface{}, 0, 0)
 	m := make(map[string]interface{})
 	if len(in.Mode) > 0 {
 		m["mode"] = in.Mode
@@ -103,7 +103,8 @@ func flattenServiceEndpointSpec(in swarm.EndpointSpec) []interface{} {
 		m["ports"] = flattenServicePorts(in.Ports)
 	}
 
-	return []interface{}{m}
+	out = append(out, m)
+	return out
 }
 
 ///// start TaskSpec
@@ -126,16 +127,19 @@ func flattenContainerSpec(in *swarm.ContainerSpec) []interface{} {
 		m["hostname"] = in.Hostname
 	}
 	if len(in.Env) > 0 {
-		m["env"] = in.Env
+		m["env"] = mapStringSliceToMap(in.Env)
 	}
 	if len(in.User) > 0 {
 		m["user"] = in.User
+	}
+	if len(in.Dir) > 0 {
+		m["dir"] = in.Dir
 	}
 	if len(in.Groups) > 0 {
 		m["groups"] = in.Groups
 	}
 	if in.Privileges != nil {
-		// m["privileges"] = flattenPrivileges(in.Privileges)
+		m["privileges"] = flattenPrivileges(in.Privileges)
 	}
 	if in.ReadOnly {
 		m["read_only"] = in.ReadOnly
@@ -147,7 +151,7 @@ func flattenContainerSpec(in *swarm.ContainerSpec) []interface{} {
 		m["stop_signal"] = in.StopSignal
 	}
 	if in.StopGracePeriod != nil {
-		m["stop_signal"] = shortDur(*in.StopGracePeriod)
+		m["stop_grace_period"] = shortDur(*in.StopGracePeriod)
 	}
 	if in.Healthcheck != nil {
 		m["healthcheck"] = flattenServiceHealthcheck(in.Healthcheck)
@@ -168,23 +172,45 @@ func flattenContainerSpec(in *swarm.ContainerSpec) []interface{} {
 	return out
 }
 
-func flattenServiceMounts(in []mount.Mount) []interface{} {
-	if in == nil || len(in) == 0 {
+func flattenPrivileges(in *swarm.Privileges) []interface{} {
+	if in == nil {
 		return make([]interface{}, 0, 0)
 	}
 
+	var out = make([]interface{}, 1, 1)
+	m := make(map[string]interface{})
+	if in.CredentialSpec != nil {
+		credSpec := make(map[string]interface{})
+		credSpec["file"] = in.CredentialSpec.File
+		credSpec["registry"] = in.CredentialSpec.Registry
+		m["credential_spec"] = credSpec
+	}
+	if in.SELinuxContext != nil {
+		seLinuxContext := make(map[string]interface{})
+		seLinuxContext["disable"] = in.SELinuxContext.Disable
+		seLinuxContext["user"] = in.SELinuxContext.User
+		seLinuxContext["role"] = in.SELinuxContext.Role
+		seLinuxContext["type"] = in.SELinuxContext.Type
+		seLinuxContext["level"] = in.SELinuxContext.Level
+		m["credential_spec"] = seLinuxContext
+	}
+	out[0] = m
+	return out
+}
+
+func flattenServiceMounts(in []mount.Mount) *schema.Set {
 	var out = make([]interface{}, len(in), len(in))
 	for i, v := range in {
 		m := make(map[string]interface{})
 		m["target"] = v.Target
 		m["source"] = v.Source
-		m["type"] = v.Type
+		m["type"] = string(v.Type)
 		if len(v.Consistency) > 0 {
-			m["consistency"] = v.Consistency
+			m["consistency"] = string(v.Consistency)
 		}
 		m["read_only"] = v.ReadOnly
 		if v.BindOptions != nil {
-			m["bind_propagation"] = v.BindOptions.Propagation
+			m["bind_propagation"] = string(v.BindOptions.Propagation)
 		}
 		if v.VolumeOptions != nil {
 			m["volume_no_copy"] = v.VolumeOptions.NoCopy
@@ -195,12 +221,16 @@ func flattenServiceMounts(in []mount.Mount) []interface{} {
 			}
 		}
 		if v.TmpfsOptions != nil {
-			m["tmpfs_size_bytes"] = v.TmpfsOptions.SizeBytes
+			m["tmpfs_size_bytes"] = int(v.TmpfsOptions.SizeBytes)
 			m["tmpfs_mode"] = v.TmpfsOptions.Mode.Perm
 		}
 		out[i] = m
 	}
-	return out
+	taskSpecResource := resourceDockerService().Schema["task_spec"].Elem.(*schema.Resource)
+	containerSpecResource := taskSpecResource.Schema["container_spec"].Elem.(*schema.Resource)
+	mountsResource := containerSpecResource.Schema["mounts"].Elem.(*schema.Resource)
+	f := schema.HashResource(mountsResource)
+	return schema.NewSet(f, out)
 }
 
 func flattenServiceHealthcheck(in *container.HealthConfig) []interface{} {
@@ -221,11 +251,7 @@ func flattenServiceHealthcheck(in *container.HealthConfig) []interface{} {
 	return out
 }
 
-func flattenServiceHosts(in []string) []interface{} {
-	if in == nil || len(in) == 0 {
-		return make([]interface{}, 0, 0)
-	}
-
+func flattenServiceHosts(in []string) *schema.Set {
 	var out = make([]interface{}, len(in), len(in))
 	for i, v := range in {
 		m := make(map[string]interface{})
@@ -234,7 +260,11 @@ func flattenServiceHosts(in []string) []interface{} {
 		m["ip"] = split[1]
 		out[i] = m
 	}
-	return out
+	taskSpecResource := resourceDockerService().Schema["task_spec"].Elem.(*schema.Resource)
+	containerSpecResource := taskSpecResource.Schema["container_spec"].Elem.(*schema.Resource)
+	hostsResource := containerSpecResource.Schema["hosts"].Elem.(*schema.Resource)
+	f := schema.HashResource(hostsResource)
+	return schema.NewSet(f, out)
 }
 
 func flattenServiceDNSConfig(in *swarm.DNSConfig) []interface{} {
@@ -257,11 +287,7 @@ func flattenServiceDNSConfig(in *swarm.DNSConfig) []interface{} {
 	return out
 }
 
-func flattenServiceSecrets(in []*swarm.SecretReference) []interface{} {
-	if in == nil || len(in) == 0 {
-		return make([]interface{}, 0, 0)
-	}
-
+func flattenServiceSecrets(in []*swarm.SecretReference) *schema.Set {
 	var out = make([]interface{}, len(in), len(in))
 	for i, v := range in {
 		m := make(map[string]interface{})
@@ -270,18 +296,29 @@ func flattenServiceSecrets(in []*swarm.SecretReference) []interface{} {
 			m["secret_name"] = v.SecretName
 		}
 		if v.File != nil {
-			m["file_name"] = v.File.Name
+			fileMap := make(map[string]interface{})
+			if len(v.File.Name) > 0 {
+				fileMap["name"] = v.File.Name
+			}
+			if len(v.File.UID) > 0 {
+				fileMap["uid"] = v.File.UID
+			}
+			if len(v.File.GID) > 0 {
+				fileMap["gid"] = v.File.GID
+			}
+			fileMap["mode"] = v.File.Mode.String()
+			m["file"] = fileMap
 		}
 		out[i] = m
 	}
-	return out
+	taskSpecResource := resourceDockerService().Schema["task_spec"].Elem.(*schema.Resource)
+	containerSpecResource := taskSpecResource.Schema["container_spec"].Elem.(*schema.Resource)
+	secretsResource := containerSpecResource.Schema["secrets"].Elem.(*schema.Resource)
+	f := schema.HashResource(secretsResource)
+	return schema.NewSet(f, out)
 }
 
-func flattenServiceConfigs(in []*swarm.ConfigReference) []interface{} {
-	if in == nil || len(in) == 0 {
-		return make([]interface{}, 0, 0)
-	}
-
+func flattenServiceConfigs(in []*swarm.ConfigReference) *schema.Set {
 	var out = make([]interface{}, len(in), len(in))
 	for i, v := range in {
 		m := make(map[string]interface{})
@@ -290,27 +327,51 @@ func flattenServiceConfigs(in []*swarm.ConfigReference) []interface{} {
 			m["config_name"] = v.ConfigName
 		}
 		if v.File != nil {
-			m["file_name"] = v.File.Name
+			fileMap := make(map[string]interface{})
+			if len(v.File.Name) > 0 {
+				fileMap["name"] = v.File.Name
+			}
+			if len(v.File.UID) > 0 {
+				fileMap["uid"] = v.File.UID
+			}
+			if len(v.File.GID) > 0 {
+				fileMap["gid"] = v.File.GID
+			}
+			fileMap["mode"] = v.File.Mode.String()
+			m["file"] = fileMap
 		}
 		out[i] = m
 	}
-	return out
+	taskSpecResource := resourceDockerService().Schema["task_spec"].Elem.(*schema.Resource)
+	containerSpecResource := taskSpecResource.Schema["container_spec"].Elem.(*schema.Resource)
+	configsResource := containerSpecResource.Schema["configs"].Elem.(*schema.Resource)
+	f := schema.HashResource(configsResource)
+	return schema.NewSet(f, out)
 }
 
 func flattenTaskResources(in *swarm.ResourceRequirements) []interface{} {
 	var out = make([]interface{}, 0, 0)
 	m := make(map[string]interface{})
-	//
+	// FIXME mavogel
 	out = append(out, m)
 	return out
 }
 
-func flattenTaskRestartPolicy(in *swarm.RestartPolicy) []interface{} {
-	var out = make([]interface{}, 0, 0)
+func flattenTaskRestartPolicy(in *swarm.RestartPolicy) map[string]interface{} {
 	m := make(map[string]interface{})
-	//
-	out = append(out, m)
-	return out
+	if len(in.Condition) > 0 {
+		m["condition"] = string(in.Condition)
+	}
+	if in.Delay != nil {
+		m["delay"] = shortDur(*in.Delay)
+	}
+	if in.MaxAttempts != nil {
+		m["max_attempts"] = string(*in.MaxAttempts)
+	}
+	if in.Window != nil {
+		m["window"] = shortDur(*in.Window)
+	}
+	return m
 }
 
 func flattenTaskPlacement(in *swarm.Placement) []interface{} {
@@ -346,10 +407,6 @@ func flattenPlacementPrefs(in []swarm.PlacementPreference) *schema.Set {
 }
 
 func flattenPlacementPlatforms(in []swarm.Platform) *schema.Set {
-	if in == nil || len(in) == 0 {
-		return schema.NewSet(schema.HashString, make([]interface{}, 0, 0))
-	}
-
 	var out = make([]interface{}, len(in), len(in))
 	for i, v := range in {
 		m := make(map[string]interface{})
@@ -357,19 +414,18 @@ func flattenPlacementPlatforms(in []swarm.Platform) *schema.Set {
 		m["os"] = v.OS
 		out[i] = m
 	}
-	return schema.NewSet(schema.HashString, out)
+	taskSpecResource := resourceDockerService().Schema["task_spec"].Elem.(*schema.Resource)
+	placementResource := taskSpecResource.Schema["placement"].Elem.(*schema.Resource)
+	f := schema.HashResource(placementResource)
+	return schema.NewSet(f, out)
 }
 
-func flattenTaskNetworks(in []swarm.NetworkAttachmentConfig) []interface{} {
-	if in == nil || len(in) == 0 {
-		return make([]interface{}, 0, 0)
-	}
-
+func flattenTaskNetworks(in []swarm.NetworkAttachmentConfig) *schema.Set {
 	var out = make([]interface{}, len(in), len(in))
 	for i, v := range in {
 		out[i] = v.Target
 	}
-	return out
+	return schema.NewSet(schema.HashString, out)
 }
 
 func flattenTaskLogDriver(in *swarm.Driver) []interface{} {
@@ -379,7 +435,7 @@ func flattenTaskLogDriver(in *swarm.Driver) []interface{} {
 
 	var out = make([]interface{}, 1, 1)
 	m := make(map[string]interface{})
-	m["driver_name"] = in.Name
+	m["name"] = in.Name
 	if len(in.Options) > 0 {
 		m["options"] = in.Options
 	}
@@ -389,23 +445,25 @@ func flattenTaskLogDriver(in *swarm.Driver) []interface{} {
 
 ///// end TaskSpec
 ///// start EndpointSpec
-func flattenServicePorts(in []swarm.PortConfig) []interface{} {
-	if in == nil || len(in) == 0 {
-		return make([]interface{}, 0, 0)
-	}
-
+func flattenServicePorts(in []swarm.PortConfig) *schema.Set {
 	var out = make([]interface{}, len(in), len(in))
 	for i, v := range in {
 		m := make(map[string]interface{})
-		m["internal"] = int(v.TargetPort)
-		if v.PublishedPort > 0 {
-			m["external"] = v.PublishedPort
+		if len(v.Name) > 0 {
+			m["name"] = v.Name
 		}
-		m["publish_mode"] = v.PublishMode
-		m["protocol"] = v.Protocol
+		m["protocol"] = string(v.Protocol)
+		m["target_port"] = int(v.TargetPort)
+		if v.PublishedPort > 0 {
+			m["published_port"] = int(v.PublishedPort)
+		}
+		m["publish_mode"] = string(v.PublishMode)
 		out[i] = m
 	}
-	return out
+	endpointSpecResource := resourceDockerService().Schema["endpoint_spec"].Elem.(*schema.Resource)
+	portsResource := endpointSpecResource.Schema["ports"].Elem.(*schema.Resource)
+	f := schema.HashResource(portsResource)
+	return schema.NewSet(f, out)
 }
 
 ///// end EndpointSpec
@@ -428,4 +486,18 @@ func newStringSet(f schema.SchemaSetFunc, in []string) *schema.Set {
 		out[i] = v
 	}
 	return schema.NewSet(f, out)
+}
+
+// mapStringSliceToMap maps a slice with '='  delimiter to as map: e.g. 'foo=bar' -> foo = "bar"
+func mapStringSliceToMap(in []string) map[string]string {
+	mapped := make(map[string]string, len(in))
+	for _, v := range in {
+		if len(v) > 0 {
+			splitted := strings.Split(v, "=")
+			key := splitted[0]
+			value := splitted[1]
+			mapped[key] = value
+		}
+	}
+	return mapped
 }
