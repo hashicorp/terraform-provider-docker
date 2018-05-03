@@ -488,6 +488,7 @@ func resourceDockerService() *schema.Resource {
 												"generic_resources": &schema.Schema{
 													Type:        schema.TypeList,
 													Description: "User-defined resources can be either Integer resources (e.g, SSD=3) or String resources (e.g, GPU=UUID1)",
+													MaxItems:    1,
 													Optional:    true,
 													Elem: &schema.Resource{
 														Schema: map[string]*schema.Schema{
@@ -501,7 +502,7 @@ func resourceDockerService() *schema.Resource {
 																Type:        schema.TypeMap,
 																Description: "The Integer resources",
 																Optional:    true,
-																Elem:        &schema.Schema{Type: schema.TypeString},
+																Elem:        &schema.Schema{Type: schema.TypeInt},
 															},
 														},
 													},
@@ -529,6 +530,7 @@ func resourceDockerService() *schema.Resource {
 												"generic_resources": &schema.Schema{
 													Type:        schema.TypeList,
 													Description: "User-defined resources can be either Integer resources (e.g, SSD=3) or String resources (e.g, GPU=UUID1)",
+													MaxItems:    1,
 													Optional:    true,
 													Elem: &schema.Resource{
 														Schema: map[string]*schema.Schema{

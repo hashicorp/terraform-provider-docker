@@ -86,14 +86,6 @@ func flattenServiceUpdateOrRollbackConfig(in *swarm.UpdateConfig) []interface{} 
 }
 
 func flattenServiceEndpointSpec(in swarm.EndpointSpec) []interface{} {
-	// FIXME
-	// // endpoint_mode is only present if Ports are set
-	// // https://docs.docker.com/network/overlay/#bypass-the-routing-mesh-for-a-swarm-service
-	// if len(service.Endpoint.Spec.Ports) > 0 {
-	// 	if err = d.Set("endpoint_mode", service.Endpoint.Spec.Mode); err != nil {
-	// 		log.Printf("[WARN] failed to set endpoint_mode from API: %s", err)
-	// 	}
-	// }
 	var out = make([]interface{}, 0, 0)
 	m := make(map[string]interface{})
 	if len(in.Mode) > 0 {
@@ -179,20 +171,25 @@ func flattenPrivileges(in *swarm.Privileges) []interface{} {
 
 	var out = make([]interface{}, 1, 1)
 	m := make(map[string]interface{})
+
 	if in.CredentialSpec != nil {
-		credSpec := make(map[string]interface{})
-		credSpec["file"] = in.CredentialSpec.File
-		credSpec["registry"] = in.CredentialSpec.Registry
+		credSpec := make([]interface{}, 1, 1)
+		internal := make(map[string]interface{})
+		internal["file"] = in.CredentialSpec.File
+		internal["registry"] = in.CredentialSpec.Registry
+		credSpec[0] = internal
 		m["credential_spec"] = credSpec
 	}
 	if in.SELinuxContext != nil {
-		seLinuxContext := make(map[string]interface{})
-		seLinuxContext["disable"] = in.SELinuxContext.Disable
-		seLinuxContext["user"] = in.SELinuxContext.User
-		seLinuxContext["role"] = in.SELinuxContext.Role
-		seLinuxContext["type"] = in.SELinuxContext.Type
-		seLinuxContext["level"] = in.SELinuxContext.Level
-		m["credential_spec"] = seLinuxContext
+		seLinuxContext := make([]interface{}, 1, 1)
+		internal := make(map[string]interface{})
+		internal["disable"] = in.SELinuxContext.Disable
+		internal["user"] = in.SELinuxContext.User
+		internal["role"] = in.SELinuxContext.Role
+		internal["type"] = in.SELinuxContext.Type
+		internal["level"] = in.SELinuxContext.Level
+		seLinuxContext[0] = internal
+		m["se_linux_context"] = seLinuxContext
 	}
 	out[0] = m
 	return out
@@ -296,18 +293,7 @@ func flattenServiceSecrets(in []*swarm.SecretReference) *schema.Set {
 			m["secret_name"] = v.SecretName
 		}
 		if v.File != nil {
-			fileMap := make(map[string]interface{})
-			if len(v.File.Name) > 0 {
-				fileMap["name"] = v.File.Name
-			}
-			if len(v.File.UID) > 0 {
-				fileMap["uid"] = v.File.UID
-			}
-			if len(v.File.GID) > 0 {
-				fileMap["gid"] = v.File.GID
-			}
-			fileMap["mode"] = v.File.Mode.String()
-			m["file"] = fileMap
+			m["file_name"] = v.File.Name
 		}
 		out[i] = m
 	}
@@ -327,18 +313,7 @@ func flattenServiceConfigs(in []*swarm.ConfigReference) *schema.Set {
 			m["config_name"] = v.ConfigName
 		}
 		if v.File != nil {
-			fileMap := make(map[string]interface{})
-			if len(v.File.Name) > 0 {
-				fileMap["name"] = v.File.Name
-			}
-			if len(v.File.UID) > 0 {
-				fileMap["uid"] = v.File.UID
-			}
-			if len(v.File.GID) > 0 {
-				fileMap["gid"] = v.File.GID
-			}
-			fileMap["mode"] = v.File.Mode.String()
-			m["file"] = fileMap
+			m["file_name"] = v.File.Name
 		}
 		out[i] = m
 	}
@@ -351,9 +326,45 @@ func flattenServiceConfigs(in []*swarm.ConfigReference) *schema.Set {
 
 func flattenTaskResources(in *swarm.ResourceRequirements) []interface{} {
 	var out = make([]interface{}, 0, 0)
-	m := make(map[string]interface{})
-	// FIXME mavogel
-	out = append(out, m)
+	if in != nil {
+		m := make(map[string]interface{})
+		m["limits"] = flattenResourceLimitsOrReservations(in.Limits)
+		m["reservation"] = flattenResourceLimitsOrReservations(in.Reservations)
+		out = append(out, m)
+	}
+	return out
+}
+
+func flattenResourceLimitsOrReservations(in *swarm.Resources) []interface{} {
+	var out = make([]interface{}, 0, 0)
+	if in != nil {
+		m := make(map[string]interface{})
+		m["nano_cpu"] = in.NanoCPUs
+		m["memory_bytes"] = in.MemoryBytes
+		m["generic_resources"] = flattenResourceGenericResource(in.GenericResources)
+		out = append(out, m)
+	}
+	return out
+}
+
+func flattenResourceGenericResource(in []swarm.GenericResource) []interface{} {
+	var out = make([]interface{}, 0, 0)
+	if in != nil && len(in) > 0 {
+		m := make(map[string]interface{})
+		named := make(map[string]string)
+		discrete := make(map[string]int64)
+		for _, value := range in {
+			if value.NamedResourceSpec != nil {
+				named[value.NamedResourceSpec.Kind] = value.NamedResourceSpec.Value
+			}
+			if value.DiscreteResourceSpec != nil {
+				discrete[value.DiscreteResourceSpec.Kind] = value.DiscreteResourceSpec.Value
+			}
+		}
+		m["named_resources_spec"] = named
+		m["discrete_resources_spec"] = discrete
+		out = append(out, m)
+	}
 	return out
 }
 

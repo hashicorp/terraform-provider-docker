@@ -598,13 +598,6 @@ func createServiceSpec(d *schema.ResourceData) (swarm.ServiceSpec, error) {
 	}
 	serviceSpec.RollbackConfig = rollbackConfig
 
-	// FIXME mavogel
-	// networks, err := createServiceNetworks(d)
-	// if err != nil {
-	// 	return serviceSpec, err
-	// }
-	// serviceSpec.Networks = networks
-
 	endpointSpec, err := createServiceEndpointSpec(d)
 	if err != nil {
 		return serviceSpec, err
@@ -700,11 +693,9 @@ func createContainerSpec(v interface{}) (*swarm.ContainerSpec, error) {
 			}
 			if value, ok := rawContainerSpec["command"]; ok {
 				containerSpec.Command = stringListToStringSlice(value.([]interface{}))
-				// TODO valudate https://github.com/hashicorp/terraform/blob/master/helper/schema/schema.go
 			}
 			if value, ok := rawContainerSpec["args"]; ok {
 				containerSpec.Args = stringListToStringSlice(value.([]interface{}))
-				// TODO valudate https://github.com/hashicorp/terraform/blob/master/helper/schema/schema.go
 			}
 			if value, ok := rawContainerSpec["hostname"]; ok {
 				containerSpec.Hostname = value.(string)
@@ -943,18 +934,6 @@ func createContainerSpec(v interface{}) (*swarm.ContainerSpec, error) {
 		}
 	}
 
-	// if v, ok := d.GetOk("stop_grace_period"); ok {
-	// 	parsed, _ := time.ParseDuration(v.(string))
-	// 	containerSpec.StopGracePeriod = &parsed
-	// }
-
-	// // FIXME
-	// endpointSpec := swarm.EndpointSpec{}
-
-	// if v, ok := d.GetOk("network_mode"); ok {
-	// 	endpointSpec.Mode = swarm.ResolutionMode(v.(string))
-	// }
-
 	return &containerSpec, nil
 }
 
@@ -1027,7 +1006,6 @@ func createGenericResources(value interface{}) ([]swarm.GenericResource, error) 
 				for k, v := range typeMap {
 					discreteGenericResource.Kind = k
 					discreteGenericResource.Value, _ = strconv.ParseInt(v.(string), 10, 64)
-					// FIXME check type
 				}
 				genericResource.DiscreteResourceSpec = discreteGenericResource
 			}
@@ -1037,7 +1015,7 @@ func createGenericResources(value interface{}) ([]swarm.GenericResource, error) 
 	return genericResources, nil
 }
 
-// createRestartPolicy creates the restart poliyc of the service FIXME
+// createRestartPolicy creates the restart poliyc of the service
 func createRestartPolicy(v interface{}) (*swarm.RestartPolicy, error) {
 	restartPolicy := swarm.RestartPolicy{}
 	rawRestartPolicy := make(map[string]interface{})
