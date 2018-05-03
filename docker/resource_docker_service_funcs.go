@@ -229,7 +229,7 @@ func fetchDockerService(ID string, name string, client *dc.Client) (*swarm.Servi
 func deleteService(serviceID string, d *schema.ResourceData, client *dc.Client) error {
 	// get containerIDs of the running service because they do not exist after the service is deleted
 	serviceContainerIds := make([]string, 0)
-	if _, ok := d.GetOk("task_spec.0.container_spec.stop_grace_period"); ok {
+	if _, ok := d.GetOk("task_spec.0.container_spec.0.stop_grace_period"); ok {
 		filter := make(map[string][]string)
 		filter["service"] = []string{d.Get("name").(string)}
 		tasks, err := client.ListTasks(dc.ListTasksOptions{
@@ -263,10 +263,9 @@ func deleteService(serviceID string, d *schema.ResourceData, client *dc.Client) 
 	}
 
 	// destroy each container after a grace period if specified
-	if v, ok := d.GetOk("task_spec.0.container_spec.stop_grace_period"); ok {
+	if v, ok := d.GetOk("task_spec.0.container_spec.0.stop_grace_period"); ok {
 		for _, containerID := range serviceContainerIds {
-			timeout := v.(int)
-			destroyGraceSeconds := time.Duration(timeout) * time.Second
+			destroyGraceSeconds, _ := time.ParseDuration(v.(string))
 			log.Printf("[INFO] Waiting for container: '%s' to exit: max %v", containerID, destroyGraceSeconds)
 			ctx, cancel := context.WithTimeout(context.Background(), destroyGraceSeconds)
 			defer cancel()
@@ -905,25 +904,16 @@ func createContainerSpec(v interface{}) (*swarm.ContainerSpec, error) {
 				for _, rawSecret := range value.(*schema.Set).List() {
 					rawSecret := rawSecret.(map[string]interface{})
 					secret := swarm.SecretReference{
-						SecretID:   rawSecret["secret_id"].(string),
-						SecretName: rawSecret["secret_name"].(string),
+						SecretID: rawSecret["secret_id"].(string),
+						File: &swarm.SecretReferenceFileTarget{
+							Name: rawSecret["file_name"].(string),
+							UID:  "0",
+							GID:  "0",
+							Mode: os.FileMode(0444),
+						},
 					}
-					if rawSecretFile, ok := rawSecret["file"]; ok {
-						rawSecretFile := rawSecretFile.(map[string]interface{})
-						secretFile := &swarm.SecretReferenceFileTarget{}
-						if value, ok := rawSecretFile["name"]; ok {
-							secretFile.Name = value.(string)
-						}
-						if value, ok := rawSecretFile["uid"]; ok {
-							secretFile.UID = value.(string)
-						}
-						if value, ok := rawSecretFile["uid"]; ok {
-							secretFile.GID = value.(string)
-						}
-						if value, ok := rawSecretFile["mode"]; ok {
-							secretFile.Mode = os.FileMode(value.(int32))
-						}
-						secret.File = secretFile
+					if value, ok := rawSecret["secret_name"]; ok {
+						secret.SecretName = value.(string)
 					}
 					secrets = append(secrets, &secret)
 				}
@@ -935,31 +925,16 @@ func createContainerSpec(v interface{}) (*swarm.ContainerSpec, error) {
 				for _, rawConfig := range value.(*schema.Set).List() {
 					rawConfig := rawConfig.(map[string]interface{})
 					config := swarm.ConfigReference{
-						ConfigID:   rawConfig["config_id"].(string),
-						ConfigName: rawConfig["config_name"].(string),
+						ConfigID: rawConfig["config_id"].(string),
+						File: &swarm.ConfigReferenceFileTarget{
+							Name: rawConfig["file_name"].(string),
+							UID:  "0",
+							GID:  "0",
+							Mode: os.FileMode(0444),
+						},
 					}
-					if rawConfigFile, ok := rawConfig["file"]; ok {
-						rawConfigFile := rawConfigFile.(map[string]interface{})
-						configFile := &swarm.ConfigReferenceFileTarget{}
-						if value, ok := rawConfigFile["name"]; ok {
-							configFile.Name = value.(string)
-						}
-						if value, ok := rawConfigFile["uid"]; ok {
-							configFile.UID = value.(string)
-						} else {
-							configFile.UID = "0"
-						}
-						if value, ok := rawConfigFile["uid"]; ok {
-							configFile.GID = value.(string)
-						} else {
-							configFile.GID = "0"
-						}
-						if value, ok := rawConfigFile["mode"]; ok {
-							configFile.Mode = os.FileMode(value.(int32))
-						} else {
-							configFile.Mode = os.FileMode(0444)
-						}
-						config.File = configFile
+					if value, ok := rawConfig["config_name"]; ok {
+						config.ConfigName = value.(string)
 					}
 					configs = append(configs, &config)
 				}

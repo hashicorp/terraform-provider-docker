@@ -415,38 +415,6 @@ func resourceDockerService() *schema.Resource {
 										Optional:    true,
 										Elem: &schema.Resource{
 											Schema: map[string]*schema.Schema{
-												"file": &schema.Schema{
-													Type:        schema.TypeMap,
-													Description: "File represents a specific target that is backed by a file",
-													Required:    true,
-													Elem: &schema.Resource{
-														Schema: map[string]*schema.Schema{
-															"name": &schema.Schema{
-																Type:        schema.TypeString,
-																Description: "Represents the final filename in the filesystem",
-																Required:    true,
-															},
-															"uid": &schema.Schema{
-																Type:        schema.TypeString,
-																Description: "Represents the file UID",
-																Optional:    true,
-																Default:     "0",
-															},
-															"gid": &schema.Schema{
-																Type:        schema.TypeString,
-																Description: "Represents the file GID",
-																Optional:    true,
-																Default:     "0",
-															},
-															"mode": &schema.Schema{
-																Type:        schema.TypeString,
-																Description: "Represents the FileMode of the file",
-																Optional:    true,
-																Default:     0444,
-															},
-														},
-													},
-												},
 												"secret_id": &schema.Schema{
 													Type:        schema.TypeString,
 													Description: "ID of the specific secret that we're referencing",
@@ -457,6 +425,11 @@ func resourceDockerService() *schema.Resource {
 													Description: "Name of the secret that this references, but this is just provided for lookup/display purposes. The config in the reference will be identified by its ID",
 													Optional:    true,
 												},
+												"file_name": &schema.Schema{
+													Type:        schema.TypeString,
+													Description: "Represents the final filename in the filesystem",
+													Required:    true,
+												},
 											},
 										},
 									},
@@ -466,38 +439,6 @@ func resourceDockerService() *schema.Resource {
 										Optional:    true,
 										Elem: &schema.Resource{
 											Schema: map[string]*schema.Schema{
-												"file": &schema.Schema{
-													Type:        schema.TypeMap,
-													Description: "File represents a specific target that is backed by a file",
-													Required:    true,
-													Elem: &schema.Resource{
-														Schema: map[string]*schema.Schema{
-															"name": &schema.Schema{
-																Type:        schema.TypeString,
-																Description: "Represents the final filename in the filesystem",
-																Required:    true,
-															},
-															"uid": &schema.Schema{
-																Type:        schema.TypeString,
-																Description: "Represents the file UID",
-																Optional:    true,
-																Computed:    true,
-															},
-															"gid": &schema.Schema{
-																Type:        schema.TypeString,
-																Description: "Represents the file GID",
-																Optional:    true,
-																Computed:    true,
-															},
-															"mode": &schema.Schema{
-																Type:        schema.TypeString,
-																Description: "Represents the FileMode of the file",
-																Optional:    true,
-																Computed:    true,
-															},
-														},
-													},
-												},
 												"config_id": &schema.Schema{
 													Type:        schema.TypeString,
 													Description: "ID of the specific config that we're referencing",
@@ -507,6 +448,11 @@ func resourceDockerService() *schema.Resource {
 													Type:        schema.TypeString,
 													Description: "Name of the config that this references, but this is just provided for lookup/display purposes. The config in the reference will be identified by its ID",
 													Optional:    true,
+												},
+												"file_name": &schema.Schema{
+													Type:        schema.TypeString,
+													Description: "Represents the final filename in the filesystem",
+													Required:    true,
 												},
 											},
 										},
