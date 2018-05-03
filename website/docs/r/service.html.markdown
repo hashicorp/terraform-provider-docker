@@ -43,7 +43,8 @@ resource "docker_service" "foo" {
 ```
 
 The following command is the equivalent:
-```sh
+
+```bash
 $ docker service create -d -p 8080 --name foo-service repo.mycompany.com:8080/foo-service:v1
 ```
 
@@ -317,7 +318,7 @@ The following arguments are supported:
 * `read_only` - (Optional, bool) Mount the container's root filesystem as read only.
 * `mounts` - (Optional, set of blocks) See [Mounts](#mounts) below for details.
 * `stop_signal` - (Optional, string) Signal to stop the container.
-* `stop_grace_period` - (Optional, string) Amount of time to wait for the container to terminate before forcefully removing it (ms|s|m|h).
+* `stop_grace_period` - (Optional, string) Amount of time to wait for the container to terminate before forcefully removing it `(ms|s|m|h)`.
 * `healthcheck` - (Optional, block) See [Healthcheck](#healthcheck) below for details.
 * `host` - (Optional, map of string/string) A list of hostname/IP mappings to add to the container's hosts file.
   * `ip` - (Required string) The ip
@@ -373,11 +374,11 @@ the following:
 
 * `test` - (Required, list of strings) Command to run to check health. For example, to run `curl -f http://localhost/health` set the
     command to be `["CMD", "curl", "-f", "http://localhost/health"]`.
-* `interval` - (Optional, string) Time between running the check (ms|s|m|h). Default 0s.
-* `timeout` - (Optional, string) Maximum time to allow one check to run (ms|s|m|h). Default 0s.
-* `start_period` - (Optional, string) Start period for the container to initialize before counting retries towards unstable (ms|s|m|h). Default 0s.
-* `start_period` - Start period for the container to initialize before counting retries towards unstable (ms|s|m|h). Default 0s.
-* `retries` - (Optional, int) Consecutive failures needed to report unhealthy. Default 0.
+* `interval` - (Optional, string) Time between running the check `(ms|s|m|h)`. Default: `0s`.
+* `timeout` - (Optional, string) Maximum time to allow one check to run `(ms|s|m|h)`. Default: `0s`.
+* `start_period` - (Optional, string) Start period for the container to initialize before counting retries towards unstable `(ms|s|m|h)`. Default: `0s`.
+* `start_period` - Start period for the container to initialize before counting retries towards unstable `(ms|s|m|h)`. Default: `0s`.
+* `retries` - (Optional, int) Consecutive failures needed to report unhealthy. Default: `0`.
 
 <a id="dnsconfig"></a>
 ### DNS Config
@@ -407,6 +408,7 @@ the extra mount mappings for the container. Each `configs` is a reference to a s
 * `config_id` - (Required, string) ConfigID represents the ID of the specific config.
 * `config_name` - (Optional, string) The name of the config that this references, but internally it is just provided for lookup/display purposes
 * `file_name` - (Required, string) Represents the final filename in the filesystem. The specific target file that the config data is written within the docker container, e.g. `/root/config/config.json`
+
 <!-- end task-container-spec -->
 
 <!-- start task-resources-spec -->
@@ -435,10 +437,10 @@ the extra mount mappings for the container. Each `configs` is a reference to a s
 
 `restart_policy` is a block within the configuration that can be repeated only **once** to specify the mode configuration for the service. The `restart_policy` block specifies the restart policy which applies to containers created as part of this service and supports the following:
 
-* `condition` (Optional, string) Condition for restart: none|on-failure|any
-* `delay` (Optional, string) Delay between restart attempts (ms|s|m|h)
-* `max_attempts` (Optional, string) Maximum attempts to restart a given container before giving up (default value is 0, which is ignored)
-* `window` (Optional, string) The time window used to evaluate the restart policy (default value is 0, which is unbounded) (ms|s|m|h)
+* `condition` (Optional, string) Condition for restart: `(none|on-failure|any)`
+* `delay` (Optional, string) Delay between restart attempts `(ms|s|m|h)`
+* `max_attempts` (Optional, string) Maximum attempts to restart a given container before giving up (default value is `0`, which is ignored)
+* `window` (Optional, string) The time window used to evaluate the restart policy (default value is `0`, which is unbounded) `(ms|s|m|h)`
 
 <!-- end task-restart-policy-spec -->
 <!-- start task-placement-spec -->
@@ -460,7 +462,7 @@ the extra mount mappings for the container. Each `configs` is a reference to a s
 
 `log_driver` is a block within the configuration that can be repeated only **once** to specify the extra log_driver configuration for the containers of the service. The `log_driver` specifies the log driver to use for tasks created from this spec. If not present, the default one for the swarm will be used, finally falling back to the engine default if not specified. The block supports the following:
 
-* `name` - (Required, string) The logging driver to use. Either `none|json-file|syslog|journald|gelf|fluentd|awslogs|splunk|etwlogs|gcplogs`.
+* `name` - (Required, string) The logging driver to use. Either `(none|json-file|syslog|journald|gelf|fluentd|awslogs|splunk|etwlogs|gcplogs)`.
 * `options` - (Optional, a map of strings and strings) The options for the logging driver, e.g.
 
 ```hcl
@@ -478,6 +480,7 @@ options {
 `mode` is a block within the configuration that can be repeated only **once** to specify the mode configuration for the service. The `mode` block supports the following:
 
 * `global` - (Optional, bool) set it to `true` to run the service in the global mode
+
 ```hcl
 resource "docker_service" "foo" {
   ...
@@ -488,6 +491,7 @@ resource "docker_service" "foo" {
 }
 ```
 * `replicated` - (Optional, map), which contains atm only the amount of `replicas`
+
 ```hcl
 resource "docker_service" "foo" {
   ...
@@ -509,9 +513,9 @@ is started in `replicated` mode with 1 replica. A change of service mode is not 
 `update_config` or `rollback_config` is a block within the configuration that can be repeated only **once** to specify the extra update configuration for the containers of the service. The `update_config` `rollback_config` block supports the following:
 
 * `parallelism` - (Optional, int) The maximum number of tasks to be updated in one iteration simultaneously (0 to update all at once).
-* `delay` - (Optional, int) Delay between updates (ns|us|ms|s|m|h), e.g. 5s.
-* `failure_action` - (Optional, int) Action on update failure: pause | continue | rollback.
-* `monitor` - (Optional, int) Duration after each task update to monitor for failure (ns|us|ms|s|m|h)
+* `delay` - (Optional, int) Delay between updates `(ns|us|ms|s|m|h)`, e.g. `5s`.
+* `failure_action` - (Optional, int) Action on update failure: `pause|continue|rollback`.
+* `monitor` - (Optional, int) Duration after each task update to monitor for failure `(ns|us|ms|s|m|h)`
 * `max_failure_ratio` - (Optional, string) The failure rate to tolerate during an update as `float`. **Important:** the `float`need to be wrapped in a `string` to avoid internal
 casting and precision errors.
 * `order` - (Optional, int) Update order either 'stop-first' or 'start-first'.
@@ -521,7 +525,7 @@ casting and precision errors.
 
 `endpoint_spec` is a block within the configuration that can be repeated only **once** to specify properties that can be configured to access and load balance a service. The block supports the following:
 
-* `mode` - (Optional, string) The mode of resolution to use for internal load balancing between tasks. `(vip|dnsrr)`. Defaults to `vip`.
+* `mode` - (Optional, string) The mode of resolution to use for internal load balancing between tasks. `(vip|dnsrr)`. Default: `vip`.
 * `ports` - (Optional, block) See [Ports](#ports) below for details.
 
 <a id="ports"></a>
@@ -532,7 +536,7 @@ the port mappings of the container. Each `ports` block supports
 the following:
 
 * `name` - (Optional, string) A random name for the port.
-* `protocol` - (Optional, string) Protocol that can be used over this port: `tcp|ucp`. Defaults to `tcp`.
+* `protocol` - (Optional, string) Protocol that can be used over this port: `tcp|ucp`. Default: `tcp`.
 * `target_port` - (Required, int) Port inside the container.
 * `published_port` - (Required, int) The port on the swarm hosts. If not set the value of `target_port` will be used.
 * `publish_mode` - (Optional, string) Represents the mode in which the port is to be published: `ingress|host`
@@ -545,9 +549,9 @@ given interval that, e.g., all tasks/replicas of a service are up and healthy
 
 The `converge_config` block supports the following:
 
-* `delay` - (Optional, string) Time between each the check to check docker endpoint (ms|s|m|h). For example, to check if
-all tasks are up when a service is created, or to check if all tasks are successfully updated on an update. Default 7s.
-* `timeout` - (Optional, string) The timeout of the service to reach the desired state (s|m). Default: 3m.
+* `delay` - (Optional, string) Time between each the check to check docker endpoint `(ms|s|m|h)`. For example, to check if
+all tasks are up when a service is created, or to check if all tasks are successfully updated on an update. Default: `7s`.
+* `timeout` - (Optional, string) The timeout of the service to reach the desired state `(s|m)`. Default: `3m`.
 
 ## Attributes Reference
 
