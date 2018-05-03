@@ -59,7 +59,7 @@ In order to run the full suite of Acceptance tests, run `make testacc`.
 *Note:* Acceptance tests create a local registry which will be deleted afterwards.
 
 ```sh
-$ sh scripts/runAccTests.sh
+$ make testacc
 ```
 
 In order to extend the provider and test it with `terraform`, build the provider as mentioned above with

@@ -99,7 +99,7 @@ func resourceDockerService() *schema.Resource {
 									},
 									"env": &schema.Schema{
 										Type:        schema.TypeMap,
-										Description: "A list of environment variables in the form VAR=value",
+										Description: "A list of environment variables in the form VAR=\"value\"",
 										Optional:    true,
 										Elem:        &schema.Schema{Type: schema.TypeString},
 									},
@@ -121,7 +121,7 @@ func resourceDockerService() *schema.Resource {
 									},
 									"privileges": &schema.Schema{
 										Type:        schema.TypeList,
-										Description: "The replicated service mode",
+										Description: "Security options for the container",
 										MaxItems:    1,
 										Optional:    true,
 										Elem: &schema.Resource{
@@ -186,7 +186,7 @@ func resourceDockerService() *schema.Resource {
 									},
 									"read_only": &schema.Schema{
 										Type:        schema.TypeBool,
-										Description: "Mount the container's root filesystem as read only.",
+										Description: "Mount the container's root filesystem as read only",
 										Optional:    true,
 									},
 									"mounts": &schema.Schema{
@@ -240,7 +240,7 @@ func resourceDockerService() *schema.Resource {
 												},
 												"volume_options": &schema.Schema{
 													Type:        schema.TypeList,
-													Description: "Optional configuration for the bind type",
+													Description: "Optional configuration for the volume type",
 													Optional:    true,
 													MaxItems:    1,
 													Elem: &schema.Resource{
@@ -309,7 +309,7 @@ func resourceDockerService() *schema.Resource {
 									},
 									"stop_grace_period": &schema.Schema{
 										Type:         schema.TypeString,
-										Description:  "Amount of time to wait for the container to terminate before forcefully removing it",
+										Description:  "Amount of time to wait for the container to terminate before forcefully removing it (ms|s|m|h)",
 										Optional:     true,
 										Computed:     true,
 										ValidateFunc: validateDurationGeq0(),
@@ -570,7 +570,7 @@ func resourceDockerService() *schema.Resource {
 									},
 									"delay": &schema.Schema{
 										Type:         schema.TypeString,
-										Description:  "Delay between restart attempts",
+										Description:  "Delay between restart attempts (ms|s|m|h)",
 										Optional:     true,
 										ValidateFunc: validateDurationGeq0(),
 									},
@@ -580,8 +580,8 @@ func resourceDockerService() *schema.Resource {
 										Optional:    true,
 									},
 									"window": &schema.Schema{
-										Type:         schema.TypeInt,
-										Description:  "The time window used to evaluate the restart policy (default value is 0, which is unbounded)",
+										Type:         schema.TypeString,
+										Description:  "The time window used to evaluate the restart policy (default value is 0, which is unbounded) (ms|s|m|h)",
 										Optional:     true,
 										ValidateFunc: validateDurationGeq0(),
 									},
@@ -612,17 +612,19 @@ func resourceDockerService() *schema.Resource {
 									},
 									"platforms": &schema.Schema{
 										Type:        schema.TypeSet,
-										Description: "Platforms stores all the platforms that the service's image can run om",
+										Description: "Platforms stores all the platforms that the service's image can run on",
 										Optional:    true,
 										Elem: &schema.Resource{
 											Schema: map[string]*schema.Schema{
 												"architecture": &schema.Schema{
-													Type:     schema.TypeString,
-													Required: true,
+													Type:        schema.TypeString,
+													Description: "The architecture, e.g. amd64",
+													Required:    true,
 												},
 												"os": &schema.Schema{
-													Type:     schema.TypeString,
-													Required: true,
+													Type:        schema.TypeString,
+													Description: "The operation system, e.g. linux",
+													Required:    true,
 												},
 											},
 										},
