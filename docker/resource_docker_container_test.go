@@ -4,6 +4,9 @@ import (
 	"archive/tar"
 	"bytes"
 	"fmt"
+	"os"
+	"strconv"
+	"strings"
 	"testing"
 
 	dc "github.com/fsouza/go-dockerclient"
@@ -207,6 +210,34 @@ func TestAccDockerContainer_customized(t *testing.T) {
 			return fmt.Errorf("Container is not connected to the right user defined network: test")
 		}
 
+		if len(c.HostConfig.Ulimits) != 2 {
+			return fmt.Errorf("Container doesn't have 2 ulimits")
+		}
+
+		if c.HostConfig.Ulimits[1].Name != "nproc" {
+			return fmt.Errorf("Container doesn't have a nproc ulimit")
+		}
+
+		if c.HostConfig.Ulimits[1].Hard != 1024 {
+			return fmt.Errorf("Container doesn't have a correct nproc hard limit")
+		}
+
+		if c.HostConfig.Ulimits[1].Soft != 512 {
+			return fmt.Errorf("Container doesn't have a correct mem nproc limit")
+		}
+
+		if c.HostConfig.Ulimits[0].Name != "nofile" {
+			return fmt.Errorf("Container doesn't have a nofile ulimit")
+		}
+
+		if c.HostConfig.Ulimits[0].Hard != 262144 {
+			return fmt.Errorf("Container doesn't have a correct nofile hard limit")
+		}
+
+		if c.HostConfig.Ulimits[0].Soft != 200000 {
+			return fmt.Errorf("Container doesn't have a correct nofile soft limit")
+		}
+
 		return nil
 	}
 
@@ -244,8 +275,13 @@ func TestAccDockerContainer_upload(t *testing.T) {
 		r := bytes.NewReader(buf.Bytes())
 		tr := tar.NewReader(r)
 
-		if _, err := tr.Next(); err != nil {
+		if header, err := tr.Next(); err != nil {
 			return fmt.Errorf("Unable to read content of tar archive: %s", err)
+		} else {
+			mode := strconv.FormatInt(header.Mode, 8)
+			if !strings.HasSuffix(mode, "744") {
+				return fmt.Errorf("File permissions are incorrect: %s", mode)
+			}
 		}
 
 		fbuf := new(bytes.Buffer)
@@ -265,6 +301,79 @@ func TestAccDockerContainer_upload(t *testing.T) {
 		Steps: []resource.TestStep{
 			resource.TestStep{
 				Config: testAccDockerContainerUploadConfig,
+				Check: resource.ComposeTestCheckFunc(
+					testAccContainerRunning("docker_container.foo", &c),
+					testCheck,
+				),
+			},
+		},
+	})
+}
+
+func TestAccDockerContainer_device(t *testing.T) {
+	var c dc.Container
+
+	testCheck := func(*terraform.State) error {
+		client := testAccProvider.Meta().(*ProviderConfig).DockerClient
+
+		createExecOpts := dc.CreateExecOptions{
+			Cmd:       []string{"dd", "if=/dev/zero_test", "of=/tmp/test.txt", "count=10", "bs=1"},
+			Container: c.ID,
+		}
+
+		exec, err := client.CreateExec(createExecOpts)
+		if err != nil {
+			return fmt.Errorf("Unable to create a exec instance on container: %s", err)
+		}
+
+		startExecOpts := dc.StartExecOptions{
+			OutputStream: os.Stdout,
+			ErrorStream:  os.Stdout,
+		}
+
+		if err := client.StartExec(exec.ID, startExecOpts); err != nil {
+			return fmt.Errorf("Unable to run exec a instance on container: %s", err)
+		}
+
+		buf := new(bytes.Buffer)
+		downloadFileOpts := dc.DownloadFromContainerOptions{
+			OutputStream: buf,
+			Path:         "/tmp/test.txt",
+		}
+
+		if err := client.DownloadFromContainer(c.ID, downloadFileOpts); err != nil {
+			return fmt.Errorf("Unable to download a file from container: %s", err)
+		}
+
+		r := bytes.NewReader(buf.Bytes())
+		tr := tar.NewReader(r)
+
+		if _, err := tr.Next(); err != nil {
+			return fmt.Errorf("Unable to read content of tar archive: %s", err)
+		}
+
+		fbuf := new(bytes.Buffer)
+		fbuf.ReadFrom(tr)
+		content := fbuf.Bytes()
+
+		if len(content) != 10 {
+			return fmt.Errorf("Incorrect size of file: %d", len(content))
+		}
+		for _, value := range content {
+			if value != 0 {
+				return fmt.Errorf("Incorrect content in file: %v", content)
+			}
+		}
+
+		return nil
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:  func() { testAccPreCheck(t) },
+		Providers: testAccProviders,
+		Steps: []resource.TestStep{
+			resource.TestStep{
+				Config: testAccDockerContainerDeviceConfig,
 				Check: resource.ComposeTestCheckFunc(
 					testAccContainerRunning("docker_container.foo", &c),
 					testCheck,
@@ -386,6 +495,18 @@ resource "docker_container" "foo" {
 		host = "testhost2"
 		ip = "10.0.2.0"
 	}
+
+	ulimit {
+		name = "nproc"
+		hard = 1024
+		soft = 512
+	}
+
+	ulimit {
+		name = "nofile"
+		hard = 262144
+		soft = 200000
+	}
 }
 
 resource "docker_network" "test_network" {
@@ -405,6 +526,23 @@ resource "docker_container" "foo" {
 	upload {
 		content = "foo"
 		file = "/terraform/test.txt"
+		executable = true
+	}
+}
+`
+
+const testAccDockerContainerDeviceConfig = `
+resource "docker_image" "foo" {
+	name = "nginx:latest"
+}
+
+resource "docker_container" "foo" {
+	name = "tf-test"
+	image = "${docker_image.foo.latest}"
+
+	devices {
+    host_path = "/dev/zero"
+    container_path = "/dev/zero_test"
 	}
 }
 `

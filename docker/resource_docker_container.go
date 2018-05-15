@@ -250,6 +250,31 @@ func resourceDockerContainer() *schema.Resource {
 				},
 			},
 
+			"ulimit": &schema.Schema{
+				Type:     schema.TypeSet,
+				Optional: true,
+				ForceNew: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"name": &schema.Schema{
+							Type:     schema.TypeString,
+							Required: true,
+							ForceNew: true,
+						},
+						"soft": &schema.Schema{
+							Type:     schema.TypeInt,
+							Required: true,
+							ForceNew: true,
+						},
+						"hard": &schema.Schema{
+							Type:     schema.TypeInt,
+							Required: true,
+							ForceNew: true,
+						},
+					},
+				},
+			},
+
 			"env": &schema.Schema{
 				Type:     schema.TypeSet,
 				Optional: true,
@@ -290,6 +315,33 @@ func resourceDockerContainer() *schema.Resource {
 				Type:     schema.TypeBool,
 				Optional: true,
 				ForceNew: true,
+			},
+
+			"devices": &schema.Schema{
+				Type:     schema.TypeSet,
+				Optional: true,
+				ForceNew: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"host_path": &schema.Schema{
+							Type:     schema.TypeString,
+							Required: true,
+							ForceNew: true,
+						},
+
+						"container_path": &schema.Schema{
+							Type:     schema.TypeString,
+							Optional: true,
+							ForceNew: true,
+						},
+
+						"permissions": &schema.Schema{
+							Type:     schema.TypeString,
+							Optional: true,
+							ForceNew: true,
+						},
+					},
+				},
 			},
 
 			"destroy_grace_seconds": &schema.Schema{
@@ -377,6 +429,12 @@ func resourceDockerContainer() *schema.Resource {
 							Type:     schema.TypeString,
 							Required: true,
 							ForceNew: true,
+						},
+						"executable": &schema.Schema{
+							Type:     schema.TypeBool,
+							Optional: true,
+							ForceNew: true,
+							Default:  false,
 						},
 					},
 				},

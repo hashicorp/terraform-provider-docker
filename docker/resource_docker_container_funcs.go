@@ -83,6 +83,10 @@ func resourceDockerContainerCreate(d *schema.ResourceData, meta interface{}) err
 		extraHosts = extraHostsSetToDockerExtraHosts(v.(*schema.Set))
 	}
 
+	extraUlimits := []dc.ULimit{}
+	if v, ok := d.GetOk("ulimit"); ok {
+		extraUlimits = ulimitsToDockerUlimits(v.(*schema.Set))
+	}
 	volumes := map[string]struct{}{}
 	binds := []string{}
 	volumesFrom := []string{}
@@ -125,6 +129,9 @@ func resourceDockerContainerCreate(d *schema.ResourceData, meta interface{}) err
 	if len(volumesFrom) != 0 {
 		hostConfig.VolumesFrom = volumesFrom
 	}
+	if len(extraUlimits) != 0 {
+		hostConfig.Ulimits = extraUlimits
+	}
 
 	if v, ok := d.GetOk("capabilities"); ok {
 		for _, capInt := range v.(*schema.Set).List() {
@@ -133,6 +140,10 @@ func resourceDockerContainerCreate(d *schema.ResourceData, meta interface{}) err
 			hostConfig.CapDrop = stringSetToStringSlice(capa["drop"].(*schema.Set))
 			break
 		}
+	}
+
+	if v, ok := d.GetOk("devices"); ok {
+		hostConfig.Devices = deviceSetToDockerDevices(v.(*schema.Set))
 	}
 
 	if v, ok := d.GetOk("dns"); ok {
@@ -206,15 +217,23 @@ func resourceDockerContainerCreate(d *schema.ResourceData, meta interface{}) err
 	}
 
 	if v, ok := d.GetOk("upload"); ok {
+
+		var mode int64
 		for _, upload := range v.(*schema.Set).List() {
 			content := upload.(map[string]interface{})["content"].(string)
 			file := upload.(map[string]interface{})["file"].(string)
+			executable := upload.(map[string]interface{})["executable"].(bool)
 
 			buf := new(bytes.Buffer)
 			tw := tar.NewWriter(buf)
+			if executable {
+				mode = 0744
+			} else {
+				mode = 0644
+			}
 			hdr := &tar.Header{
 				Name: file,
-				Mode: 0644,
+				Mode: mode,
 				Size: int64(len(content)),
 			}
 			if err := tw.WriteHeader(hdr); err != nil {
@@ -424,6 +443,21 @@ func portSetToDockerPorts(ports *schema.Set) (map[dc.Port]struct{}, map[dc.Port]
 	return retExposedPorts, retPortBindings
 }
 
+func ulimitsToDockerUlimits(extraUlimits *schema.Set) []dc.ULimit {
+	retExtraUlimits := []dc.ULimit{}
+
+	for _, ulimitInt := range extraUlimits.List() {
+		ulimits := ulimitInt.(map[string]interface{})
+		u := dc.ULimit{
+			Name: ulimits["name"].(string),
+			Soft: int64(ulimits["soft"].(int)),
+			Hard: int64(ulimits["hard"].(int)),
+		}
+		retExtraUlimits = append(retExtraUlimits, u)
+	}
+
+	return retExtraUlimits
+}
 func extraHostsSetToDockerExtraHosts(extraHosts *schema.Set) []string {
 	retExtraHosts := []string{}
 
@@ -472,4 +506,30 @@ func volumeSetToDockerVolumes(volumes *schema.Set) (map[string]struct{}, []strin
 	}
 
 	return retVolumeMap, retHostConfigBinds, retVolumeFromContainers, nil
+}
+
+func deviceSetToDockerDevices(devices *schema.Set) []dc.Device {
+	retDevices := []dc.Device{}
+	for _, deviceInt := range devices.List() {
+		deviceMap := deviceInt.(map[string]interface{})
+		hostPath := deviceMap["host_path"].(string)
+		containerPath := deviceMap["container_path"].(string)
+		permissions := deviceMap["permissions"].(string)
+
+		switch {
+		case len(containerPath) == 0:
+			containerPath = hostPath
+			fallthrough
+		case len(permissions) == 0:
+			permissions = "rwm"
+		}
+
+		device := dc.Device{
+			PathOnHost:        hostPath,
+			PathInContainer:   containerPath,
+			CgroupPermissions: permissions,
+		}
+		retDevices = append(retDevices, device)
+	}
+	return retDevices
 }
