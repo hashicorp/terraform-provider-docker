@@ -352,13 +352,13 @@ func flattenResourceGenericResource(in []swarm.GenericResource) []interface{} {
 	if in != nil && len(in) > 0 {
 		m := make(map[string]interface{})
 		named := make(map[string]string)
-		discrete := make(map[string]int64)
+		discrete := make(map[string]string)
 		for _, value := range in {
 			if value.NamedResourceSpec != nil {
 				named[value.NamedResourceSpec.Kind] = value.NamedResourceSpec.Value
 			}
 			if value.DiscreteResourceSpec != nil {
-				discrete[value.DiscreteResourceSpec.Kind] = value.DiscreteResourceSpec.Value
+				discrete[value.DiscreteResourceSpec.Kind] = strconv.Itoa(int(value.DiscreteResourceSpec.Value))
 			}
 		}
 		m["named_resources_spec"] = named
