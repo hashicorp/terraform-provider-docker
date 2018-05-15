@@ -339,7 +339,7 @@ func flattenResourceLimitsOrReservations(in *swarm.Resources) []interface{} {
 	var out = make([]interface{}, 0, 0)
 	if in != nil {
 		m := make(map[string]interface{})
-		m["nano_cpu"] = in.NanoCPUs
+		m["nano_cpus"] = in.NanoCPUs
 		m["memory_bytes"] = in.MemoryBytes
 		m["generic_resources"] = flattenResourceGenericResource(in.GenericResources)
 		out = append(out, m)
