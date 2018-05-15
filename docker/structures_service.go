@@ -1,6 +1,7 @@
 package docker
 
 import (
+	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -202,24 +203,38 @@ func flattenServiceMounts(in []mount.Mount) *schema.Set {
 		m["target"] = v.Target
 		m["source"] = v.Source
 		m["type"] = string(v.Type)
-		if len(v.Consistency) > 0 {
-			m["consistency"] = string(v.Consistency)
-		}
+		m["consistency"] = string(v.Consistency)
 		m["read_only"] = v.ReadOnly
 		if v.BindOptions != nil {
-			m["bind_propagation"] = string(v.BindOptions.Propagation)
+			bindOptions := make(map[string]interface{}, 0)
+			if len(v.BindOptions.Propagation) > 0 {
+				bindOptions["bind_propagation"] = string(v.BindOptions.Propagation)
+			}
+
+			m["bind_options"] = bindOptions
 		}
 		if v.VolumeOptions != nil {
-			m["volume_no_copy"] = v.VolumeOptions.NoCopy
-			m["volume_labels"] = v.VolumeOptions.Labels
-			if v.VolumeOptions.DriverConfig != nil {
-				m["volume_driver_name"] = v.VolumeOptions.DriverConfig.Name
-				m["volume_driver_options"] = v.VolumeOptions.DriverConfig.Options
-			}
+			volumeOptions := make([]interface{}, 0, 0)
+			volumeOptionsItem := make(map[string]interface{}, 0)
+
+			volumeOptionsItem["no_copy"] = v.VolumeOptions.NoCopy
+			// volumeOptionsItem["labels"] = v.VolumeOptions.Labels
+			// if v.VolumeOptions.DriverConfig != nil {
+			// 	volumeDriverConfig := make(map[string]interface{}, 0)
+			// 	if len(v.VolumeOptions.DriverConfig.Name) > 0 {
+			// 		volumeDriverConfig["name"] = v.VolumeOptions.DriverConfig.Name
+			// 	}
+			// 	// volumeDriverConfig["options"] = v.VolumeOptions.DriverConfig.Options TODO
+
+			// 	volumeOptionsItem["driver_config"] = volumeDriverConfig
+			// }
+
+			volumeOptions = append(volumeOptions, volumeOptionsItem)
+			m["volume_options"] = volumeOptions
 		}
-		if v.TmpfsOptions != nil {
-			m["tmpfs_size_bytes"] = int(v.TmpfsOptions.SizeBytes)
-			m["tmpfs_mode"] = v.TmpfsOptions.Mode.Perm
+		if v.TmpfsOptions != nil { // TODO
+			m["size_bytes"] = int(v.TmpfsOptions.SizeBytes)
+			m["mode"] = v.TmpfsOptions.Mode.Perm
 		}
 		out[i] = m
 	}
@@ -351,18 +366,20 @@ func flattenResourceGenericResource(in []swarm.GenericResource) []interface{} {
 	var out = make([]interface{}, 0, 0)
 	if in != nil && len(in) > 0 {
 		m := make(map[string]interface{})
-		named := make(map[string]string)
-		discrete := make(map[string]string)
-		for _, value := range in {
-			if value.NamedResourceSpec != nil {
-				named[value.NamedResourceSpec.Kind] = value.NamedResourceSpec.Value
+		named := make([]string, 0)
+		discrete := make([]string, 0)
+		for _, genericResource := range in {
+			if genericResource.NamedResourceSpec != nil {
+				log.Printf("#### named flatten: %v -> %v", genericResource.NamedResourceSpec.Kind, genericResource.NamedResourceSpec.Value)
+				named = append(named, genericResource.NamedResourceSpec.Kind+"="+genericResource.NamedResourceSpec.Value)
 			}
-			if value.DiscreteResourceSpec != nil {
-				discrete[value.DiscreteResourceSpec.Kind] = strconv.Itoa(int(value.DiscreteResourceSpec.Value))
+			if genericResource.DiscreteResourceSpec != nil {
+				log.Printf("#### discrete flatten: %v -> %v", genericResource.DiscreteResourceSpec.Kind, genericResource.NamedResourceSpec.Value)
+				discrete = append(discrete, genericResource.DiscreteResourceSpec.Kind+"="+strconv.Itoa(int(genericResource.DiscreteResourceSpec.Value)))
 			}
 		}
-		m["named_resources_spec"] = named
-		m["discrete_resources_spec"] = discrete
+		m["named_resources_spec"] = newStringSet(schema.HashString, named)
+		m["discrete_resources_spec"] = newStringSet(schema.HashString, discrete)
 		out = append(out, m)
 	}
 	return out
@@ -377,7 +394,8 @@ func flattenTaskRestartPolicy(in *swarm.RestartPolicy) map[string]interface{} {
 		m["delay"] = shortDur(*in.Delay)
 	}
 	if in.MaxAttempts != nil {
-		m["max_attempts"] = string(*in.MaxAttempts)
+		mapped := *in.MaxAttempts
+		m["max_attempts"] = strconv.Itoa(int(mapped))
 	}
 	if in.Window != nil {
 		m["window"] = shortDur(*in.Window)
@@ -389,7 +407,6 @@ func flattenTaskPlacement(in *swarm.Placement) []interface{} {
 	if in == nil {
 		return make([]interface{}, 0, 0)
 	}
-
 	var out = make([]interface{}, 1, 1)
 	m := make(map[string]interface{})
 	if len(in.Constraints) > 0 {

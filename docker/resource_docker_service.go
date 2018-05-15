@@ -493,16 +493,18 @@ func resourceDockerService() *schema.Resource {
 													Elem: &schema.Resource{
 														Schema: map[string]*schema.Schema{
 															"named_resources_spec": &schema.Schema{
-																Type:        schema.TypeMap,
+																Type:        schema.TypeSet,
 																Description: "The String resources",
 																Optional:    true,
 																Elem:        &schema.Schema{Type: schema.TypeString},
+																Set:         schema.HashString,
 															},
 															"discrete_resources_spec": &schema.Schema{
-																Type:        schema.TypeMap,
+																Type:        schema.TypeSet,
 																Description: "The Integer resources",
 																Optional:    true,
-																Elem:        &schema.Schema{Type: schema.TypeInt},
+																Elem:        &schema.Schema{Type: schema.TypeString},
+																Set:         schema.HashString,
 															},
 														},
 													},
@@ -535,13 +537,13 @@ func resourceDockerService() *schema.Resource {
 													Elem: &schema.Resource{
 														Schema: map[string]*schema.Schema{
 															"named_resources_spec": &schema.Schema{
-																Type:        schema.TypeMap,
+																Type:        schema.TypeSet,
 																Description: "The String resources",
 																Optional:    true,
 																Elem:        &schema.Schema{Type: schema.TypeString},
 															},
 															"discrete_resources_spec": &schema.Schema{
-																Type:        schema.TypeMap,
+																Type:        schema.TypeSet,
 																Description: "The Integer resources",
 																Optional:    true,
 																Elem:        &schema.Schema{Type: schema.TypeString},
@@ -575,9 +577,10 @@ func resourceDockerService() *schema.Resource {
 										ValidateFunc: validateDurationGeq0(),
 									},
 									"max_attempts": &schema.Schema{
-										Type:        schema.TypeString,
-										Description: "Maximum attempts to restart a given container before giving up (default value is 0, which is ignored)",
-										Optional:    true,
+										Type:         schema.TypeInt,
+										Description:  "Maximum attempts to restart a given container before giving up (default value is 0, which is ignored)",
+										Optional:     true,
+										ValidateFunc: validateIntegerGeqThan(0),
 									},
 									"window": &schema.Schema{
 										Type:         schema.TypeString,

@@ -646,7 +646,7 @@ func createServiceTaskSpec(d *schema.ResourceData) (swarm.TaskSpec, error) {
 					}
 					taskSpec.RestartPolicy = restartPolicy
 				}
-				if rawPlacementSpec, ok := rawTaskSpec["resources"]; ok {
+				if rawPlacementSpec, ok := rawTaskSpec["placement"]; ok {
 					placement, err := createPlacement(rawPlacementSpec)
 					if err != nil {
 						return taskSpec, err
@@ -964,15 +964,15 @@ func createResources(v interface{}) (*swarm.ResourceRequirements, error) {
 				if value, ok := rawResourcesSpec["reservation"]; ok {
 					if len(value.([]interface{})) > 0 {
 						resources.Reservations = &swarm.Resources{}
-						for _, rawLimitsSpec := range value.([]interface{}) {
-							rawLimitsSpec := rawLimitsSpec.(map[string]interface{})
-							if value, ok := rawLimitsSpec["nano_cpus"]; ok {
-								resources.Limits.NanoCPUs = int64(value.(int))
+						for _, rawReservationSpec := range value.([]interface{}) {
+							rawReservationSpec := rawReservationSpec.(map[string]interface{})
+							if value, ok := rawReservationSpec["nano_cpus"]; ok {
+								resources.Reservations.NanoCPUs = int64(value.(int))
 							}
-							if value, ok := rawLimitsSpec["memory_bytes"]; ok {
-								resources.Limits.MemoryBytes = int64(value.(int))
+							if value, ok := rawReservationSpec["memory_bytes"]; ok {
+								resources.Reservations.MemoryBytes = int64(value.(int))
 							}
-							if value, ok := rawLimitsSpec["generic_resources"]; ok {
+							if value, ok := rawReservationSpec["generic_resources"]; ok {
 								resources.Reservations.GenericResources, _ = createGenericResources(value)
 							}
 						}
@@ -986,30 +986,35 @@ func createResources(v interface{}) (*swarm.ResourceRequirements, error) {
 
 // createGenericResources creates generic resources for a container
 func createGenericResources(value interface{}) ([]swarm.GenericResource, error) {
-	genericResources := []swarm.GenericResource{}
+	genericResources := make([]swarm.GenericResource, 0)
 	if len(value.([]interface{})) > 0 {
 		for _, rawGenericResource := range value.([]interface{}) {
 			rawGenericResource := rawGenericResource.(map[string]interface{})
-			genericResource := swarm.GenericResource{}
-			if value, ok := rawGenericResource["named_resources_spec"]; ok {
-				typeMap := value.(map[string]interface{})
-				namedGenericResource := &swarm.NamedGenericResource{}
-				for k, v := range typeMap {
-					namedGenericResource.Kind = k
-					namedGenericResource.Value = v.(string)
+
+			if rawNamedResources, ok := rawGenericResource["named_resources_spec"]; ok {
+				for _, rawNamedResource := range rawNamedResources.(*schema.Set).List() {
+					namedGenericResource := &swarm.NamedGenericResource{}
+					splitted := strings.Split(rawNamedResource.(string), "=")
+					namedGenericResource.Kind = splitted[0]
+					namedGenericResource.Value = splitted[1]
+
+					genericResource := swarm.GenericResource{}
+					genericResource.NamedResourceSpec = namedGenericResource
+					genericResources = append(genericResources, genericResource)
 				}
-				genericResource.NamedResourceSpec = namedGenericResource
 			}
-			if value, ok := rawGenericResource["discrete_resources_spec"]; ok {
-				typeMap := value.(map[string]interface{})
-				discreteGenericResource := &swarm.DiscreteGenericResource{}
-				for k, v := range typeMap {
-					discreteGenericResource.Kind = k
-					discreteGenericResource.Value, _ = strconv.ParseInt(v.(string), 10, 64)
+			if rawDiscreteResources, ok := rawGenericResource["discrete_resources_spec"]; ok {
+				for _, rawDiscreteResource := range rawDiscreteResources.(*schema.Set).List() {
+					discreteGenericResource := &swarm.DiscreteGenericResource{}
+					splitted := strings.Split(rawDiscreteResource.(string), "=")
+					discreteGenericResource.Kind = splitted[0]
+					discreteGenericResource.Value, _ = strconv.ParseInt(splitted[1], 10, 64)
+
+					genericResource := swarm.GenericResource{}
+					genericResource.DiscreteResourceSpec = discreteGenericResource
+					genericResources = append(genericResources, genericResource)
 				}
-				genericResource.DiscreteResourceSpec = discreteGenericResource
 			}
-			genericResources = append(genericResources, genericResource)
 		}
 	}
 	return genericResources, nil
@@ -1018,7 +1023,7 @@ func createGenericResources(value interface{}) ([]swarm.GenericResource, error) 
 // createRestartPolicy creates the restart poliyc of the service
 func createRestartPolicy(v interface{}) (*swarm.RestartPolicy, error) {
 	restartPolicy := swarm.RestartPolicy{}
-	rawRestartPolicy := make(map[string]interface{})
+	rawRestartPolicy := v.(map[string]interface{})
 
 	if v, ok := rawRestartPolicy["condition"]; ok {
 		restartPolicy.Condition = swarm.RestartPolicyCondition(v.(string))
@@ -1058,6 +1063,7 @@ func createPlacement(v interface{}) (*swarm.Placement, error) {
 			}
 		}
 	}
+
 	return &placement, nil
 }
 
