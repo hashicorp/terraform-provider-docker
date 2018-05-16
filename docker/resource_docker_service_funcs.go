@@ -790,7 +790,7 @@ func createContainerSpec(v interface{}) (*swarm.ContainerSpec, error) {
 								mountInstance.BindOptions = &mount.BindOptions{}
 								for _, rawBindOptions := range value.([]interface{}) {
 									rawBindOptions := rawBindOptions.(map[string]interface{})
-									if value, ok := rawBindOptions["bind_propagation"]; ok {
+									if value, ok := rawBindOptions["propagation"]; ok {
 										mountInstance.BindOptions.Propagation = mount.Propagation(value.(string))
 									}
 								}

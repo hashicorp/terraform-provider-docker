@@ -223,7 +223,7 @@ func resourceDockerService() *schema.Resource {
 													MaxItems:    1,
 													Elem: &schema.Resource{
 														Schema: map[string]*schema.Schema{
-															"bind_propagation": &schema.Schema{
+															"propagation": &schema.Schema{
 																Type:         schema.TypeString,
 																Description:  "A propagation mode with the value",
 																Optional:     true,

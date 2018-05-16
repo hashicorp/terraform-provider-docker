@@ -208,7 +208,7 @@ func flattenServiceMounts(in []mount.Mount) *schema.Set {
 			bindOptionsItem := make(map[string]interface{}, 0)
 
 			if len(v.BindOptions.Propagation) > 0 {
-				bindOptionsItem["bind_propagation"] = string(v.BindOptions.Propagation)
+				bindOptionsItem["propagation"] = string(v.BindOptions.Propagation)
 			}
 
 			bindOptions = append(bindOptions, bindOptionsItem)

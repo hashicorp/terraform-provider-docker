@@ -114,7 +114,7 @@ resource "docker_service" "foo" {
                     read_only   = true
 
                     bind_options {
-                        bind_propagation = "private"
+                        propagation = "private"
                     }
                 },
             ]
@@ -354,7 +354,7 @@ the following:
 * `type` - (Required, string) The mount type: valid values are `bind|volume|tmpfs`.
 * `read_only` - (Optional, string) Whether the mount should be read-only
 * `bind_options` - (Optional, map) Optional configuration for the `bind` type.
-  * `bind_propagation` - (Optional, string) A propagation mode with the value.
+  * `propagation` - (Optional, string) A propagation mode with the value.
 * `volume_options` - (Optional, map) Optional configuration for the `volume` type.
   * `no_copy` - (Optional, string) Whether to populate volume with data from the target.
   * `labels` - (Optional, map of key/value pairs) Adding labels.
