@@ -5,7 +5,6 @@ import (
 	"os"
 	"regexp"
 	"testing"
-	"time"
 
 	dc "github.com/fsouza/go-dockerclient"
 	"github.com/hashicorp/terraform/helper/resource"
@@ -295,7 +294,6 @@ func TestAccDockerService_full(t *testing.T) {
 				
 				`,
 				Check: resource.ComposeTestCheckFunc(
-					waitForNonConverge(), // TODO
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-basic"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image", "127.0.0.1:15000/tftest-service:v1"),
@@ -3581,13 +3579,6 @@ func isServiceRemoved(serviceName string) resource.TestCheckFunc {
 			return fmt.Errorf("Service should be removed but is running: %s", serviceName)
 		}
 
-		return nil
-	}
-}
-
-func waitForNonConverge() resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		time.Sleep(1000 * time.Millisecond)
 		return nil
 	}
 }
