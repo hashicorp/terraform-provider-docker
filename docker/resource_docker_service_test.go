@@ -2280,7 +2280,7 @@ func TestAccDockerService_updateImageConverge(t *testing.T) {
 						delay             = "1s"
 						failure_action    = "pause"
 						monitor           = "1s"
-						max_failure_ratio = "0.1"
+						max_failure_ratio = "0.5"
 						order             = "start-first"
 					}
 
@@ -2307,7 +2307,7 @@ func TestAccDockerService_updateImageConverge(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "pause"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.monitor", "1s"),
-					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.5"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.order", "start-first"),
 					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.#", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.83412866.target_port", "8080"),
@@ -2376,7 +2376,7 @@ func TestAccDockerService_updateConfigConverge(t *testing.T) {
 						delay             = "1s"
 						failure_action    = "pause"
 						monitor           = "1s"
-						max_failure_ratio = "0.1"
+						max_failure_ratio = "0.5"
 						order             = "start-first"
 					}
 
@@ -2403,7 +2403,7 @@ func TestAccDockerService_updateConfigConverge(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "pause"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.monitor", "1s"),
-					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.5"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.order", "start-first"),
 					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.#", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.83412866.target_port", "8080"),
@@ -2928,7 +2928,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthConverge(t *testing.
 						delay             = "1s"
 						failure_action    = "pause"
 						monitor           = "1s"
-						max_failure_ratio = "0.1"
+						max_failure_ratio = "0.5"
 						order             = "start-first"
 					}
 
@@ -2954,7 +2954,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthConverge(t *testing.
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "pause"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.monitor", "1s"),
-					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.5"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.order", "start-first"),
 					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.#", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.3541714906.target_port", "8080"),
@@ -3013,7 +3013,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthConverge(t *testing.
 						delay             = "1s"
 						failure_action    = "pause"
 						monitor           = "1s"
-						max_failure_ratio = "0.1"
+						max_failure_ratio = "0.5"
 						order             = "start-first"
 					}
 
@@ -3045,7 +3045,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthConverge(t *testing.
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "pause"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.monitor", "1s"),
-					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.5"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.order", "start-first"),
 					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.#", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.3541714906.target_port", "8080"),
@@ -3292,7 +3292,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 						delay             = "1s"
 						failure_action    = "pause"
 						monitor           = "1s"
-						max_failure_ratio = "0.1"
+						max_failure_ratio = "0.5"
 						order             = "start-first"
 					}
 
@@ -3318,7 +3318,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "pause"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.monitor", "1s"),
-					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.5"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.order", "start-first"),
 					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.#", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.3541714906.target_port", "8080"),
@@ -3377,7 +3377,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 						delay             = "1s"
 						failure_action    = "pause"
 						monitor           = "1s"
-						max_failure_ratio = "0.1"
+						max_failure_ratio = "0.5"
 						order             = "start-first"
 					}
 
@@ -3409,7 +3409,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "pause"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.monitor", "1s"),
-					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.5"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.order", "start-first"),
 					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.#", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.3541714906.target_port", "8080"),
@@ -3470,7 +3470,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 						delay             = "1s"
 						failure_action    = "pause"
 						monitor           = "1s"
-						max_failure_ratio = "0.1"
+						max_failure_ratio = "0.5"
 						order             = "start-first"
 					}
 
@@ -3502,7 +3502,7 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "pause"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.monitor", "1s"),
-					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.5"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.order", "start-first"),
 					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.#", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.3541714906.target_port", "8080"),
