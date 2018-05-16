@@ -182,15 +182,14 @@ func resourceDockerServiceUpdate(d *schema.ResourceData, meta interface{}) error
 		}
 
 		// Wait, catching any errors
-		_, err := stateConf.WaitForState()
+		state, err := stateConf.WaitForState()
+		log.Printf("[INFO] ###### State awaited: %v with error: %v", state, err)
 		if err != nil {
-			// the service will be deleted in case it cannot be converged
-			if deleteErr := deleteService(service.ID, d, client); deleteErr != nil {
-				return deleteErr
-			}
 			if strings.Contains(err.Error(), "timeout while waiting for state") {
+				log.Printf("######## did not converge error...")
 				return &DidNotConvergeError{ServiceID: service.ID, Timeout: convergeConfig.timeout}
 			}
+			log.Printf("######## OTHER converge error...")
 			return err
 		}
 	}
@@ -398,6 +397,7 @@ func resourceDockerServiceUpdateRefreshFunc(
 		}
 
 		if service.UpdateStatus != nil {
+			log.Printf("######## update status: %v", service.UpdateStatus.State)
 			switch service.UpdateStatus.State {
 			case swarm.UpdateStateUpdating:
 				rollback = false
@@ -430,6 +430,9 @@ func resourceDockerServiceUpdateRefreshFunc(
 		}
 
 		if isUpdateCompleted {
+			if rollback {
+				return nil, "", fmt.Errorf("service rollback completed: %s", service.UpdateStatus.Message)
+			}
 			return service.ID, "completed", nil
 		}
 
