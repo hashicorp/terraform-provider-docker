@@ -112,7 +112,6 @@ resource "docker_service" "foo" {
                     source      = "${docker_volume.test_volume.name}"
                     type        = "volume"
                     read_only   = true
-                    consistency = "consistent"
 
                     bind_options {
                         bind_propagation = "private"
@@ -354,7 +353,6 @@ the following:
 * `source` - (Required, string) The mount source (e.g., a volume name, a host path)
 * `type` - (Required, string) The mount type: valid values are `bind|volume|tmpfs`.
 * `read_only` - (Optional, string) Whether the mount should be read-only
-* `consistency` - (Optional, string) The consistency requirement for the mount: valid values are `default|consistent|cached|delegated`.
 * `bind_options` - (Optional, map) Optional configuration for the `bind` type.
   * `bind_propagation` - (Optional, string) A propagation mode with the value.
 * `volume_options` - (Optional, map) Optional configuration for the `volume` type.
