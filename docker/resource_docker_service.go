@@ -216,12 +216,6 @@ func resourceDockerService() *schema.Resource {
 													Description: "Whether the mount should be read-only",
 													Optional:    true,
 												},
-												"consistency": &schema.Schema{
-													Type:         schema.TypeString,
-													Description:  "The consistency requirement for the mount",
-													Optional:     true,
-													ValidateFunc: validateStringMatchesPattern(`^(default|consistent|cached|delegated)$`),
-												},
 												"bind_options": &schema.Schema{
 													Type:        schema.TypeList,
 													Description: "Optional configuration for the bind type",
@@ -256,30 +250,21 @@ func resourceDockerService() *schema.Resource {
 																Optional:    true,
 																Elem:        &schema.Schema{Type: schema.TypeString},
 															},
-															"driver_config": &schema.Schema{
-																Type:        schema.TypeMap,
-																Description: "Optional configuration for the bind type",
+															"driver_name": &schema.Schema{
+																Type:        schema.TypeString,
+																Description: "Name of the driver to use to create the volume.",
 																Optional:    true,
-																Elem: &schema.Resource{
-																	Schema: map[string]*schema.Schema{
-																		"name": &schema.Schema{
-																			Type:        schema.TypeString,
-																			Description: "Name of the driver to use to create the volume.",
-																			Optional:    true,
-																		},
-																		"options": &schema.Schema{
-																			Type:        schema.TypeMap,
-																			Description: "key/value map of driver specific options",
-																			Optional:    true,
-																			Elem:        &schema.Schema{Type: schema.TypeString},
-																		},
-																	},
-																},
+															},
+															"driver_options": &schema.Schema{
+																Type:        schema.TypeMap,
+																Description: "key/value map of driver specific options",
+																Optional:    true,
+																Elem:        &schema.Schema{Type: schema.TypeString},
 															},
 														},
 													},
 												},
-												"tmpf_options": &schema.Schema{
+												"tmpfs_options": &schema.Schema{
 													Type:        schema.TypeList,
 													Description: "Optional configuration for the tmpfs type",
 													Optional:    true,

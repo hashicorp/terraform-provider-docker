@@ -2,6 +2,7 @@ package docker
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -112,6 +113,9 @@ func resourceDockerServiceRead(d *schema.ResourceData, meta interface{}) error {
 	if err != nil {
 		return fmt.Errorf("Error inspecting service %s: %s", apiService.ID, err)
 	}
+
+	jsonObj, _ := json.Marshal(service)
+	log.Printf("[DEBUG] Docker service inspect: %s", jsonObj)
 
 	d.SetId(service.ID)
 	d.Set("name", service.Spec.Name)
@@ -769,13 +773,12 @@ func createContainerSpec(v interface{}) (*swarm.ContainerSpec, error) {
 					rawMount := rawMount.(map[string]interface{})
 					mountType := mount.Type(rawMount["type"].(string))
 					mountInstance := mount.Mount{
-						Type:     mountType,
-						Target:   rawMount["target"].(string),
-						Source:   rawMount["source"].(string),
-						ReadOnly: rawMount["read_only"].(bool),
+						Type:   mountType,
+						Target: rawMount["target"].(string),
+						Source: rawMount["source"].(string),
 					}
-					if value, ok := rawMount["consistency"]; ok {
-						mountInstance.Consistency = mount.Consistency(value.(string))
+					if value, ok := rawMount["read_only"]; ok {
+						mountInstance.ReadOnly = value.(bool)
 					}
 
 					if mountType == mount.TypeBind {
@@ -802,21 +805,24 @@ func createContainerSpec(v interface{}) (*swarm.ContainerSpec, error) {
 									if value, ok := rawVolumeOptions["labels"]; ok {
 										mountInstance.VolumeOptions.Labels = mapTypeMapValsToString(value.(map[string]interface{}))
 									}
-									if value, ok := rawVolumeOptions["driver_config"]; ok {
-										mountInstance.VolumeOptions.DriverConfig = &mount.Driver{}
-										rawVolumeOptionsDriverConfig := value.(map[string]interface{})
-										if value, ok := rawVolumeOptionsDriverConfig["name"]; ok {
-											mountInstance.VolumeOptions.DriverConfig.Name = value.(string)
+									// because it is not possible to nest maps
+									if value, ok := rawVolumeOptions["driver_name"]; ok {
+										if mountInstance.VolumeOptions.DriverConfig == nil {
+											mountInstance.VolumeOptions.DriverConfig = &mount.Driver{}
 										}
-										if value, ok := rawVolumeOptionsDriverConfig["options"]; ok {
-											mountInstance.VolumeOptions.DriverConfig.Options = mapTypeMapValsToString(value.(map[string]interface{}))
+										mountInstance.VolumeOptions.DriverConfig.Name = value.(string)
+									}
+									if value, ok := rawVolumeOptions["driver_options"]; ok {
+										if mountInstance.VolumeOptions.DriverConfig == nil {
+											mountInstance.VolumeOptions.DriverConfig = &mount.Driver{}
 										}
+										mountInstance.VolumeOptions.DriverConfig.Options = mapTypeMapValsToString(value.(map[string]interface{}))
 									}
 								}
 							}
 						}
 					} else if mountType == mount.TypeTmpfs {
-						if value, ok := rawMount["bind_options"]; ok {
+						if value, ok := rawMount["tmpfs_options"]; ok {
 							if len(value.([]interface{})) > 0 {
 								mountInstance.TmpfsOptions = &mount.TmpfsOptions{}
 								for _, rawTmpfsOptions := range value.([]interface{}) {

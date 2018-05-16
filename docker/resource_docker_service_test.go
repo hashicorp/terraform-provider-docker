@@ -166,10 +166,16 @@ func TestAccDockerService_full(t *testing.T) {
 									source      = "${docker_volume.test_volume.name}"
 									type        = "volume"
 									read_only   = true
-									consistency = "default"
-				
+
 									volume_options {
 										no_copy = true
+										labels {
+											foo = "bar"
+										}
+										driver_name = "random-driver"
+										driver_options {
+											op1 = "val1"
+										}
 									}
 								},
 							]
@@ -289,7 +295,7 @@ func TestAccDockerService_full(t *testing.T) {
 				
 				`,
 				Check: resource.ComposeTestCheckFunc(
-					waitForNonConverge(),
+					waitForNonConverge(), // TODO
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-basic"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image", "127.0.0.1:15000/tftest-service:v1"),
@@ -308,12 +314,14 @@ func TestAccDockerService_full(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.privileges.0.se_linux_context.0.type", "type-label"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.privileges.0.se_linux_context.0.level", "level-label"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.read_only", "true"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.mounts.1957291758.volume_options.0.no_copy", "true"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.mounts.1957291758.consistency", "default"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.mounts.1957291758.read_only", "true"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.mounts.1957291758.source", "tftest-volume"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.mounts.1957291758.target", "/mount/test"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.mounts.1957291758.type", "volume"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.mounts.816078185.target", "/mount/test"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.mounts.816078185.source", "tftest-volume"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.mounts.816078185.type", "volume"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.mounts.816078185.read_only", "true"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.mounts.816078185.volume_options.0.no_copy", "true"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.mounts.816078185.volume_options.0.labels.foo", "bar"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.mounts.816078185.volume_options.0.driver_name", "random-driver"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.mounts.816078185.volume_options.0.driver_options.op1", "val1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.stop_signal", "SIGTERM"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.stop_grace_period", "10s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.0", "CMD"),
@@ -356,7 +364,7 @@ func TestAccDockerService_full(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_service.foo", "rollback_config.0.monitor", "10h"),
 					resource.TestCheckResourceAttr("docker_service.foo", "rollback_config.0.max_failure_ratio", "0.9"),
 					resource.TestCheckResourceAttr("docker_service.foo", "rollback_config.0.order", "stop-first"),
-					// resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.mode", "vip"),
+					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.mode", "vip"),
 					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.1714132424.name", "random"),
 					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.1714132424.protocol", "tcp"),
 					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.1714132424.target_port", "8080"),

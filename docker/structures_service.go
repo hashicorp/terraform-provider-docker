@@ -1,7 +1,6 @@
 package docker
 
 import (
-	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -203,39 +202,47 @@ func flattenServiceMounts(in []mount.Mount) *schema.Set {
 		m["target"] = v.Target
 		m["source"] = v.Source
 		m["type"] = string(v.Type)
-		m["consistency"] = string(v.Consistency)
 		m["read_only"] = v.ReadOnly
 		if v.BindOptions != nil {
-			bindOptions := make(map[string]interface{}, 0)
+			bindOptions := make([]interface{}, 0, 0)
+			bindOptionsItem := make(map[string]interface{}, 0)
+
 			if len(v.BindOptions.Propagation) > 0 {
-				bindOptions["bind_propagation"] = string(v.BindOptions.Propagation)
+				bindOptionsItem["bind_propagation"] = string(v.BindOptions.Propagation)
 			}
 
+			bindOptions = append(bindOptions, bindOptionsItem)
 			m["bind_options"] = bindOptions
 		}
+
 		if v.VolumeOptions != nil {
 			volumeOptions := make([]interface{}, 0, 0)
 			volumeOptionsItem := make(map[string]interface{}, 0)
 
 			volumeOptionsItem["no_copy"] = v.VolumeOptions.NoCopy
-			// volumeOptionsItem["labels"] = v.VolumeOptions.Labels
-			// if v.VolumeOptions.DriverConfig != nil {
-			// 	volumeDriverConfig := make(map[string]interface{}, 0)
-			// 	if len(v.VolumeOptions.DriverConfig.Name) > 0 {
-			// 		volumeDriverConfig["name"] = v.VolumeOptions.DriverConfig.Name
-			// 	}
-			// 	// volumeDriverConfig["options"] = v.VolumeOptions.DriverConfig.Options TODO
-
-			// 	volumeOptionsItem["driver_config"] = volumeDriverConfig
-			// }
+			volumeOptionsItem["labels"] = mapStringStringToMapStringInterface(v.VolumeOptions.Labels)
+			if v.VolumeOptions.DriverConfig != nil {
+				if len(v.VolumeOptions.DriverConfig.Name) > 0 {
+					volumeOptionsItem["driver_name"] = v.VolumeOptions.DriverConfig.Name
+				}
+				volumeOptionsItem["driver_options"] = mapStringStringToMapStringInterface(v.VolumeOptions.DriverConfig.Options)
+			}
 
 			volumeOptions = append(volumeOptions, volumeOptionsItem)
 			m["volume_options"] = volumeOptions
 		}
-		if v.TmpfsOptions != nil { // TODO
-			m["size_bytes"] = int(v.TmpfsOptions.SizeBytes)
-			m["mode"] = v.TmpfsOptions.Mode.Perm
+
+		if v.TmpfsOptions != nil {
+			tmpfsOptions := make([]interface{}, 0, 0)
+			tmpfsOptionsItem := make(map[string]interface{}, 0)
+
+			tmpfsOptionsItem["size_bytes"] = int(v.TmpfsOptions.SizeBytes)
+			tmpfsOptionsItem["mode"] = v.TmpfsOptions.Mode.Perm
+
+			tmpfsOptions = append(tmpfsOptions, tmpfsOptionsItem)
+			m["tmpfs_options"] = tmpfsOptions
 		}
+
 		out[i] = m
 	}
 	taskSpecResource := resourceDockerService().Schema["task_spec"].Elem.(*schema.Resource)
@@ -370,11 +377,9 @@ func flattenResourceGenericResource(in []swarm.GenericResource) []interface{} {
 		discrete := make([]string, 0)
 		for _, genericResource := range in {
 			if genericResource.NamedResourceSpec != nil {
-				log.Printf("#### named flatten: %v -> %v", genericResource.NamedResourceSpec.Kind, genericResource.NamedResourceSpec.Value)
 				named = append(named, genericResource.NamedResourceSpec.Kind+"="+genericResource.NamedResourceSpec.Value)
 			}
 			if genericResource.DiscreteResourceSpec != nil {
-				log.Printf("#### discrete flatten: %v -> %v", genericResource.DiscreteResourceSpec.Kind, genericResource.NamedResourceSpec.Value)
 				discrete = append(discrete, genericResource.DiscreteResourceSpec.Kind+"="+strconv.Itoa(int(genericResource.DiscreteResourceSpec.Value)))
 			}
 		}
@@ -526,6 +531,19 @@ func mapStringSliceToMap(in []string) map[string]string {
 			value := splitted[1]
 			mapped[key] = value
 		}
+	}
+	return mapped
+}
+
+// mapStringStringToMapStringInterface maps a string string map to a string interface map
+func mapStringStringToMapStringInterface(in map[string]string) map[string]interface{} {
+	if in == nil || len(in) == 0 {
+		return make(map[string]interface{}, 0)
+	}
+
+	mapped := make(map[string]interface{}, len(in))
+	for k, v := range in {
+		mapped[k] = v
 	}
 	return mapped
 }
