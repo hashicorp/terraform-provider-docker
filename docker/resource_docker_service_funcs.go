@@ -108,10 +108,35 @@ func resourceDockerServiceRead(d *schema.ResourceData, meta interface{}) error {
 		d.SetId("")
 		return nil
 	}
-
 	service, err := client.InspectService(apiService.ID)
 	if err != nil {
 		return fmt.Errorf("Error inspecting service %s: %s", apiService.ID, err)
+	}
+
+	if v, ok := d.GetOk("endpoint_spec.0.mode"); ok {
+		mode := v.(string)
+		log.Printf("[INFO] ####### PRESENT: '%v'", mode)
+		// We have a delay from the Docker Daemon here. On Mac it runs fine
+		// on ubuntu it randomly fails. So we wait until the daemon returns it
+		stateConf := &resource.StateChangeConf{
+			Pending:    []string{"not_present"},
+			Target:     []string{"present"},
+			Refresh:    resourceDockerServiceReadEndpointSpecRefreshFunc(service.ID, meta),
+			Timeout:    15 * time.Second,
+			MinTimeout: 5 * time.Second,
+			Delay:      1 * time.Second,
+		}
+
+		_, err := stateConf.WaitForState()
+		if err != nil {
+			// the service will be deleted in case it cannot be read correctly
+			if deleteErr := deleteService(service.ID, d, client); deleteErr != nil {
+				return deleteErr
+			}
+			return fmt.Errorf("[ERROR] Failed to get endpoint spec from Docker Daemon although it was defined: %v", err)
+		}
+	} else {
+		log.Printf("[INFO] ####### NOT --- PRESENT")
 	}
 
 	jsonObj, _ := json.Marshal(service)
@@ -138,6 +163,24 @@ func resourceDockerServiceRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	return nil
+}
+
+// TODO
+func resourceDockerServiceReadEndpointSpecRefreshFunc(
+	serviceID string, meta interface{}) resource.StateRefreshFunc {
+	return func() (interface{}, string, error) {
+		client := meta.(*ProviderConfig).DockerClient
+		service, err := client.InspectService(serviceID)
+		if err != nil {
+			return serviceID, "error", fmt.Errorf("Error inspecting service '%s': %s", serviceID, err)
+		}
+
+		if len(service.Endpoint.Spec.Mode) == 0 || len(service.Endpoint.Spec.Ports) == 0 {
+			return serviceID, "not_present", nil
+		}
+
+		return serviceID, "present", nil
+	}
 }
 
 func resourceDockerServiceUpdate(d *schema.ResourceData, meta interface{}) error {
@@ -183,13 +226,11 @@ func resourceDockerServiceUpdate(d *schema.ResourceData, meta interface{}) error
 
 		// Wait, catching any errors
 		state, err := stateConf.WaitForState()
-		log.Printf("[INFO] ###### State awaited: %v with error: %v", state, err)
+		log.Printf("[INFO] State awaited: %v with error: %v", state, err)
 		if err != nil {
 			if strings.Contains(err.Error(), "timeout while waiting for state") {
-				log.Printf("######## did not converge error...")
 				return &DidNotConvergeError{ServiceID: service.ID, Timeout: convergeConfig.timeout}
 			}
-			log.Printf("######## OTHER converge error...")
 			return err
 		}
 	}
@@ -397,7 +438,7 @@ func resourceDockerServiceUpdateRefreshFunc(
 		}
 
 		if service.UpdateStatus != nil {
-			log.Printf("######## update status: %v", service.UpdateStatus.State)
+			log.Printf("[DEBUG] update status: %v", service.UpdateStatus.State)
 			switch service.UpdateStatus.State {
 			case swarm.UpdateStateUpdating:
 				rollback = false
@@ -1203,9 +1244,6 @@ func portSetToServicePorts(v interface{}) []swarm.PortConfig {
 			}
 			if externalPort, ok := rawPort["published_port"]; ok {
 				portConfig.PublishedPort = uint32(externalPort.(int))
-			} else {
-				// If the external port is not specified we use the internal port for it
-				portConfig.PublishedPort = portConfig.TargetPort
 			}
 			if value, ok := rawPort["publish_mode"]; ok {
 				portConfig.PublishMode = swarm.PortConfigPublishMode(value.(string))

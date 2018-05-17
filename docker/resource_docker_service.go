@@ -848,7 +848,7 @@ func resourceDockerService() *schema.Resource {
 									},
 									"published_port": &schema.Schema{
 										Type:        schema.TypeInt,
-										Description: "The port on the swarm hosts. If not set the value of 'target_port' will be used",
+										Description: "The port on the swarm hosts.",
 										Optional:    true,
 									},
 									"publish_mode": &schema.Schema{
