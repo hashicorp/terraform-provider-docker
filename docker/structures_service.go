@@ -85,10 +85,10 @@ func flattenServiceUpdateOrRollbackConfig(in *swarm.UpdateConfig) []interface{} 
 	return out
 }
 
-func flattenServiceEndpointSpec(in swarm.EndpointSpec) []interface{} {
+func flattenServiceEndpointSpec(in *swarm.EndpointSpec) []interface{} {
 	var out = make([]interface{}, 0, 0)
 	m := make(map[string]interface{})
-	m["mode"] = in.Mode
+	m["mode"] = string(in.Mode)
 	m["ports"] = flattenServicePorts(in.Ports)
 
 	out = append(out, m)

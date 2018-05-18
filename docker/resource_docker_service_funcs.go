@@ -113,33 +113,33 @@ func resourceDockerServiceRead(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("Error inspecting service %s: %s", apiService.ID, err)
 	}
 
-	if v, ok := d.GetOk("endpoint_spec.0.mode"); ok {
-		mode := v.(string)
-		log.Printf("[INFO] ####### PRESENT: '%v'", mode)
-		// We have a delay from the Docker Daemon here. On Mac it runs fine
-		// on ubuntu it randomly fails. So we wait until the daemon returns it
-		stateConf := &resource.StateChangeConf{
-			Pending:    []string{"not_present"},
-			Target:     []string{"present"},
-			Refresh:    resourceDockerServiceReadEndpointSpecRefreshFunc(service.ID, meta),
-			Timeout:    15 * time.Second,
-			MinTimeout: 5 * time.Second,
-			Delay:      1 * time.Second,
-		}
+	// if rawMode, modeOk := d.GetOk("endpoint_spec.0.mode"); modeOk {
+	// 	mode := rawMode.(string)
+	// 	log.Printf("[INFO] ####### PRESENT: '%v'", mode)
+	// 	// We have a delay from the Docker Daemon here. On Mac it runs fine
+	// 	// on ubuntu it randomly fails. So we wait until the daemon returns it
+	// 	stateConf := &resource.StateChangeConf{
+	// 		Pending:    []string{"not_present"},
+	// 		Target:     []string{"present"},
+	// 		Refresh:    resourceDockerServiceReadEndpointSpecRefreshFunc(service.ID, meta),
+	// 		Timeout:    15 * time.Second,
+	// 		MinTimeout: 5 * time.Second,
+	// 		Delay:      1 * time.Second,
+	// 	}
 
-		_, err := stateConf.WaitForState()
-		if err != nil {
-			// the service will be deleted in case it cannot be read correctly
-			if deleteErr := deleteService(service.ID, d, client); deleteErr != nil {
-				return deleteErr
-			}
-			return fmt.Errorf("[ERROR] Failed to get endpoint spec from Docker Daemon although it was defined: %v", err)
-		}
-	} else {
-		log.Printf("[INFO] ####### NOT --- PRESENT")
-	}
+	// 	_, err := stateConf.WaitForState()
+	// 	if err != nil {
+	// 		// the service will be deleted in case it cannot be read correctly
+	// 		if deleteErr := deleteService(service.ID, d, client); deleteErr != nil {
+	// 			return deleteErr
+	// 		}
+	// 		return fmt.Errorf("[ERROR] Failed to get endpoint spec from Docker Daemon although it was defined: %v", err)
+	// 	}
+	// } else {
+	// 	log.Printf("[INFO] ####### NOT --- PRESENT")
+	// }
 
-	jsonObj, _ := json.Marshal(service)
+	jsonObj, _ := json.MarshalIndent(service, "", "\t")
 	log.Printf("[DEBUG] Docker service inspect: %s", jsonObj)
 
 	d.SetId(service.ID)
@@ -158,7 +158,7 @@ func resourceDockerServiceRead(d *schema.ResourceData, meta interface{}) error {
 	if err = d.Set("rollback_config", flattenServiceUpdateOrRollbackConfig(service.Spec.RollbackConfig)); err != nil {
 		log.Printf("[WARN] failed to set rollback_config from API: %s", err)
 	}
-	if err = d.Set("endpoint_spec", flattenServiceEndpointSpec(service.Endpoint.Spec)); err != nil {
+	if err = d.Set("endpoint_spec", flattenServiceEndpointSpec(service.Spec.EndpointSpec)); err != nil {
 		log.Printf("[WARN] failed to set endpoint spec from API: %s", err)
 	}
 
