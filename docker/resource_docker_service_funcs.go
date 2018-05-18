@@ -113,32 +113,6 @@ func resourceDockerServiceRead(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("Error inspecting service %s: %s", apiService.ID, err)
 	}
 
-	// if rawMode, modeOk := d.GetOk("endpoint_spec.0.mode"); modeOk {
-	// 	mode := rawMode.(string)
-	// 	log.Printf("[INFO] ####### PRESENT: '%v'", mode)
-	// 	// We have a delay from the Docker Daemon here. On Mac it runs fine
-	// 	// on ubuntu it randomly fails. So we wait until the daemon returns it
-	// 	stateConf := &resource.StateChangeConf{
-	// 		Pending:    []string{"not_present"},
-	// 		Target:     []string{"present"},
-	// 		Refresh:    resourceDockerServiceReadEndpointSpecRefreshFunc(service.ID, meta),
-	// 		Timeout:    15 * time.Second,
-	// 		MinTimeout: 5 * time.Second,
-	// 		Delay:      1 * time.Second,
-	// 	}
-
-	// 	_, err := stateConf.WaitForState()
-	// 	if err != nil {
-	// 		// the service will be deleted in case it cannot be read correctly
-	// 		if deleteErr := deleteService(service.ID, d, client); deleteErr != nil {
-	// 			return deleteErr
-	// 		}
-	// 		return fmt.Errorf("[ERROR] Failed to get endpoint spec from Docker Daemon although it was defined: %v", err)
-	// 	}
-	// } else {
-	// 	log.Printf("[INFO] ####### NOT --- PRESENT")
-	// }
-
 	jsonObj, _ := json.MarshalIndent(service, "", "\t")
 	log.Printf("[DEBUG] Docker service inspect: %s", jsonObj)
 
@@ -163,24 +137,6 @@ func resourceDockerServiceRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	return nil
-}
-
-// TODO
-func resourceDockerServiceReadEndpointSpecRefreshFunc(
-	serviceID string, meta interface{}) resource.StateRefreshFunc {
-	return func() (interface{}, string, error) {
-		client := meta.(*ProviderConfig).DockerClient
-		service, err := client.InspectService(serviceID)
-		if err != nil {
-			return serviceID, "error", fmt.Errorf("Error inspecting service '%s': %s", serviceID, err)
-		}
-
-		if len(service.Endpoint.Spec.Mode) == 0 || len(service.Endpoint.Spec.Ports) == 0 {
-			return serviceID, "not_present", nil
-		}
-
-		return serviceID, "present", nil
-	}
 }
 
 func resourceDockerServiceUpdate(d *schema.ResourceData, meta interface{}) error {
