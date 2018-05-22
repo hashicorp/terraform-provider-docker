@@ -24,7 +24,7 @@ install:
 - sudo service docker restart
 
 script:
-- bash docker_in_docker.sh
+- bash scripts/docker_in_docker.sh
 
 branches:
   only:
