@@ -325,6 +325,7 @@ The following arguments are supported:
 * `dns_config` - (Optional, block) See [DNS Config](#dnsconfig) below for details.
 * `secrets` - (Optional, set of blocks) See [Secrets](#secrets) below for details.
 * `configs` - (Optional, set of blocks) See [Configs](#configs) below for details.
+* `isolation` - (Optional, string) Isolation technology of the containers running the service. (Windows only). Valid values are: `default|process|hyperv`
 
 
 <a id="privileges"></a>

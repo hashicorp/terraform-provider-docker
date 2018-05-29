@@ -442,6 +442,13 @@ func resourceDockerService() *schema.Resource {
 											},
 										},
 									},
+									"isolation": &schema.Schema{
+										Type:         schema.TypeString,
+										Description:  "Isolation technology of the containers running the service. (Windows only)",
+										Optional:     true,
+										Default:      "default",
+										ValidateFunc: validateStringMatchesPattern(`^(default|process|hyperv)$`),
+									},
 								},
 							},
 						},
