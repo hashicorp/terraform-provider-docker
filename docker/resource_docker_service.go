@@ -843,10 +843,10 @@ func resourceDockerService() *schema.Resource {
 									},
 									"protocol": &schema.Schema{
 										Type:         schema.TypeString,
-										Description:  "Rrepresents the protocol of a port: 'tcp' or 'udp'",
+										Description:  "Rrepresents the protocol of a port: 'tcp', 'udp' or 'sctp'",
 										Optional:     true,
 										Default:      "tcp",
-										ValidateFunc: validateStringMatchesPattern(`^(tcp|udp)$`),
+										ValidateFunc: validateStringMatchesPattern(`^(tcp|udp|sctp)$`),
 									},
 									"target_port": &schema.Schema{
 										Type:        schema.TypeInt,

@@ -535,7 +535,7 @@ the port mappings of the container. Each `ports` block supports
 the following:
 
 * `name` - (Optional, string) A random name for the port.
-* `protocol` - (Optional, string) Protocol that can be used over this port: `tcp|ucp`. Default: `tcp`.
+* `protocol` - (Optional, string) Protocol that can be used over this port: `tcp|udp|sctp`. Default: `tcp`.
 * `target_port` - (Required, int) Port inside the container.
 * `published_port` - (Required, int) The port on the swarm hosts. If not set the value of `target_port` will be used.
 * `publish_mode` - (Optional, string) Represents the mode in which the port is to be published: `ingress|host`
