@@ -383,12 +383,6 @@
 			"revisionTime": "2018-05-30T01:28:07Z"
 		},
 		{
-			"checksumSHA1": "XcUgUwnG9cMKIvwl8UGuUsXc0CA=",
-			"path": "github.com/docker/docker/pkg/archive",
-			"revision": "65bd038fc5e47ed37d2702cbdd6ce484d320380b",
-			"revisionTime": "2018-05-30T01:28:07Z"
-		},
-		{
 			"checksumSHA1": "CYkS5Yh4GZ80KS+n/o+c5d0ktsA=",
 			"path": "github.com/docker/docker/pkg/fileutils",
 			"revision": "65bd038fc5e47ed37d2702cbdd6ce484d320380b",
@@ -489,12 +483,6 @@
 			"path": "github.com/docker/libnetwork/ipamutils",
 			"revision": "a355c4bd0900178ebd6f435ee55d0ab4f712f506",
 			"revisionTime": "2018-05-29T16:43:54Z"
-		},
-		{
-			"checksumSHA1": "LxmlsftDto7ZuwfNmJRdKPah1t8=",
-			"path": "github.com/fsouza/go-dockerclient",
-			"revision": "bf3bc17bb026cbe5e9203374f9a1ce37e521a364",
-			"revisionTime": "2018-03-03T17:22:32Z"
 		},
 		{
 			"checksumSHA1": "1K+xrZ1PBez190iGt5OnMtGdih4=",
