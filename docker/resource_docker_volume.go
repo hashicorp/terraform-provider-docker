@@ -101,7 +101,7 @@ func resourceDockerVolumeDelete(d *schema.ResourceData, meta interface{}) error 
 	err := client.VolumeRemove(ctx, d.Id(), forceDelete)
 
 	if err != nil && !dc.IsErrNotFound(err) {
-		return fmt.Errorf("Error deleting volume %s: %s after %d tries", d.Id(), err)
+		return fmt.Errorf("Error deleting volume %s: %s", d.Id(), err)
 	}
 
 	d.SetId("")
