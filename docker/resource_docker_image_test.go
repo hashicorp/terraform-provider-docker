@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"testing"
 
-	dc "github.com/fsouza/go-dockerclient"
+	// dc "github.com/fsouza/go-dockerclient"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
 )

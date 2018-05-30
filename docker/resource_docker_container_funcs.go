@@ -381,13 +381,13 @@ package docker
 // 	return ret
 // }
 
-// func mapTypeMapValsToString(typeMap map[string]interface{}) map[string]string {
-// 	mapped := make(map[string]string, len(typeMap))
-// 	for k, v := range typeMap {
-// 		mapped[k] = v.(string)
-// 	}
-// 	return mapped
-// }
+func mapTypeMapValsToString(typeMap map[string]interface{}) map[string]string {
+	mapped := make(map[string]string, len(typeMap))
+	for k, v := range typeMap {
+		mapped[k] = v.(string)
+	}
+	return mapped
+}
 
 // // mapTypeMapValsToStringSlice maps a map to a slice with '=': e.g. foo = "bar" -> 'foo=bar'
 // func mapTypeMapValsToStringSlice(typeMap map[string]interface{}) []string {
