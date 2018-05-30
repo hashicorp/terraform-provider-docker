@@ -1,6 +1,7 @@
 package docker
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"regexp"
@@ -56,7 +57,7 @@ func TestAccDockerImage_destroy(t *testing.T) {
 				}
 
 				client := testAccProvider.Meta().(*ProviderConfig).DockerClient
-				_, err := client.InspectImage(rs.Primary.Attributes["latest"])
+				_, _, err := client.ImageInspectWithRaw(context.Background(), rs.Primary.Attributes["latest"])
 				if err != nil {
 					return err
 				}
@@ -132,7 +133,7 @@ func testAccDockerImageDestroy(s *terraform.State) error {
 		}
 
 		client := testAccProvider.Meta().(*ProviderConfig).DockerClient
-		_, err := client.InspectImage(rs.Primary.Attributes["latest"])
+		_, _, err := client.ImageInspectWithRaw(context.Background(), rs.Primary.Attributes["latest"])
 		if err == nil {
 			return fmt.Errorf("Image still exists")
 		} else if err != dc.ErrNoSuchImage {
