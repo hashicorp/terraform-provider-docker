@@ -6,6 +6,9 @@ import (
 	"log"
 	"strings"
 
+	"bytes"
+	"encoding/base64"
+	"encoding/json"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	"github.com/hashicorp/terraform/helper/schema"
@@ -21,7 +24,7 @@ func resourceDockerImageCreate(d *schema.ResourceData, meta interface{}) error {
 	d.SetId(apiImage.ID + d.Get("name").(string))
 	d.Set("latest", apiImage.ID)
 
-	return nil
+	return resourceDockerImageRead(d, meta)
 }
 
 func resourceDockerImageRead(d *schema.ResourceData, meta interface{}) error {
@@ -52,7 +55,7 @@ func resourceDockerImageUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	d.Set("latest", apiImage.ID)
 
-	return nil
+	return resourceDockerImageRead(d, meta)
 }
 
 func resourceDockerImageDelete(d *schema.ResourceData, meta interface{}) error {
@@ -145,14 +148,23 @@ func pullImage(data *Data, client *client.Client, authConfig *AuthConfigs, image
 		}
 	}
 
-	out, err := client.ImagePull(context.Background(), image, types.ImagePullOptions{
-		RegistryAuth: auth.Auth,
-	})
+	encodedJSON, err := json.Marshal(auth)
+	if err != nil {
+		return fmt.Errorf("error creating auth config: %s", err)
+	}
 
+	out, err := client.ImagePull(context.Background(), image, types.ImagePullOptions{
+		RegistryAuth: base64.URLEncoding.EncodeToString(encodedJSON),
+	})
 	if err != nil {
 		return fmt.Errorf("error pulling image %s: %s", image, err)
 	}
 	defer out.Close()
+
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(out)
+	s := buf.String()
+	log.Printf("[DEBUG] pulled image %v: %v", image, s)
 
 	return fetchLocalImages(data, client)
 }
@@ -215,9 +227,9 @@ func parseImageOptions(image string) internalPullImageOptions {
 
 func findImage(d *schema.ResourceData, client *client.Client, authConfig *AuthConfigs) (*types.ImageSummary, error) {
 	var data Data
-	if err := fetchLocalImages(&data, client); err != nil {
-		return nil, err
-	}
+	//if err := fetchLocalImages(&data, client); err != nil {
+	//	return nil, err
+	//} Is done in pullImage
 
 	imageName := d.Get("name").(string)
 	if imageName == "" {
