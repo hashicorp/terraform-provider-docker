@@ -36,7 +36,6 @@ func dataSourceDockerRegistryImageRead(d *schema.ResourceData, meta interface{})
 	pullOpts := parseImageOptions(d.Get("name").(string))
 	authConfig := meta.(*ProviderConfig).AuthConfigs
 
-	// TODO done in client now
 	// Use the official Docker Hub if a registry isn't specified
 	if pullOpts.Registry == "" {
 		pullOpts.Registry = "registry.hub.docker.com"
