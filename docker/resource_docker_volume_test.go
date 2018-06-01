@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/docker/docker/api/types"
-	dc "github.com/docker/docker/client"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
 	"testing"
@@ -42,12 +41,8 @@ func checkDockerVolume(n string, volume *types.Volume) resource.TestCheckFunc {
 
 		ctx := context.Background()
 		client := testAccProvider.Meta().(*ProviderConfig).DockerClient
-		v, err := client.VolumeInspect(ctx, n)
-		// volumes, err := client.VolumeList(ctx, filters.Args{})
+		v, err := client.VolumeInspect(ctx, rs.Primary.ID)
 		if err != nil {
-			if dc.IsErrNotFound(err) {
-				return fmt.Errorf("Volume not found: %s", rs.Primary.ID)
-			}
 			return err
 		}
 

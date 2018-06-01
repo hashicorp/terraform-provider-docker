@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/volume"
-	dc "github.com/docker/docker/client"
 	"github.com/hashicorp/terraform/helper/schema"
 )
 
@@ -70,7 +69,7 @@ func resourceDockerVolumeCreate(d *schema.ResourceData, meta interface{}) error 
 	d.Set("driver", retVolume.Driver)
 	d.Set("mountpoint", retVolume.Mountpoint)
 
-	return nil
+	return resourceDockerVolumeRead(d, meta)
 }
 
 func resourceDockerVolumeRead(d *schema.ResourceData, meta interface{}) error {
@@ -81,7 +80,7 @@ func resourceDockerVolumeRead(d *schema.ResourceData, meta interface{}) error {
 	var retVolume types.Volume
 	retVolume, err = client.VolumeInspect(ctx, d.Id())
 
-	if err != nil && !dc.IsErrNotFound(err) {
+	if err != nil {
 		return fmt.Errorf("Unable to inspect volume: %s", err)
 	}
 
@@ -98,9 +97,10 @@ func resourceDockerVolumeDelete(d *schema.ResourceData, meta interface{}) error 
 
 	forceDelete := true
 
+	// TODO statefunc
 	err := client.VolumeRemove(ctx, d.Id(), forceDelete)
 
-	if err != nil && !dc.IsErrNotFound(err) {
+	if err != nil {
 		return fmt.Errorf("Error deleting volume %s: %s", d.Id(), err)
 	}
 
