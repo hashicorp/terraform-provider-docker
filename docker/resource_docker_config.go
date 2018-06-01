@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"context"
+
 	"github.com/docker/docker/api/types/swarm"
 	"github.com/hashicorp/terraform/helper/schema"
 )
@@ -63,7 +64,6 @@ func resourceDockerConfigRead(d *schema.ResourceData, meta interface{}) error {
 		log.Printf("[WARN] Config (%s) not found, removing from state", d.Id())
 		d.SetId("")
 		return nil
-		return err
 	}
 	d.SetId(config.ID)
 	return nil
