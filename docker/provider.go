@@ -99,7 +99,7 @@ func Provider() terraform.ResourceProvider {
 			"docker_image": resourceDockerImage(),
 			// "docker_network":   resourceDockerNetwork(),
 			// "docker_volume":    resourceDockerVolume(),
-			// "docker_config":    resourceDockerConfig(),
+			"docker_config": resourceDockerConfig(),
 			// "docker_secret":    resourceDockerSecret(),
 			// "docker_service":   resourceDockerService(),
 		},
