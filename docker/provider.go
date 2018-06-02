@@ -101,7 +101,7 @@ func Provider() terraform.ResourceProvider {
 			"docker_volume":    resourceDockerVolume(),
 			"docker_config":    resourceDockerConfig(),
 			"docker_secret":    resourceDockerSecret(),
-			// "docker_service":   resourceDockerService(),
+			"docker_service":   resourceDockerService(),
 		},
 
 		DataSourcesMap: map[string]*schema.Resource{
