@@ -32,11 +32,10 @@ func (c *Config) NewClient() (*client.Client, error) {
 			return nil, fmt.Errorf("cert_path must not be specified")
 		}
 
-		// return dc.NewTLSClientFromBytes(c.Host, []byte(c.Cert), []byte(c.Key), []byte(c.Ca))
 		return client.NewClientWithOpts(
 			client.WithHost(c.Host),
+			client.WithTLSClientConfig(c.Ca, c.Cert, c.Key),
 			client.WithVersion(apiVersion),
-			// TODO
 		)
 	}
 
