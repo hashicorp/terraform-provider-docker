@@ -4,10 +4,13 @@ import (
 	"fmt"
 
 	"context"
+	"encoding/json"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/network"
+	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/helper/schema"
 	"log"
+	"time"
 )
 
 func resourceDockerNetworkCreate(d *schema.ResourceData, meta interface{}) error {
@@ -42,9 +45,9 @@ func resourceDockerNetworkCreate(d *schema.ResourceData, meta interface{}) error
 		createOpts.IPAM = ipamOpts
 	}
 
-	var err error
-	var retNetwork types.NetworkCreateResponse
-	if retNetwork, err = client.NetworkCreate(context.Background(), d.Get("name").(string), createOpts); err != nil {
+	retNetwork := types.NetworkCreateResponse{}
+	retNetwork, err := client.NetworkCreate(context.Background(), d.Get("name").(string), createOpts)
+	if err != nil {
 		return fmt.Errorf("Unable to create network: %s", err)
 	}
 
@@ -54,20 +57,22 @@ func resourceDockerNetworkCreate(d *schema.ResourceData, meta interface{}) error
 }
 
 func resourceDockerNetworkRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderConfig).DockerClient
+	log.Printf("[INFO] Waiting for network: '%s' to expose all fields: max '%v seconds'", d.Id(), 30)
 
-	var err error
-	var retNetwork types.NetworkResource
-	if retNetwork, err = client.NetworkInspect(context.Background(), d.Id(), types.NetworkInspectOptions{}); err != nil {
-		log.Printf("[WARN] Network (%s) not found, removing from state", d.Id())
-		d.SetId("")
-		return nil
+	stateConf := &resource.StateChangeConf{
+		Pending:    []string{"pending"},
+		Target:     []string{"all_fields", "removed"},
+		Refresh:    resourceDockerNetworkReadRefreshFunc(d, meta),
+		Timeout:    30 * time.Second,
+		MinTimeout: 5 * time.Second,
+		Delay:      2 * time.Second,
 	}
 
-	d.Set("scope", retNetwork.Scope)
-	d.Set("driver", retNetwork.Driver)
-	d.Set("options", retNetwork.Options)
-	d.Set("internal", retNetwork.Internal)
+	// Wait, catching any errors
+	_, err := stateConf.WaitForState()
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -104,4 +109,45 @@ func ipamConfigSetToIpamConfigs(ipamConfigSet *schema.Set) []network.IPAMConfig 
 	}
 
 	return ipamConfigs
+}
+
+func resourceDockerNetworkReadRefreshFunc(
+	d *schema.ResourceData, meta interface{}) resource.StateRefreshFunc {
+	return func() (interface{}, string, error) {
+		client := meta.(*ProviderConfig).DockerClient
+		networkID := d.Id()
+
+		retNetwork, _, err := client.NetworkInspectWithRaw(context.Background(), networkID, types.NetworkInspectOptions{})
+		if err != nil {
+			log.Printf("[WARN] Network (%s) not found, removing from state", networkID)
+			d.SetId("")
+			return networkID, "removed", err
+		}
+
+		jsonObj, _ := json.MarshalIndent(retNetwork, "", "\t")
+		log.Printf("[DEBUG] Docker network inspect: %s", jsonObj)
+
+		d.Set("internal", retNetwork.Internal)
+		if len(retNetwork.Driver) > 0 {
+			d.Set("driver", retNetwork.Driver)
+		} else {
+			log.Printf("[DEBUG] driver: %v not exposed", retNetwork.Driver)
+			return networkID, "pending", nil
+		}
+		if len(retNetwork.Scope) > 0 {
+			d.Set("scope", retNetwork.Scope)
+		} else {
+			log.Printf("[DEBUG] scope: %v not exposed", retNetwork.Scope)
+			return networkID, "pending", nil
+		}
+		if retNetwork.Options != nil && len(retNetwork.Options) != 0 {
+			d.Set("options", retNetwork.Options)
+		} else {
+			log.Printf("[DEBUG] options: %v not exposed", retNetwork.Options)
+			return networkID, "pending", nil
+		}
+
+		log.Println("[DEBUG] all network fields exposed")
+		return networkID, "all_fields", nil
+	}
 }

@@ -1329,7 +1329,7 @@ func TestAccDockerService_updateFailsAndRollbackConverge(t *testing.T) {
 }
 
 func TestAccDockerService_updateNetworksConverge(t *testing.T) {
-	t.Skip("Skipped because response from daemon is not always consistent")
+	// t.Skip("Skipped because response from daemon is not always consistent")
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
 		Providers: testAccProviders,
@@ -1370,8 +1370,8 @@ func TestAccDockerService_updateNetworksConverge(t *testing.T) {
 					}
 
 					converge_config {
-						delay    = "7s"
-						timeout  = "3m"
+						delay    = "5s"
+						timeout  = "60s"
 					}
 
 				}
@@ -1420,8 +1420,8 @@ func TestAccDockerService_updateNetworksConverge(t *testing.T) {
 					}
 
 					converge_config {
-						delay    = "7s"
-						timeout  = "3m"
+						delay    = "5s"
+						timeout  = "60s"
 					}
 				}
 				`,
@@ -1473,8 +1473,8 @@ func TestAccDockerService_updateNetworksConverge(t *testing.T) {
 					}
 
 					converge_config {
-						delay    = "7s"
-						timeout  = "3m"
+						delay    = "5s"
+						timeout  = "60s"
 					}
 				}
 				`,
