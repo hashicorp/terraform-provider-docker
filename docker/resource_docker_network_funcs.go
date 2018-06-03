@@ -125,26 +125,20 @@ func resourceDockerNetworkReadRefreshFunc(
 		}
 
 		jsonObj, _ := json.MarshalIndent(retNetwork, "", "\t")
-		log.Printf("[DEBUG] Docker network inspect: %s", jsonObj)
+		log.Printf("[INFO] Docker network inspect: %s", jsonObj)
 
 		d.Set("internal", retNetwork.Internal)
-		if len(retNetwork.Driver) > 0 {
-			d.Set("driver", retNetwork.Driver)
+		d.Set("driver", retNetwork.Driver)
+		d.Set("scope", retNetwork.Scope)
+		if retNetwork.Scope == "overlay" {
+			if retNetwork.Options != nil && len(retNetwork.Options) != 0 {
+				d.Set("options", retNetwork.Options)
+			} else {
+				log.Printf("[DEBUG] options: %v not exposed", retNetwork.Options)
+				return networkID, "pending", nil
+			}
 		} else {
-			log.Printf("[DEBUG] driver: %v not exposed", retNetwork.Driver)
-			return networkID, "pending", nil
-		}
-		if len(retNetwork.Scope) > 0 {
-			d.Set("scope", retNetwork.Scope)
-		} else {
-			log.Printf("[DEBUG] scope: %v not exposed", retNetwork.Scope)
-			return networkID, "pending", nil
-		}
-		if retNetwork.Options != nil && len(retNetwork.Options) != 0 {
 			d.Set("options", retNetwork.Options)
-		} else {
-			log.Printf("[DEBUG] options: %v not exposed", retNetwork.Options)
-			return networkID, "pending", nil
 		}
 
 		log.Println("[DEBUG] all network fields exposed")
