@@ -125,7 +125,7 @@ func resourceDockerNetworkReadRefreshFunc(
 		}
 
 		jsonObj, _ := json.MarshalIndent(retNetwork, "", "\t")
-		log.Printf("[INFO] Docker network inspect: %s", jsonObj)
+		log.Printf("[DEBUG] Docker network inspect: %s", jsonObj)
 
 		d.Set("internal", retNetwork.Internal)
 		d.Set("driver", retNetwork.Driver)
