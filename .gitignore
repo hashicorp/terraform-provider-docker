@@ -34,3 +34,7 @@ scripts/testing/certs
 
 # build outputs
 results
+
+# Examples
+examples/**/.terraform
+examples/**/terraform.tfstate*
