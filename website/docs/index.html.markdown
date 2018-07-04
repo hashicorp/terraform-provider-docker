@@ -102,8 +102,8 @@ The following arguments are supported:
   for connecting to the Docker host via TLS. If this is blank, the
   `DOCKER_CERT_PATH` will also be checked.
 
-* `ca_material`, `cert_material`, `key_material`, - (Optional) Content of `ca.pem`, `cert.pem`, and `key.pem` files
-  for TLS authentication. Cannot be used together with `cert_path`.
+* `ca_material`, `cert_material`, `key_material`, - (Optional) Path to the files `ca.pem`, `cert.pem`, and `key.pem`
+  used for TLS authentication. Cannot be used together with `cert_path`.
 
 * `registry_auth` - (Optional) A block specifying the credentials for a target
   v2 Docker registry.
