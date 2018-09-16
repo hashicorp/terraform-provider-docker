@@ -1,0 +1,19 @@
+version: {build}
+image: Visual Studio 2017
+
+environment:
+  GOPATH: C:\gopath
+
+clone_folder: C:\gopath\src\github.com\terraform-providers\terraform-provider-docker
+
+install:
+  - echo %PATH%
+  - go version
+  - go env
+  - docker version
+  - openssl version
+  - pwd
+
+build_script:
+  - go get github.com/hashicorp/terraform/plugin
+  - go install
