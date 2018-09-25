@@ -104,7 +104,7 @@ provider "docker" {
   cert_path = "${pathexpand("~/.docker")}"
 
   # -> or the following
-  ca_material = "${file(pathexpand("~/.docker/ca.pem"))}"
+  ca_material = "${file(pathexpand("~/.docker/ca.pem"))}" # this can be omitted
   cert_material = "${file(pathexpand("~/.docker/cert.pem"))}"
   key_material = "${file(pathexpand("~/.docker/key.pem"))}"
 }
@@ -118,11 +118,12 @@ The following arguments are supported:
   blank, the `DOCKER_HOST` environment variable will also be read.
 
 * `cert_path` - (Optional) Path to a directory with certificate information
-  for connecting to the Docker host via TLS. If this is blank, the
-  `DOCKER_CERT_PATH` will also be checked.
+  for connecting to the Docker host via TLS. It is expected that the 3 files `{ca, cert, key}.pem` 
+  are present in the path. If the path is blank, the `DOCKER_CERT_PATH` will also be checked.
 
 * `ca_material`, `cert_material`, `key_material`, - (Optional) Content of `ca.pem`, `cert.pem`, and `key.pem` files
-  for TLS authentication. Cannot be used together with `cert_path`.
+  for TLS authentication. Cannot be used together with `cert_path`. If `ca_material` is omitted
+  the client does not check the servers certificate chain and host name.
 
 * `registry_auth` - (Optional) A block specifying the credentials for a target
   v2 Docker registry.

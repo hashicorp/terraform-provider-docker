@@ -29,7 +29,7 @@ type Config struct {
 }
 
 // buildHTTPClientFromBytes builds the http client from bytes (content of the files)
-func buildHTTPClientFromBytes(certPEMBlock, keyPEMBlock, caPEMCert []byte) (*http.Client, error) {
+func buildHTTPClientFromBytes(caPEMCert, certPEMBlock, keyPEMBlock []byte) (*http.Client, error) {
 	tlsConfig := &tls.Config{}
 	if certPEMBlock != nil && keyPEMBlock != nil {
 		tlsCert, err := tls.X509KeyPair(certPEMBlock, keyPEMBlock)
@@ -39,7 +39,7 @@ func buildHTTPClientFromBytes(certPEMBlock, keyPEMBlock, caPEMCert []byte) (*htt
 		tlsConfig.Certificates = []tls.Certificate{tlsCert}
 	}
 
-	if caPEMCert == nil {
+	if caPEMCert == nil || len(caPEMCert) == 0 {
 		tlsConfig.InsecureSkipVerify = true
 	} else {
 		caPool := x509.NewCertPool()
@@ -83,16 +83,16 @@ func defaultPooledTransport() *http.Transport {
 
 // NewClient returns a new Docker client.
 func (c *Config) NewClient() (*client.Client, error) {
-	if c.Ca != "" || c.Cert != "" || c.Key != "" {
-		if c.Ca == "" || c.Cert == "" || c.Key == "" {
-			return nil, fmt.Errorf("ca_material, cert_material, and key_material must be specified")
+	if c.Cert != "" || c.Key != "" {
+		if c.Cert == "" || c.Key == "" {
+			return nil, fmt.Errorf("cert_material, and key_material must be specified")
 		}
 
 		if c.CertPath != "" {
 			return nil, fmt.Errorf("cert_path must not be specified")
 		}
 
-		httpClient, err := buildHTTPClientFromBytes([]byte(c.Cert), []byte(c.Key), []byte(c.Ca))
+		httpClient, err := buildHTTPClientFromBytes([]byte(c.Ca), []byte(c.Cert), []byte(c.Key))
 		if err != nil {
 			return nil, err
 		}
