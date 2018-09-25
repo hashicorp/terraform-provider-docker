@@ -91,6 +91,25 @@ and paste it into `~/.docker/config.json`:
 }
 ```
 
+## Certificate information
+
+Specify certificate information either with a directory or
+directly with the content of the files for connecting to the Docker host via TLS.
+
+```hcl
+provider "docker" {
+  host    = "tcp://your-host-ip:2376/"
+
+  # -> specify either
+  cert_path = "${pathexpand("~/.docker")}"
+
+  # -> or the following
+  ca_material = "${file(pathexpand("~/.docker/ca.pem"))}"
+  cert_material = "${file(pathexpand("~/.docker/cert.pem"))}"
+  key_material = "${file(pathexpand("~/.docker/key.pem"))}"
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported:
