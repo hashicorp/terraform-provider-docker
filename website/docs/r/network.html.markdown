@@ -38,6 +38,12 @@ The following arguments are supported:
   the drivers.
 * `internal` - (Optional, boolean) Restrict external access to the network.
   Defaults to `false`.
+* `attachable` - (Optional, boolean) Enable manual container attachment to the network.
+  Defaults to `false`.
+* `ingress` - (Optional, boolean) Create swarm routing-mesh network.
+  Defaults to `false`.
+* `ipv6` - (Optional, boolean) Enable IPv6 networking.
+  Defaults to `false`.
 * `ipam_driver` - (Optional, string) Driver used by the custom IP scheme of the
   network.
 * `ipam_config` - (Optional, block) See [IPAM config](#ipam_config) below for
