@@ -95,7 +95,7 @@ func testAccNetworkInternal(network *types.NetworkResource, internal bool) resou
 const testAccDockerNetworkInternalConfig = `
 resource "docker_network" "foobar" {
   name = "foobar"
-  internal = "true"
+  internal = true
 }
 `
 
@@ -117,9 +117,9 @@ func TestAccDockerNetwork_attachable(t *testing.T) {
 	})
 }
 
-func testAccNetworkAttachable(network *types.NetworkResource, internal bool) resource.TestCheckFunc {
+func testAccNetworkAttachable(network *types.NetworkResource, attachable bool) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		if network.Internal != internal {
+		if network.Attachable != attachable {
 			return fmt.Errorf("Bad value for attribute 'attachable': %t", network.Attachable)
 		}
 		return nil
@@ -129,75 +129,7 @@ func testAccNetworkAttachable(network *types.NetworkResource, internal bool) res
 const testAccDockerNetworkAttachableConfig = `
 resource "docker_network" "foobar" {
   name = "foobar"
-  attachable = "true"
-}
-`
-
-func TestAccDockerNetwork_ingress(t *testing.T) {
-	var n types.NetworkResource
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testAccPreCheck(t) },
-		Providers: testAccProviders,
-		Steps: []resource.TestStep{
-			resource.TestStep{
-				Config: testAccDockerNetworkIngressConfig,
-				Check: resource.ComposeTestCheckFunc(
-					testAccNetwork("docker_network.foobar", &n),
-					testAccNetworkIngress(&n, true),
-				),
-			},
-		},
-	})
-}
-
-func testAccNetworkIngress(network *types.NetworkResource, internal bool) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		if network.Internal != internal {
-			return fmt.Errorf("Bad value for attribute 'ingress': %t", network.Ingress)
-		}
-		return nil
-	}
-}
-
-const testAccDockerNetworkIngressConfig = `
-resource "docker_network" "foobar" {
-  name = "foobar"
-  ingress = "true"
-}
-`
-
-func TestAccDockerNetwork_ipv6(t *testing.T) {
-	var n types.NetworkResource
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testAccPreCheck(t) },
-		Providers: testAccProviders,
-		Steps: []resource.TestStep{
-			resource.TestStep{
-				Config: testAccDockerNetworkIpv6Config,
-				Check: resource.ComposeTestCheckFunc(
-					testAccNetwork("docker_network.foobar", &n),
-					testAccNetworkIpv6(&n, true),
-				),
-			},
-		},
-	})
-}
-
-func testAccNetworkIpv6(network *types.NetworkResource, internal bool) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		if network.Internal != internal {
-			return fmt.Errorf("Bad value for attribute 'ipv6': %t", network.EnableIPv6)
-		}
-		return nil
-	}
-}
-
-const testAccDockerNetworkIpv6Config = `
-resource "docker_network" "foobar" {
-  name = "foobar"
-  ipv6 = "true"
+  attachable = true
 }
 `
 
