@@ -29,6 +29,7 @@ resource "docker_network" "private_network" {
 The following arguments are supported:
 
 * `name` - (Required, string) The name of the Docker network.
+* `labels` - (Optional, map of string/string key/value pairs) User-defined key/value metadata.
 * `check_duplicate` - (Optional, boolean) Requests daemon to check for networks
   with same name.
 * `driver` - (Optional, string) Name of the network driver to use. Defaults to
