@@ -206,11 +206,13 @@ func resourceDockerContainer() *schema.Resource {
 						"external": &schema.Schema{
 							Type:     schema.TypeInt,
 							Optional: true,
+							Computed: true,
 							ForceNew: true,
 						},
 
 						"ip": &schema.Schema{
 							Type:     schema.TypeString,
+							Default:  "0.0.0.0",
 							Optional: true,
 							ForceNew: true,
 						},

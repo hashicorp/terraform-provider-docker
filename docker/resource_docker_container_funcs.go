@@ -3,9 +3,12 @@ package docker
 import (
 	"archive/tar"
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"strconv"
+	"strings"
 	"time"
 
 	"context"
@@ -285,6 +288,9 @@ func resourceDockerContainerRead(d *schema.ResourceData, meta interface{}) error
 			return fmt.Errorf("Error inspecting container %s: %s", apiContainer.ID, err)
 		}
 
+		jsonObj, _ := json.MarshalIndent(container, "", "\t")
+		log.Printf("[INFO] Docker container inspect: %s", jsonObj)
+
 		if container.State.Running ||
 			!container.State.Running && !d.Get("must_run").(bool) {
 			break
@@ -320,9 +326,10 @@ func resourceDockerContainerRead(d *schema.ResourceData, meta interface{}) error
 		d.Set("ip_prefix_length", container.NetworkSettings.IPPrefixLen)
 		d.Set("gateway", container.NetworkSettings.Gateway)
 		d.Set("bridge", container.NetworkSettings.Bridge)
+		if err := d.Set("ports", flattenContainerPorts(container.NetworkSettings.Ports)); err != nil {
+			log.Printf("[WARN] failed to set ports from API: %s", err)
+		}
 	}
-
-	// TODO read ports here as well
 
 	return nil
 }
@@ -358,8 +365,28 @@ func resourceDockerContainerDelete(d *schema.ResourceData, meta interface{}) err
 	return nil
 }
 
-// TODO move to separate flattener file
+// TODO extract to structures_container.go
+func flattenContainerPorts(in nat.PortMap) *schema.Set {
+	var out = make([]interface{}, len(in), len(in))
+	for port, portBindings := range in {
+		m := make(map[string]interface{})
+		for i, portBinding := range portBindings {
+			portProtocolSplit := strings.Split(string(port), "/")
+			convertedInternal, _ := strconv.Atoi(portProtocolSplit[0])
+			convertedExternal, _ := strconv.Atoi(portBinding.HostPort)
+			m["internal"] = convertedInternal
+			m["external"] = convertedExternal
+			m["ip"] = portBinding.HostIP
+			m["protocol"] = portProtocolSplit[1]
+			out[i] = m
+		}
+	}
+	portsSpecResource := resourceDockerContainer().Schema["ports"].Elem.(*schema.Resource)
+	f := schema.HashResource(portsSpecResource)
+	return schema.NewSet(f, out)
+}
 
+// TODO move to separate flattener file
 func stringListToStringSlice(stringList []interface{}) []string {
 	ret := []string{}
 	for _, v := range stringList {
