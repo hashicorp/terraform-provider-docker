@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"context"
+	"math/rand"
+
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
@@ -16,7 +18,6 @@ import (
 	"github.com/docker/go-connections/nat"
 	"github.com/docker/go-units"
 	"github.com/hashicorp/terraform/helper/schema"
-	"math/rand"
 )
 
 var (
@@ -321,10 +322,13 @@ func resourceDockerContainerRead(d *schema.ResourceData, meta interface{}) error
 		d.Set("bridge", container.NetworkSettings.Bridge)
 	}
 
+	// TODO read ports here as well
+
 	return nil
 }
 
 func resourceDockerContainerUpdate(d *schema.ResourceData, meta interface{}) error {
+	// TODO call resourceDockerContainerRead here
 	return nil
 }
 
@@ -353,6 +357,8 @@ func resourceDockerContainerDelete(d *schema.ResourceData, meta interface{}) err
 	d.SetId("")
 	return nil
 }
+
+// TODO move to separate flattener file
 
 func stringListToStringSlice(stringList []interface{}) []string {
 	ret := []string{}
