@@ -289,7 +289,7 @@ func resourceDockerContainerRead(d *schema.ResourceData, meta interface{}) error
 		}
 
 		jsonObj, _ := json.MarshalIndent(container, "", "\t")
-		log.Printf("[INFO] Docker container inspect: %s", jsonObj)
+		log.Printf("[DEBUG] Docker container inspect: %s", jsonObj)
 
 		if container.State.Running ||
 			!container.State.Running && !d.Get("must_run").(bool) {
@@ -367,10 +367,10 @@ func resourceDockerContainerDelete(d *schema.ResourceData, meta interface{}) err
 
 // TODO extract to structures_container.go
 func flattenContainerPorts(in nat.PortMap) *schema.Set {
-	var out = make([]interface{}, len(in), len(in))
+	var out = make([]interface{}, 0)
 	for port, portBindings := range in {
 		m := make(map[string]interface{})
-		for i, portBinding := range portBindings {
+		for _, portBinding := range portBindings {
 			portProtocolSplit := strings.Split(string(port), "/")
 			convertedInternal, _ := strconv.Atoi(portProtocolSplit[0])
 			convertedExternal, _ := strconv.Atoi(portBinding.HostPort)
@@ -378,7 +378,7 @@ func flattenContainerPorts(in nat.PortMap) *schema.Set {
 			m["external"] = convertedExternal
 			m["ip"] = portBinding.HostIP
 			m["protocol"] = portProtocolSplit[1]
-			out[i] = m
+			out = append(out, m)
 		}
 	}
 	portsSpecResource := resourceDockerContainer().Schema["ports"].Elem.(*schema.Resource)
@@ -457,18 +457,19 @@ func portSetToDockerPorts(ports *schema.Set) (map[nat.Port]struct{}, map[nat.Por
 		exposedPort := nat.Port(strconv.Itoa(internal) + "/" + protocol)
 		retExposedPorts[exposedPort] = struct{}{}
 
-		external, extOk := port["external"].(int)
-		ip, ipOk := port["ip"].(string)
+		portBinding := nat.PortBinding{}
 
+		external, extOk := port["external"].(int)
 		if extOk {
-			portBinding := nat.PortBinding{
-				HostPort: strconv.Itoa(external),
-			}
-			if ipOk {
-				portBinding.HostIP = ip
-			}
-			retPortBindings[exposedPort] = append(retPortBindings[exposedPort], portBinding)
+			portBinding.HostPort = strconv.Itoa(external)
 		}
+
+		ip, ipOk := port["ip"].(string)
+		if ipOk {
+			portBinding.HostIP = ip
+		}
+
+		retPortBindings[exposedPort] = append(retPortBindings[exposedPort], portBinding)
 	}
 
 	return retExposedPorts, retPortBindings

@@ -377,7 +377,6 @@ func TestAccDockerContainer_device(t *testing.T) {
 	})
 }
 func TestAccDockerContainer_port_internal(t *testing.T) {
-	t.Skip("Skipped: needs to be fixed")
 	var c types.ContainerJSON
 
 	testCheck := func(*terraform.State) error {
@@ -414,8 +413,10 @@ func TestAccDockerContainer_port_internal(t *testing.T) {
 					testCheck,
 					resource.TestCheckResourceAttr("docker_container.foo", "name", "tf-test"),
 					resource.TestCheckResourceAttr("docker_container.foo", "ports.#", "1"),
-					// Note: cannot be tested because the external port > 32768 is generated and so the
-					// hash of the port set changes every time: ports.425894982.external
+					resource.TestCheckResourceAttr("docker_container.foo", "ports.2978131916.internal", "80"),
+					resource.TestCheckResourceAttr("docker_container.foo", "ports.2978131916.ip", "0.0.0.0"),
+					resource.TestCheckResourceAttr("docker_container.foo", "ports.2978131916.protocol", "tcp"),
+					resource.TestCheckResourceAttr("docker_container.foo", "ports.2978131916.external", "32678"),
 				),
 			},
 		},
