@@ -296,7 +296,7 @@ func resourceDockerContainerRead(d *schema.ResourceData, meta interface{}) error
 		}
 
 		jsonObj, _ := json.MarshalIndent(container, "", "\t")
-		log.Printf("[DEBUG] Docker container inspect: %s", jsonObj)
+		log.Printf("[INFO] Docker container inspect: %s", jsonObj)
 
 		if container.State.Running ||
 			!container.State.Running && !d.Get("must_run").(bool) {
