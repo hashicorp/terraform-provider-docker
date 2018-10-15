@@ -205,7 +205,7 @@ func resourceDockerContainer() *schema.Resource {
 
 						"external": &schema.Schema{
 							Type:     schema.TypeInt,
-							Default:  "32678",
+							Default:  "32768",
 							Optional: true,
 							ForceNew: true,
 						},

@@ -423,7 +423,7 @@ func TestAccDockerContainer_port_internal(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_container.foo", "ports.2978131916.internal", "80"),
 					resource.TestCheckResourceAttr("docker_container.foo", "ports.2978131916.ip", "0.0.0.0"),
 					resource.TestCheckResourceAttr("docker_container.foo", "ports.2978131916.protocol", "tcp"),
-					resource.TestCheckResourceAttr("docker_container.foo", "ports.2978131916.external", "32678"),
+					resource.TestCheckResourceAttr("docker_container.foo", "ports.2978131916.external", "32768"),
 				),
 			},
 		},
