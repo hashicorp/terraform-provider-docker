@@ -13,7 +13,7 @@ setup() {
   export DOCKER_REGISTRY_USER="testuser"
   export DOCKER_REGISTRY_PASS="testpwd"
   export DOCKER_PRIVATE_IMAGE="127.0.0.1:15000/tftest-service:v1"
-  #sh "$(pwd)"/scripts/testing/setup_private_registry.sh
+  sh "$(pwd)"/scripts/testing/setup_private_registry.sh
 }
 
 run() {
