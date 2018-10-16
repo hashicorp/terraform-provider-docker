@@ -452,6 +452,24 @@ func TestAccDockerContainer_port_multiple_internal(t *testing.T) {
 			return fmt.Errorf("Expected host port to be set, but was empty")
 		}
 
+		portBindings, ok = portMap["81/tcp"]
+		if !ok || len(portMap["81/tcp"]) == 0 {
+			return fmt.Errorf("Port 81 on tcp is not set")
+		}
+
+		portBindingsLength = len(portBindings)
+		if portBindingsLength != 1 {
+			return fmt.Errorf("Expected 1 binding on port 81, but was %d", portBindingsLength)
+		}
+
+		if len(portBindings[0].HostIP) == 0 {
+			return fmt.Errorf("Expected host IP to be set, but was empty")
+		}
+
+		if len(portBindings[0].HostPort) == 0 {
+			return fmt.Errorf("Expected host port to be set, but was empty")
+		}
+
 		return nil
 	}
 
