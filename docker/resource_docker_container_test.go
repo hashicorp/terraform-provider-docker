@@ -420,15 +420,16 @@ func TestAccDockerContainer_port_internal(t *testing.T) {
 					testCheck,
 					resource.TestCheckResourceAttr("docker_container.foo", "name", "tf-test"),
 					resource.TestCheckResourceAttr("docker_container.foo", "ports.#", "1"),
-					// resource.TestCheckResourceAttr("docker_container.foo", "ports.2861306838.internal", "80"),
-					// resource.TestCheckResourceAttr("docker_container.foo", "ports.2861306838.ip", "0.0.0.0"),
-					// resource.TestCheckResourceAttr("docker_container.foo", "ports.2861306838.protocol", "tcp"),
-					// resource.TestCheckResourceAttr("docker_container.foo", "ports.2861306838.external", "0"),
+					resource.TestCheckResourceAttr("docker_container.foo", "ports.0.internal", "80"),
+					resource.TestCheckResourceAttr("docker_container.foo", "ports.0.ip", "0.0.0.0"),
+					resource.TestCheckResourceAttr("docker_container.foo", "ports.0.protocol", "tcp"),
+					testValueHigherEqualThan("docker_container.foo", "ports.0.external", 32768),
 				),
 			},
 		},
 	})
 }
+
 func TestAccDockerContainer_port(t *testing.T) {
 	var c types.ContainerJSON
 
@@ -466,10 +467,10 @@ func TestAccDockerContainer_port(t *testing.T) {
 					testCheck,
 					resource.TestCheckResourceAttr("docker_container.foo", "name", "tf-test"),
 					resource.TestCheckResourceAttr("docker_container.foo", "ports.#", "1"),
-					resource.TestCheckResourceAttr("docker_container.foo", "ports.2498386340.internal", "80"),
-					resource.TestCheckResourceAttr("docker_container.foo", "ports.2498386340.ip", "0.0.0.0"),
-					resource.TestCheckResourceAttr("docker_container.foo", "ports.2498386340.protocol", "tcp"),
-					resource.TestCheckResourceAttr("docker_container.foo", "ports.2498386340.external", "32787"),
+					resource.TestCheckResourceAttr("docker_container.foo", "ports.0.internal", "80"),
+					resource.TestCheckResourceAttr("docker_container.foo", "ports.0.ip", "0.0.0.0"),
+					resource.TestCheckResourceAttr("docker_container.foo", "ports.0.protocol", "tcp"),
+					resource.TestCheckResourceAttr("docker_container.foo", "ports.0.external", "32787"),
 				),
 			},
 		},
@@ -505,6 +506,37 @@ func testAccContainerRunning(n string, container *types.ContainerJSON) resource.
 		}
 
 		return fmt.Errorf("Container not found: %s", rs.Primary.ID)
+	}
+}
+
+func testValueHigherEqualThan(name, key string, value int) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		ms := s.RootModule()
+		rs, ok := ms.Resources[name]
+		if !ok {
+			return fmt.Errorf("Not found: %s", name)
+		}
+
+		is := rs.Primary
+		if is == nil {
+			return fmt.Errorf("No primary instance: %s", name)
+		}
+
+		vRaw, ok := is.Attributes[key]
+		if !ok {
+			return fmt.Errorf("%s: Attribute '%s' not found", name, key)
+		}
+
+		v, err := strconv.Atoi(vRaw)
+		if err != nil {
+			return fmt.Errorf("'%s' is not a number", vRaw)
+		}
+
+		if v < value {
+			return fmt.Errorf("'%v' is smaller than '%v', but was expected to be equal or greater", v, value)
+		}
+
+		return nil
 	}
 }
 
