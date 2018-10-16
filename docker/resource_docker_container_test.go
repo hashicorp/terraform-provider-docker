@@ -429,6 +429,56 @@ func TestAccDockerContainer_port_internal(t *testing.T) {
 		},
 	})
 }
+func TestAccDockerContainer_port_multiple_internal(t *testing.T) {
+	var c types.ContainerJSON
+
+	testCheck := func(*terraform.State) error {
+		portMap := c.NetworkSettings.NetworkSettingsBase.Ports
+		portBindings, ok := portMap["80/tcp"]
+		if !ok || len(portMap["80/tcp"]) == 0 {
+			return fmt.Errorf("Port 80 on tcp is not set")
+		}
+
+		portBindingsLength := len(portBindings)
+		if portBindingsLength != 1 {
+			return fmt.Errorf("Expected 1 binding on port 80, but was %d", portBindingsLength)
+		}
+
+		if len(portBindings[0].HostIP) == 0 {
+			return fmt.Errorf("Expected host IP to be set, but was empty")
+		}
+
+		if len(portBindings[0].HostPort) == 0 {
+			return fmt.Errorf("Expected host port to be set, but was empty")
+		}
+
+		return nil
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:  func() { testAccPreCheck(t) },
+		Providers: testAccProviders,
+		Steps: []resource.TestStep{
+			resource.TestStep{
+				Config: testAccDockerContainerMultipleInternalPortConfig,
+				Check: resource.ComposeTestCheckFunc(
+					testAccContainerRunning("docker_container.foo", &c),
+					testCheck,
+					resource.TestCheckResourceAttr("docker_container.foo", "name", "tf-test"),
+					resource.TestCheckResourceAttr("docker_container.foo", "ports.#", "2"),
+					resource.TestCheckResourceAttr("docker_container.foo", "ports.0.internal", "80"),
+					resource.TestCheckResourceAttr("docker_container.foo", "ports.0.ip", "0.0.0.0"),
+					resource.TestCheckResourceAttr("docker_container.foo", "ports.0.protocol", "tcp"),
+					testValueHigherEqualThan("docker_container.foo", "ports.0.external", 32768),
+					resource.TestCheckResourceAttr("docker_container.foo", "ports.1.internal", "81"),
+					resource.TestCheckResourceAttr("docker_container.foo", "ports.1.ip", "0.0.0.0"),
+					resource.TestCheckResourceAttr("docker_container.foo", "ports.1.protocol", "tcp"),
+					testValueHigherEqualThan("docker_container.foo", "ports.1.external", 32768),
+				),
+			},
+		},
+	})
+}
 
 func TestAccDockerContainer_port(t *testing.T) {
 	var c types.ContainerJSON
@@ -688,6 +738,27 @@ resource "docker_container" "foo" {
 	ports {
 		internal = "80"
 	}
+}
+`
+
+const testAccDockerContainerMultipleInternalPortConfig = `
+resource "docker_image" "foo" {
+	name = "nginx:latest"
+	keep_locally = true
+}
+
+resource "docker_container" "foo" {
+	name = "tf-test"
+	image = "${docker_image.foo.latest}"
+	
+	ports = [
+		{
+			internal = "80"
+		},
+		{
+			internal = "81"
+		}
+	]
 }
 `
 const testAccDockerContainerPortConfig = `

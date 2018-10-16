@@ -22,6 +22,7 @@ run() {
   # for a single test comment the previous line and uncomment the next line
   TF_LOG=INFO TF_ACC=1 go test -v github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerContainer_port$ -timeout 360s
   TF_LOG=INFO TF_ACC=1 go test -v github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerContainer_port_internal$ -timeout 360s
+  TF_LOG=INFO TF_ACC=1 go test -v github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerContainer_port_multiple_internal$ -timeout 360s
   
   # keep the return value for the scripts to fail and clean properly
   return $?
