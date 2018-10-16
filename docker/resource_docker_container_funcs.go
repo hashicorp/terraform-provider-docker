@@ -296,7 +296,7 @@ func resourceDockerContainerRead(d *schema.ResourceData, meta interface{}) error
 		}
 
 		jsonObj, _ := json.MarshalIndent(container, "", "\t")
-		log.Printf("[INFO] Docker container inspect: %s", jsonObj)
+		log.Printf("[DEBUG] Docker container inspect: %s", jsonObj)
 
 		if container.State.Running ||
 			!container.State.Running && !d.Get("must_run").(bool) {
@@ -333,9 +333,9 @@ func resourceDockerContainerRead(d *schema.ResourceData, meta interface{}) error
 		d.Set("ip_prefix_length", container.NetworkSettings.IPPrefixLen)
 		d.Set("gateway", container.NetworkSettings.Gateway)
 		d.Set("bridge", container.NetworkSettings.Bridge)
-		if err := d.Set("ports", flattenContainerPorts(container.NetworkSettings.Ports)); err != nil {
-			log.Printf("[WARN] failed to set ports from API: %s", err)
-		}
+		// if err := d.Set("ports", flattenContainerPorts(container.NetworkSettings.Ports)); err != nil {
+		// 	log.Printf("[WARN] failed to set ports from API: %s", err)
+		// }
 	}
 
 	return nil
@@ -381,6 +381,7 @@ func flattenContainerPorts(in nat.PortMap) *schema.Set {
 			portProtocolSplit := strings.Split(string(port), "/")
 			convertedInternal, _ := strconv.Atoi(portProtocolSplit[0])
 			convertedExternal, _ := strconv.Atoi(portBinding.HostPort)
+			log.Printf("[INFO] ###  convertedInternal: '%v' - convertedExternal: '%v'", convertedInternal, convertedExternal)
 			m["internal"] = convertedInternal
 			m["external"] = convertedExternal
 			m["ip"] = portBinding.HostIP
