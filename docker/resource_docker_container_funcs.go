@@ -74,9 +74,7 @@ func resourceDockerContainerCreate(d *schema.ResourceData, meta interface{}) err
 	exposedPorts := map[nat.Port]struct{}{}
 	portBindings := map[nat.Port][]nat.PortBinding{}
 
-	log.Printf("[INFO] #####")
 	if v, ok := d.GetOk("ports"); ok {
-		log.Printf("[INFO] #####--> ports: %v", v)
 		exposedPorts, portBindings = portSetToDockerPorts(v.([]interface{}))
 	}
 	if len(exposedPorts) != 0 {
@@ -456,7 +454,6 @@ func portSetToDockerPorts(ports []interface{}) (map[nat.Port]struct{}, map[nat.P
 	retExposedPorts := map[nat.Port]struct{}{}
 	retPortBindings := map[nat.Port][]nat.PortBinding{}
 
-	log.Printf("[INFO] #### ports: '%v'", ports)
 	for _, portInt := range ports {
 		port := portInt.(map[string]interface{})
 		internal := port["internal"].(int)
@@ -477,7 +474,6 @@ func portSetToDockerPorts(ports []interface{}) (map[nat.Port]struct{}, map[nat.P
 			portBinding.HostIP = ip
 		}
 
-		log.Printf("[INFO] #### adding exposedPort: '%v'", exposedPort)
 		retPortBindings[exposedPort] = append(retPortBindings[exposedPort], portBinding)
 	}
 
