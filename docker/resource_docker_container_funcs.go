@@ -333,9 +333,9 @@ func resourceDockerContainerRead(d *schema.ResourceData, meta interface{}) error
 		d.Set("ip_prefix_length", container.NetworkSettings.IPPrefixLen)
 		d.Set("gateway", container.NetworkSettings.Gateway)
 		d.Set("bridge", container.NetworkSettings.Bridge)
-		// if err := d.Set("ports", flattenContainerPorts(container.NetworkSettings.Ports)); err != nil {
-		// 	log.Printf("[WARN] failed to set ports from API: %s", err)
-		// }
+		if err := d.Set("ports", flattenContainerPorts(container.NetworkSettings.Ports)); err != nil {
+			log.Printf("[WARN] failed to set ports from API: %s", err)
+		}
 	}
 
 	return nil
