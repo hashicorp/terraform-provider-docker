@@ -5,12 +5,13 @@ import (
 
 	"context"
 	"encoding/json"
+	"log"
+	"time"
+
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/network"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/helper/schema"
-	"log"
-	"time"
 )
 
 func resourceDockerNetworkCreate(d *schema.ResourceData, meta interface{}) error {
@@ -133,7 +134,7 @@ func resourceDockerNetworkReadRefreshFunc(
 		if err != nil {
 			log.Printf("[WARN] Network (%s) not found, removing from state", networkID)
 			d.SetId("")
-			return networkID, "removed", err
+			return networkID, "removed", nil
 		}
 
 		jsonObj, _ := json.MarshalIndent(retNetwork, "", "\t")
