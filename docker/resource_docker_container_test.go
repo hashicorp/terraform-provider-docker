@@ -40,6 +40,25 @@ func TestAccDockerContainer_basic(t *testing.T) {
 		},
 	})
 }
+func TestAccDockerContainer_basic_network(t *testing.T) {
+	var c types.ContainerJSON
+	resource.Test(t, resource.TestCase{
+		PreCheck:  func() { testAccPreCheck(t) },
+		Providers: testAccProviders,
+		Steps: []resource.TestStep{
+			resource.TestStep{
+				Config: testAccDockerContainerWith2BridgeNetworkConfig,
+				Check: resource.ComposeTestCheckFunc(
+					testAccContainerRunning("docker_container.foo", &c),
+					resource.TestCheckResourceAttrSet("docker_container.foo", "ip_address"),
+					resource.TestCheckResourceAttrSet("docker_container.foo", "ip_prefix_length"),
+					resource.TestCheckResourceAttrSet("docker_container.foo", "gateway"),
+					// resource.TestCheckResourceAttrSet("docker_container.foo", "bridge"),
+				),
+			},
+		},
+	})
+}
 
 func TestAccDockerContainerPath_validation(t *testing.T) {
 	cases := []struct {
@@ -684,6 +703,29 @@ resource "docker_image" "foo" {
 resource "docker_container" "foo" {
 	name = "tf-test"
 	image = "${docker_image.foo.latest}"
+}
+`
+
+const testAccDockerContainerWith2BridgeNetworkConfig = `
+resource "docker_network" "tftest" {
+  name = "tftest-contnw"
+}
+
+resource "docker_network" "tftest_2" {
+  name = "tftest-contnw-2"
+}
+
+resource "docker_image" "foo" {
+	name = "nginx:latest"
+}
+
+resource "docker_container" "foo" {
+	name  	 = "tf-test"
+	image 	 = "${docker_image.foo.latest}"
+	networks = [
+		"${docker_network.tftest.name}",
+		"${docker_network.tftest_2.name}"
+	]
 }
 `
 
