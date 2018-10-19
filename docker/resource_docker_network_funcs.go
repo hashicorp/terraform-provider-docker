@@ -2,6 +2,7 @@ package docker
 
 import (
 	"fmt"
+	"strings"
 
 	"context"
 	"encoding/json"
@@ -91,10 +92,21 @@ func resourceDockerNetworkRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func resourceDockerNetworkDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderConfig).DockerClient
+	log.Printf("[INFO] Waiting for network: '%s' to be removed: max '%v seconds'", d.Id(), 30)
 
-	if err := client.NetworkRemove(context.Background(), d.Id()); err != nil {
-		return fmt.Errorf("Error deleting network %s: %s", d.Id(), err)
+	stateConf := &resource.StateChangeConf{
+		Pending:    []string{"pending"},
+		Target:     []string{"removed"},
+		Refresh:    resourceDockerNetworkRemoveRefreshFunc(d, meta),
+		Timeout:    30 * time.Second,
+		MinTimeout: 5 * time.Second,
+		Delay:      2 * time.Second,
+	}
+
+	// Wait, catching any errors
+	_, err := stateConf.WaitForState()
+	if err != nil {
+		return err
 	}
 
 	d.SetId("")
@@ -159,5 +171,28 @@ func resourceDockerNetworkReadRefreshFunc(
 
 		log.Println("[DEBUG] all network fields exposed")
 		return networkID, "all_fields", nil
+	}
+}
+
+func resourceDockerNetworkRemoveRefreshFunc(
+	d *schema.ResourceData, meta interface{}) resource.StateRefreshFunc {
+	return func() (interface{}, string, error) {
+		client := meta.(*ProviderConfig).DockerClient
+		networkID := d.Id()
+
+		_, _, err := client.NetworkInspectWithRaw(context.Background(), networkID, types.NetworkInspectOptions{})
+		if err != nil {
+			log.Printf("[INFO] Network (%s) not found. Already removed", networkID)
+			return networkID, "removed", nil
+		}
+
+		if err := client.NetworkRemove(context.Background(), networkID); err != nil {
+			if strings.Contains(err.Error(), "has active endpoints") {
+				return networkID, "pending", nil
+			}
+			return networkID, "other", err
+		}
+
+		return networkID, "removed", nil
 	}
 }
