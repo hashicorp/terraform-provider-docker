@@ -300,7 +300,7 @@ func resourceDockerContainerRead(d *schema.ResourceData, meta interface{}) error
 		}
 
 		jsonObj, _ := json.MarshalIndent(container, "", "\t")
-		log.Printf("[DEBUG] Docker container inspect: %s", jsonObj)
+		log.Printf("[INFO] Docker container inspect: %s", jsonObj)
 
 		if container.State.Running ||
 			!container.State.Running && !d.Get("must_run").(bool) {
@@ -375,6 +375,16 @@ func resourceDockerContainerDelete(d *schema.ResourceData, meta interface{}) err
 
 	if err := client.ContainerRemove(context.Background(), d.Id(), removeOpts); err != nil {
 		return fmt.Errorf("Error deleting container %s: %s", d.Id(), err)
+	}
+
+	waitOkC, errorC := client.ContainerWait(context.Background(), d.Id(), container.WaitConditionRemoved)
+	select {
+	case waitOk := <-waitOkC:
+		log.Printf("[INFO] Container exited with code [%v]: '%s'", waitOk.StatusCode, d.Id())
+	case err := <-errorC:
+		if !(strings.Contains(err.Error(), "No such container") || strings.Contains(err.Error(), "is already in progress")) {
+			return fmt.Errorf("Error waiting for container removal '%s': %s", d.Id(), err)
+		}
 	}
 
 	d.SetId("")
