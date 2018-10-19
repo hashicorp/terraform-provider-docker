@@ -209,6 +209,8 @@ The following attributes are exported:
    NetworkSettings.
  * `ip_prefix_length` - The IP prefix length of the container as read from its
    NetworkSettings.
+ * `ip_addresses` - (map of strings) The IP addresses of the container on each
+   network. Key are the network names, values are the IP addresses.
  * `gateway` - The network gateway of the container as read from its
    NetworkSettings.
  * `bridge` - The network bridge of the container as read from its

@@ -340,6 +340,11 @@ func resourceDockerContainerRead(d *schema.ResourceData, meta interface{}) error
 		if err := d.Set("ports", flattenContainerPorts(container.NetworkSettings.Ports)); err != nil {
 			log.Printf("[WARN] failed to set ports from API: %s", err)
 		}
+		ips := make(map[string]string, len(container.NetworkSettings.Networks))
+		for name, net := range container.NetworkSettings.Networks {
+			ips[name] = net.IPAddress
+		}
+		d.Set(fmt.Sprintf("ip_addresses"), ips)
 	}
 
 	return nil
