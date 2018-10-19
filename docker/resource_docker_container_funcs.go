@@ -300,7 +300,7 @@ func resourceDockerContainerRead(d *schema.ResourceData, meta interface{}) error
 		}
 
 		jsonObj, _ := json.MarshalIndent(container, "", "\t")
-		log.Printf("[INFO] Docker container inspect: %s", jsonObj)
+		log.Printf("[DEBUG] Docker container inspect: %s", jsonObj)
 
 		if container.State.Running ||
 			!container.State.Running && !d.Get("must_run").(bool) {
@@ -333,18 +333,27 @@ func resourceDockerContainerRead(d *schema.ResourceData, meta interface{}) error
 
 	// Read Network Settings
 	if container.NetworkSettings != nil {
+		// TODO remove deprecated attributes in next major
 		d.Set("ip_address", container.NetworkSettings.IPAddress)
 		d.Set("ip_prefix_length", container.NetworkSettings.IPPrefixLen)
 		d.Set("gateway", container.NetworkSettings.Gateway)
+		if container.NetworkSettings != nil && len(container.NetworkSettings.Networks) > 0 {
+			// Still support deprecated outputs
+			for _, settings := range container.NetworkSettings.Networks {
+				d.Set("ip_address", settings.IPAddress)
+				d.Set("ip_prefix_length", settings.IPPrefixLen)
+				d.Set("gateway", settings.Gateway)
+				break
+			}
+		}
+
 		d.Set("bridge", container.NetworkSettings.Bridge)
 		if err := d.Set("ports", flattenContainerPorts(container.NetworkSettings.Ports)); err != nil {
 			log.Printf("[WARN] failed to set ports from API: %s", err)
 		}
-		ips := make(map[string]string, len(container.NetworkSettings.Networks))
-		for name, net := range container.NetworkSettings.Networks {
-			ips[name] = net.IPAddress
+		if err := d.Set("network_data", flattenContainerNetworks(container.NetworkSettings)); err != nil {
+			log.Printf("[WARN] failed to set network settings from API: %s", err)
 		}
-		d.Set(fmt.Sprintf("ip_addresses"), ips)
 	}
 
 	return nil
@@ -406,6 +415,23 @@ func flattenContainerPorts(in nat.PortMap) []interface{} {
 			m["protocol"] = portProtocolSplit[1]
 			out = append(out, m)
 		}
+	}
+	return out
+}
+func flattenContainerNetworks(in *types.NetworkSettings) []interface{} {
+	var out = make([]interface{}, 0)
+	if in == nil || in.Networks == nil || len(in.Networks) == 0 {
+		return out
+	}
+
+	networks := in.Networks
+	for networkName, networkData := range networks {
+		m := make(map[string]interface{})
+		m["network_name"] = networkName
+		m["ip_address"] = networkData.IPAddress
+		m["ip_prefix_length"] = networkData.IPPrefixLen
+		m["gateway"] = networkData.Gateway
+		out = append(out, m)
 	}
 	return out
 }

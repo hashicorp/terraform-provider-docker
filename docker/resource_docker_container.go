@@ -293,27 +293,49 @@ func resourceDockerContainer() *schema.Resource {
 			"ip_address": &schema.Schema{
 				Type:       schema.TypeString,
 				Computed:   true,
-				Deprecated: "User ip_adresses instead. This field only exposes the first ip_address of the container's networks.",
-			},
-
-			"ip_addresses": &schema.Schema{
-				Type:     schema.TypeMap,
-				Computed: true,
+				Deprecated: "Use ip_adresses_data instead. This field exposes the data of the container's first network.",
 			},
 
 			"ip_prefix_length": &schema.Schema{
-				Type:     schema.TypeInt,
-				Computed: true,
+				Type:       schema.TypeInt,
+				Computed:   true,
+				Deprecated: "Use ip_prefix_length from ip_adresses_data instead. This field exposes the data of the container's first network.",
 			},
 
 			"gateway": &schema.Schema{
-				Type:     schema.TypeString,
-				Computed: true,
+				Type:       schema.TypeString,
+				Computed:   true,
+				Deprecated: "Use gateway from ip_adresses_data instead. This field exposes the data of the container's first network.",
 			},
 
 			"bridge": &schema.Schema{
 				Type:     schema.TypeString,
 				Computed: true,
+			},
+
+			"network_data": &schema.Schema{
+				Type:     schema.TypeList,
+				Computed: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"network_name": &schema.Schema{
+							Type:     schema.TypeString,
+							Computed: true,
+						},
+						"ip_address": &schema.Schema{
+							Type:     schema.TypeString,
+							Computed: true,
+						},
+						"ip_prefix_length": &schema.Schema{
+							Type:     schema.TypeInt,
+							Computed: true,
+						},
+						"gateway": &schema.Schema{
+							Type:     schema.TypeString,
+							Computed: true,
+						},
+					},
+				},
 			},
 
 			"privileged": &schema.Schema{
