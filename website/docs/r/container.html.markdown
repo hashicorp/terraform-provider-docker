@@ -205,8 +205,7 @@ the following:
 
 The following attributes are exported:
 
- * `ip_address` - The IP address of the container as read from its
-   NetworkSettings.
+ * `ip_address` - The IP address of the container's first network it. Use `ip_addresses` instead.
  * `ip_prefix_length` - The IP prefix length of the container as read from its
    NetworkSettings.
  * `ip_addresses` - (map of strings) The IP addresses of the container on each

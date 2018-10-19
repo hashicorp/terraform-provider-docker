@@ -291,8 +291,9 @@ func resourceDockerContainer() *schema.Resource {
 			},
 
 			"ip_address": &schema.Schema{
-				Type:     schema.TypeString,
-				Computed: true,
+				Type:       schema.TypeString,
+				Computed:   true,
+				Deprecated: "User ip_adresses instead. This field only exposes the first ip_address of the container's networks.",
 			},
 
 			"ip_addresses": &schema.Schema{
