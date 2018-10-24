@@ -212,7 +212,9 @@ func resourceDockerContainerCreate(d *schema.ResourceData, meta interface{}) err
 		}
 
 		if err := client.NetworkDisconnect(context.Background(), "bridge", retContainer.ID, false); err != nil {
-			return fmt.Errorf("Unable to disconnect the default network: %s", err)
+			if !strings.Contains(err.Error(), "is not connected to the network bridge") {
+				return fmt.Errorf("Unable to disconnect the default network: %s", err)
+			}
 		}
 
 		for _, rawNetwork := range v.(*schema.Set).List() {
@@ -300,7 +302,7 @@ func resourceDockerContainerRead(d *schema.ResourceData, meta interface{}) error
 		}
 
 		jsonObj, _ := json.MarshalIndent(container, "", "\t")
-		log.Printf("[DEBUG] Docker container inspect: %s", jsonObj)
+		log.Printf("[INFO] Docker container inspect: %s", jsonObj)
 
 		if container.State.Running ||
 			!container.State.Running && !d.Get("must_run").(bool) {
