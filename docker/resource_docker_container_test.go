@@ -42,6 +42,73 @@ func TestAccDockerContainer_basic(t *testing.T) {
 		},
 	})
 }
+func TestAccDockerContainer_basic_network(t *testing.T) {
+	var c types.ContainerJSON
+	resource.Test(t, resource.TestCase{
+		PreCheck:  func() { testAccPreCheck(t) },
+		Providers: testAccProviders,
+		Steps: []resource.TestStep{
+			resource.TestStep{
+				Config: testAccDockerContainerWith2BridgeNetworkConfig,
+				Check: resource.ComposeTestCheckFunc(
+					testAccContainerRunning("docker_container.foo", &c),
+					resource.TestCheckResourceAttr("docker_container.foo", "bridge", ""),
+					resource.TestCheckResourceAttrSet("docker_container.foo", "ip_address"),
+					resource.TestCheckResourceAttrSet("docker_container.foo", "ip_prefix_length"),
+					resource.TestCheckResourceAttrSet("docker_container.foo", "gateway"),
+					resource.TestCheckResourceAttr("docker_container.foo", "network_data.#", "2"),
+					resource.TestCheckResourceAttrSet("docker_container.foo", "network_data.0.network_name"),
+					resource.TestCheckResourceAttrSet("docker_container.foo", "network_data.0.ip_address"),
+					resource.TestCheckResourceAttrSet("docker_container.foo", "network_data.0.ip_prefix_length"),
+					resource.TestCheckResourceAttrSet("docker_container.foo", "network_data.0.gateway"),
+					resource.TestCheckResourceAttrSet("docker_container.foo", "network_data.1.network_name"),
+					resource.TestCheckResourceAttrSet("docker_container.foo", "network_data.1.ip_address"),
+					resource.TestCheckResourceAttrSet("docker_container.foo", "network_data.1.ip_prefix_length"),
+					resource.TestCheckResourceAttrSet("docker_container.foo", "network_data.1.gateway"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccDockerContainer_2networks_withmode(t *testing.T) {
+	var c types.ContainerJSON
+	resource.Test(t, resource.TestCase{
+		PreCheck:  func() { testAccPreCheck(t) },
+		Providers: testAccProviders,
+		Steps: []resource.TestStep{
+			resource.TestStep{
+				Config: testAccDockerContainer2NetworksConfig,
+				Check: resource.ComposeTestCheckFunc(
+					testAccContainerRunning("docker_container.foo", &c),
+					resource.TestCheckResourceAttr("docker_container.foo", "bridge", ""),
+					resource.TestCheckResourceAttrSet("docker_container.foo", "ip_address"),
+					resource.TestCheckResourceAttrSet("docker_container.foo", "ip_prefix_length"),
+					resource.TestCheckResourceAttrSet("docker_container.foo", "gateway"),
+					resource.TestCheckResourceAttr("docker_container.foo", "network_data.#", "2"),
+					resource.TestCheckResourceAttrSet("docker_container.foo", "network_data.0.network_name"),
+					resource.TestCheckResourceAttrSet("docker_container.foo", "network_data.0.ip_address"),
+					resource.TestCheckResourceAttrSet("docker_container.foo", "network_data.0.ip_prefix_length"),
+					resource.TestCheckResourceAttrSet("docker_container.foo", "network_data.0.gateway"),
+					resource.TestCheckResourceAttrSet("docker_container.foo", "network_data.1.network_name"),
+					resource.TestCheckResourceAttrSet("docker_container.foo", "network_data.1.ip_address"),
+					resource.TestCheckResourceAttrSet("docker_container.foo", "network_data.1.ip_prefix_length"),
+					resource.TestCheckResourceAttrSet("docker_container.foo", "network_data.1.gateway"),
+					resource.TestCheckResourceAttr("docker_container.bar", "network_alias.#", "1"),
+					resource.TestCheckResourceAttr("docker_container.bar", "bridge", ""),
+					resource.TestCheckResourceAttrSet("docker_container.bar", "ip_address"),
+					resource.TestCheckResourceAttrSet("docker_container.bar", "ip_prefix_length"),
+					resource.TestCheckResourceAttrSet("docker_container.bar", "gateway"),
+					resource.TestCheckResourceAttr("docker_container.bar", "network_data.#", "1"),
+					resource.TestCheckResourceAttrSet("docker_container.bar", "network_data.0.network_name"),
+					resource.TestCheckResourceAttrSet("docker_container.bar", "network_data.0.ip_address"),
+					resource.TestCheckResourceAttrSet("docker_container.bar", "network_data.0.ip_prefix_length"),
+					resource.TestCheckResourceAttrSet("docker_container.bar", "network_data.0.gateway"),
+				),
+			},
+		},
+	})
+}
 
 func TestAccDockerContainerPath_validation(t *testing.T) {
 	cases := []struct {
@@ -872,6 +939,29 @@ resource "docker_container" "foo" {
 }
 `
 
+const testAccDockerContainerWith2BridgeNetworkConfig = `
+resource "docker_network" "tftest" {
+  name = "tftest-contnw"
+}
+
+resource "docker_network" "tftest_2" {
+  name = "tftest-contnw-2"
+}
+
+resource "docker_image" "foo" {
+	name = "nginx:latest"
+}
+
+resource "docker_container" "foo" {
+	name  	 = "tf-test"
+	image 	 = "${docker_image.foo.latest}"
+	networks = [
+		"${docker_network.tftest.name}",
+		"${docker_network.tftest_2.name}"
+	]
+}
+`
+
 const testAccDockerContainerVolumeConfig = `
 resource "docker_image" "foo" {
 	name = "nginx:latest"
@@ -1070,7 +1160,6 @@ resource "docker_container" "foo" {
 	] 
 }
 `
-
 const testAccDockerContainerRmConfig = `
 resource "docker_image" "foo" {
 	name = "busybox:latest"
@@ -1112,5 +1201,36 @@ resource "docker_container" "foo" {
 	command = ["/bin/sh", "-c", "exit 123"]
 	attach = true
 	must_run = false
+}
+`
+
+const testAccDockerContainer2NetworksConfig = `
+resource "docker_image" "foo" {
+  name         = "nginx:latest"
+  keep_locally = true
+}
+
+resource "docker_network" "test_network_1" {
+  name = "tftest-1"
+}
+
+resource "docker_network" "test_network_2" {
+  name = "tftest-2"
+}
+
+resource "docker_container" "foo" {
+  name          = "tf-test"
+  image         = "${docker_image.foo.latest}"
+  network_mode  = "${docker_network.test_network_1.name}"
+  networks      = ["${docker_network.test_network_2.name}"]
+  network_alias = ["tftest-container"]
+}
+
+resource "docker_container" "bar" {
+  name          = "tf-test-bar"
+  image         = "${docker_image.foo.latest}"
+  network_mode  = "bridge"
+  networks      = ["${docker_network.test_network_2.name}"]
+  network_alias = ["tftest-container-foo"]
 }
 `
