@@ -821,6 +821,123 @@ func TestAccDockerContainer_nostart(t *testing.T) {
 	})
 }
 
+func TestAccDockerContainer_ipv4address(t *testing.T) {
+	var c types.ContainerJSON
+
+	testCheck := func(*terraform.State) error {
+		networks := c.NetworkSettings.Networks
+
+		if len(networks) != 1 {
+			return fmt.Errorf("Container doesn't have a correct network")
+		}
+		if _, ok := networks["tf-test"]; !ok {
+			return fmt.Errorf("Container doesn't have a correct network")
+		}
+		if c.NetworkSettings.Networks["tf-test"].IPAMConfig == nil {
+			return fmt.Errorf("Container doesn't have a correct IPAM config")
+		}
+		if c.NetworkSettings.Networks["tf-test"].IPAMConfig.IPv4Address != "10.0.1.123" {
+			return fmt.Errorf("Container doesn't have a correct IPv4 address")
+		}
+
+		return nil
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:  func() { testAccPreCheck(t) },
+		Providers: testAccProviders,
+		Steps: []resource.TestStep{
+			resource.TestStep{
+				Config: testAccDockerContainerNetworksIPv4AddressConfig,
+				Check: resource.ComposeTestCheckFunc(
+					testAccContainerRunning("docker_container.foo", &c),
+					testCheck,
+					resource.TestCheckResourceAttr("docker_container.foo", "name", "tf-test"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccDockerContainer_ipv6address(t *testing.T) {
+	var c types.ContainerJSON
+
+	testCheck := func(*terraform.State) error {
+		networks := c.NetworkSettings.Networks
+
+		if len(networks) != 1 {
+			return fmt.Errorf("Container doesn't have a correct network")
+		}
+		if _, ok := networks["tf-test"]; !ok {
+			return fmt.Errorf("Container doesn't have a correct network")
+		}
+		if c.NetworkSettings.Networks["tf-test"].IPAMConfig == nil {
+			return fmt.Errorf("Container doesn't have a correct IPAM config")
+		}
+		if c.NetworkSettings.Networks["tf-test"].IPAMConfig.IPv6Address != "fd00:0:0:0::123" {
+			return fmt.Errorf("Container doesn't have a correct IPv6 address")
+		}
+
+		return nil
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:  func() { testAccPreCheck(t) },
+		Providers: testAccProviders,
+		Steps: []resource.TestStep{
+			resource.TestStep{
+				Config: testAccDockerContainerNetworksIPv6AddressConfig,
+				Check: resource.ComposeTestCheckFunc(
+					testAccContainerRunning("docker_container.foo", &c),
+					testCheck,
+					resource.TestCheckResourceAttr("docker_container.foo", "name", "tf-test"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccDockerContainer_dualstackaddress(t *testing.T) {
+	var c types.ContainerJSON
+
+	testCheck := func(*terraform.State) error {
+		networks := c.NetworkSettings.Networks
+
+		if len(networks) != 1 {
+			return fmt.Errorf("Container doesn't have a correct network")
+		}
+		if _, ok := networks["tf-test"]; !ok {
+			return fmt.Errorf("Container doesn't have a correct network")
+		}
+		if c.NetworkSettings.Networks["tf-test"].IPAMConfig == nil {
+			return fmt.Errorf("Container doesn't have a correct IPAM config")
+		}
+		if c.NetworkSettings.Networks["tf-test"].IPAMConfig.IPv4Address != "10.0.1.123" {
+			return fmt.Errorf("Container doesn't have a correct IPv4 address")
+		}
+		if c.NetworkSettings.Networks["tf-test"].IPAMConfig.IPv6Address != "fd00:0:0:0::123" {
+			return fmt.Errorf("Container doesn't have a correct IPv6 address")
+		}
+
+		return nil
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:  func() { testAccPreCheck(t) },
+		Providers: testAccProviders,
+		Steps: []resource.TestStep{
+			resource.TestStep{
+				Config: testAccDockerContainerNetworksDualStackAddressConfig,
+				Check: resource.ComposeTestCheckFunc(
+					testAccContainerRunning("docker_container.foo", &c),
+					testCheck,
+					resource.TestCheckResourceAttr("docker_container.foo", "name", "tf-test"),
+				),
+			},
+		},
+	})
+}
+
 func testAccContainerRunning(n string, container *types.ContainerJSON) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
@@ -1318,5 +1435,80 @@ resource "docker_container" "foo" {
   image    = "nginx:latest"
   start    = false
   must_run = false
+}
+`
+const testAccDockerContainerNetworksIPv4AddressConfig = `
+resource "docker_network" "test" {
+	name = "tf-test"
+	ipam_config {
+		subnet = "10.0.1.0/24"
+	}
+}
+resource "docker_image" "foo" {
+	name = "nginx:latest"
+	keep_locally = true
+}
+resource "docker_container" "foo" {
+	name = "tf-test"
+	image = "${docker_image.foo.latest}"
+	networks = [
+		{
+			name = "${docker_network.test.name}",
+			ipv4_address = "10.0.1.123"
+		}
+	]
+}
+`
+
+const testAccDockerContainerNetworksIPv6AddressConfig = `
+resource "docker_network" "test" {
+	name = "tf-test"
+	ipv6 = true
+	ipam_config {
+		subnet = "fd00::1/64"
+	}
+}
+resource "docker_image" "foo" {
+	name = "nginx:latest"
+	keep_locally = true
+}
+resource "docker_container" "foo" {
+	name = "tf-test"
+	image = "${docker_image.foo.latest}"
+	networks = [
+		{
+			name = "${docker_network.test.name}",
+			ipv6_address = "fd00:0:0:0::123"
+		}
+	]
+}
+`
+const testAccDockerContainerNetworksDualStackAddressConfig = `
+resource "docker_network" "test" {
+	name = "tf-test"
+	ipv6 = true
+	ipam_config = [
+		{
+			subnet = "10.0.1.0/24"
+		},
+		{
+			subnet = "fd00::1/64"
+		}
+	]
+}
+resource "docker_image" "foo" {
+	name = "nginx:latest"
+	keep_locally = true
+}
+resource "docker_container" "foo" {
+	name = "tf-test"
+	image = "${docker_image.foo.latest}"
+	networks = [
+		{
+			name = "${docker_network.test.name}",
+			ipv4_address = "10.0.1.123"
+			ipv6_address = "fd00:0:0:0::123"
+		}
+	]
 }
 `
