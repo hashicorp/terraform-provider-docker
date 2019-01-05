@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -20,7 +21,7 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
-	units "github.com/docker/go-units"
+	"github.com/docker/go-units"
 	"github.com/hashicorp/terraform/helper/schema"
 )
 
@@ -76,7 +77,7 @@ func resourceDockerContainerCreate(d *schema.ResourceData, meta interface{}) err
 	portBindings := map[nat.Port][]nat.PortBinding{}
 
 	if v, ok := d.GetOk("ports"); ok {
-		exposedPorts, portBindings = portSetToDockerPorts(v.(*schema.Set))
+		exposedPorts, portBindings = portSetToDockerPorts(v.([]interface{}))
 	}
 	if len(exposedPorts) != 0 {
 		config.ExposedPorts = exposedPorts
@@ -537,13 +538,15 @@ func (s byPortAndProtocol) Less(i, j int) bool {
 	return iPort < jPort
 }
 
-func flattenContainerPorts(in nat.PortMap) *schema.Set {
+func flattenContainerPorts(in nat.PortMap) []interface{} {
 	var out = make([]interface{}, 0)
 
 	var internalPortKeys []string
 	for portAndProtocolKeys := range in {
 		internalPortKeys = append(internalPortKeys, string(portAndProtocolKeys))
 	}
+	sort.Sort(byPortAndProtocol(internalPortKeys))
+
 	for _, portKey := range internalPortKeys {
 		m := make(map[string]interface{})
 
@@ -559,12 +562,8 @@ func flattenContainerPorts(in nat.PortMap) *schema.Set {
 			out = append(out, m)
 		}
 	}
-
-	portsResource := resourceDockerContainer().Schema["ports"].Elem.(*schema.Resource)
-	f := schema.HashResource(portsResource)
-	return schema.NewSet(f, out)
+	return out
 }
-
 func flattenContainerNetworks(in *types.NetworkSettings) []interface{} {
 	var out = make([]interface{}, 0)
 	if in == nil || in.Networks == nil || len(in.Networks) == 0 {
@@ -642,12 +641,11 @@ func fetchDockerContainer(ID string, client *client.Client) (*types.Container, e
 	return nil, nil
 }
 
-func portSetToDockerPorts(ports *schema.Set) (map[nat.Port]struct{}, map[nat.Port][]nat.PortBinding) {
+func portSetToDockerPorts(ports []interface{}) (map[nat.Port]struct{}, map[nat.Port][]nat.PortBinding) {
 	retExposedPorts := map[nat.Port]struct{}{}
 	retPortBindings := map[nat.Port][]nat.PortBinding{}
 
-	portsRaw := ports.List()
-	for _, portInt := range portsRaw {
+	for _, portInt := range ports {
 		port := portInt.(map[string]interface{})
 		internal := port["internal"].(int)
 		protocol := port["protocol"].(string)
