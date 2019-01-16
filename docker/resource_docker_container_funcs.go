@@ -503,7 +503,7 @@ func resourceDockerContainerDelete(d *schema.ResourceData, meta interface{}) err
 	}
 
 	removeOpts := types.ContainerRemoveOptions{
-		RemoveVolumes: d.Get("remove_volumes").(bool),
+		RemoveVolumes: true,
 		Force:         true,
 	}
 

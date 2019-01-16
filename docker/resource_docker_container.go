@@ -158,11 +158,6 @@ func resourceDockerContainer() *schema.Resource {
 				Optional: true,
 				ForceNew: true,
 			},
-			"remove_volumes": &schema.Schema{
-				Type:     schema.TypeBool,
-				Optional: true,
-				Default:  true,
-			},
 
 			"workdir": &schema.Schema{
 				Type:     schema.TypeString,
