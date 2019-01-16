@@ -164,6 +164,11 @@ func resourceDockerContainer() *schema.Resource {
 				Default:  true,
 			},
 
+			"workdir": &schema.Schema{
+				Type:     schema.TypeString,
+				Optional: true,
+			},
+
 			"capabilities": &schema.Schema{
 				Type:     schema.TypeSet,
 				Optional: true,

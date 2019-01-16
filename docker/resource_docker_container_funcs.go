@@ -73,6 +73,10 @@ func resourceDockerContainerCreate(d *schema.ResourceData, meta interface{}) err
 		config.User = v.(string)
 	}
 
+	if v, ok := d.GetOk("workdir"); ok {
+		config.WorkingDir = v.(string)
+	}
+
 	exposedPorts := map[nat.Port]struct{}{}
 	portBindings := map[nat.Port][]nat.PortBinding{}
 
