@@ -323,6 +323,12 @@ func resourceDockerContainer() *schema.Resource {
 							Optional: true,
 							ForceNew: true,
 						},
+
+						"shared": &schema.Schema{
+							Type:     schema.TypeBool,
+							Optional: true,
+							ForceNew: true,
+						},
 					},
 				},
 			},

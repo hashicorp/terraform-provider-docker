@@ -1279,6 +1279,7 @@ resource "docker_container" "foo" {
         volume_name = "${docker_volume.foo.name}"
         container_path = "/tmp/volume"
         read_only = false
+        shared = true
     }
 }
 `
