@@ -194,6 +194,9 @@ the following:
   volume will be mounted.
 * `read_only` - (Optional, bool) If true, this volume will be readonly.
   Defaults to false.
+* `shared` - (Optional, bool) If true, this volume will be shared.
+	Defaults to false. See [Docker documentation ][shareddocs]for more
+	details.
 
 One of `from_container`, `host_path` or `volume_name` must be set.
 
@@ -280,3 +283,4 @@ The following attributes are exported:
 
 
 [linkdoc] https://docs.docker.com/network/links/
+[shareddocs] https://docs.docker.com/engine/reference/run/#volume-shared-filesystems
