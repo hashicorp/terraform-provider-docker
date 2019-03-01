@@ -42,6 +42,30 @@ func resourceDockerImage() *schema.Resource {
 				Elem:     &schema.Schema{Type: schema.TypeString},
 				Set:      schema.HashString,
 			},
+			"build": &schema.Schema{
+				Type:          schema.TypeSet,
+				Optional:      true,
+				MaxItems:      1,
+				ConflictsWith: []string{"pull_triggers", "pull_trigger"},
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"context": &schema.Schema{
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"dockerfile": &schema.Schema{
+							Type:     schema.TypeString,
+							Optional: true,
+							Default:  "Dockerfile",
+						},
+						"buildargs": &schema.Schema{
+							Type:     schema.TypeMap,
+							Optional: true,
+							Elem:     schema.TypeString,
+						},
+					},
+				},
+			},
 		},
 	}
 }
