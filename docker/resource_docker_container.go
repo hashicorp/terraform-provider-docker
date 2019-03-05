@@ -226,7 +226,7 @@ func resourceDockerContainer() *schema.Resource {
 			},
 
 			"ports": &schema.Schema{
-				Type:     schema.TypeList,
+				Type:     schema.TypeSet,
 				Optional: true,
 				ForceNew: true,
 				Elem: &schema.Resource{
