@@ -180,7 +180,7 @@ resource "docker_service" "foo" {
                 generic_resources {
                     named_resources_spec = [
                         "GPU=UUID1"
-                    }
+                    ]
 
                     discrete_resources_spec = [
                         "SSD=3"
