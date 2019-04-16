@@ -906,7 +906,6 @@ func createContainerSpec(v interface{}) (*swarm.ContainerSpec, error) {
 
 				for _, rawSecret := range value.(*schema.Set).List() {
 					rawSecret := rawSecret.(map[string]interface{})
-
 					secretID := rawSecret["secret_id"].(string)
 					if len(secretID) == 0 {
 						log.Printf("[WARN] secret_id field was empty. Excluding secret from output")
