@@ -394,20 +394,20 @@ func TestAccDockerService_emptySecrets(t *testing.T) {
 					task_spec {
 						container_spec {
 							image = "127.0.0.1:15000/tftest-service:v1"
-						}
 
-						secrets = [
-							{
-								secret_id   = "${docker_secret.service_secret.id}"
-								secret_name = "${docker_secret.service_secret.name}"
-								file_name = "/secrets.json"
-							},
-							{
-								secret_id   = ""
-								secret_name = ""
-								file_name = ""
-							},
-						]
+							secrets = [
+								{
+									secret_id   = "${docker_secret.service_secret.id}"
+									secret_name = "${docker_secret.service_secret.name}"
+									file_name = "/secrets.json"
+								},
+								{
+									secret_id   = ""
+									secret_name = ""
+									file_name = ""
+								},
+							]
+						}
 					}
 				}
 				`,
