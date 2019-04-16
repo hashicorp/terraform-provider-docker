@@ -377,6 +377,46 @@ func TestAccDockerService_full(t *testing.T) {
 	})
 }
 
+func TestAccDockerService_emptySecrets(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:  func() { testAccPreCheck(t) },
+		Providers: testAccProviders,
+		Steps: []resource.TestStep{
+			{
+				Config: `
+				resource "docker_service" "foo" {
+					name     = "tftest-service-basic"
+					task_spec {
+						container_spec {
+							image = "127.0.0.1:15000/tftest-service:v1"
+						}
+
+						secrets = [
+							{
+								secret_id   = "${docker_secret.service_secret.id}"
+								secret_name = "${docker_secret.service_secret.name}"
+								file_name = "/secrets.json"
+							},
+							{
+								secret_id   = ""
+								secret_name = ""
+								file_name = ""
+							},
+						]
+					}
+				}
+				`,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-basic"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image", "127.0.0.1:15000/tftest-service:v1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.secrets.#", "1"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccDockerService_partialReplicated(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
