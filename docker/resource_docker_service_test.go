@@ -384,6 +384,11 @@ func TestAccDockerService_emptySecrets(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: `
+				resource "docker_secret" "service_secret" {
+					name = "tftest-mysecret"
+					data = "ewogICJrZXkiOiAiUVdFUlRZIgp9"
+				}
+
 				resource "docker_service" "foo" {
 					name     = "tftest-service-basic"
 					task_spec {
