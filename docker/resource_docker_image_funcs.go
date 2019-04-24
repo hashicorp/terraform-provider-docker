@@ -170,7 +170,7 @@ func pullImage(data *Data, client *client.Client, authConfig *AuthConfigs, image
 	s := buf.String()
 	log.Printf("[DEBUG] pulled image %v: %v", image, s)
 
-	return fetchLocalImages(data, client)
+	return nil
 }
 
 type internalPullImageOptions struct {
@@ -211,21 +211,32 @@ func parseImageOptions(image string) internalPullImageOptions {
 }
 
 func findImage(d *schema.ResourceData, client *client.Client, authConfig *AuthConfigs) (*types.ImageSummary, error) {
-	var data Data
-	//if err := fetchLocalImages(&data, client); err != nil {
-	//	return nil, err
-	//} Is done in pullImage
-
 	imageName := d.Get("name").(string)
 	if imageName == "" {
 		return nil, fmt.Errorf("Empty image name is not allowed")
+	}
+
+	var data Data
+	// load local images into the data structure
+	if err := fetchLocalImages(&data, client); err != nil {
+		return nil, err
+	}
+
+	foundImage := searchLocalImages(data, imageName)
+	if foundImage != nil {
+		return foundImage, nil
 	}
 
 	if err := pullImage(&data, client, authConfig, imageName); err != nil {
 		return nil, fmt.Errorf("Unable to pull image %s: %s", imageName, err)
 	}
 
-	foundImage := searchLocalImages(data, imageName)
+	// update the data structure of the images
+	if err := fetchLocalImages(&data, client); err != nil {
+		return nil, err
+	}
+
+	foundImage = searchLocalImages(data, imageName)
 	if foundImage != nil {
 		return foundImage, nil
 	}
