@@ -122,6 +122,7 @@ func TestAccDockerImage_data_private(t *testing.T) {
 				),
 			},
 		},
+		CheckDestroy: checkAndRemoveImages,
 	})
 }
 
@@ -143,6 +144,7 @@ func TestAccDockerImage_data_private_config_file(t *testing.T) {
 				),
 			},
 		},
+		CheckDestroy: checkAndRemoveImages,
 	})
 }
 
