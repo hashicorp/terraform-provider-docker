@@ -9,19 +9,31 @@ log() {
 }
 
 setup() {
-  export DOCKER_REGISTRY_ADDRESS="127.0.0.1:15000"
-  export DOCKER_REGISTRY_USER="testuser"
-  export DOCKER_REGISTRY_PASS="testpwd"
-  export DOCKER_PRIVATE_IMAGE="127.0.0.1:15000/tftest-service:v1"
+  #export DOCKER_REGISTRY_ADDRESS="127.0.0.1:15000"
+  #export DOCKER_REGISTRY_USER="testuser"
+  #export DOCKER_REGISTRY_PASS="testpwd"
+  #export DOCKER_PRIVATE_IMAGE="127.0.0.1:15000/tftest-service:v1"
+  echo ""
   sh "$(pwd)"/scripts/testing/setup_private_registry.sh
 }
 
 run() {
-  TF_ACC=1 go test ./docker -v -timeout 120m
+  go clean -testcache
+  #TF_ACC=1 go test ./docker -v -timeout 120m
   
   # for a single test comment the previous line and uncomment the next line
-  #TF_LOG=INFO TF_ACC=1 go test -v github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerContainer_port$ -timeout 360s
+  TF_LOG=INFO TF_ACC=1 go test -v github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerService_privateConverge$ -timeout 360s
+  TF_LOG=INFO TF_ACC=1 go test -v github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerService_updateImage$ -timeout 360s
+  TF_LOG=INFO TF_ACC=1 go test -v github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerService_updateConfigAndDecreaseReplicasConverge$ -timeout 360s
+  TF_LOG=INFO TF_ACC=1 go test -v github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerImage_data_private$ -timeout 360s
+  TF_LOG=INFO TF_ACC=1 go test -v github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerImage_data_private_config_file$ -timeout 360s
+  TF_LOG=INFO TF_ACC=1 go test -v github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerRegistryImage_auth$ -timeout 360s
+  TF_LOG=INFO TF_ACC=1 go test -v github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerContainer_private_image$ -timeout 360s
+  #TF_LOG=INFO TF_ACC=1 go test -v github.com/terraform-providers/terraform-provider-docker/docker -run ^TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseReplicasConverge$ -timeout 360s
   
+  # go get github.com/hashicorp/terraform@v0.12.0-beta2
+  # https://www.terraform.io/upgrade-guides/0-12.html
+
   # keep the return value for the scripts to fail and clean properly
   return $?
 }
