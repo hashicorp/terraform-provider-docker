@@ -1,6 +1,9 @@
 package docker
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/hashicorp/terraform/helper/schema"
 )
 
@@ -70,9 +73,10 @@ func resourceDockerService() *schema.Resource {
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"image": {
-										Type:        schema.TypeString,
-										Description: "The image name to use for the containers of the service",
-										Required:    true,
+										Type:             schema.TypeString,
+										Description:      "The image name to use for the containers of the service",
+										Required:         true,
+										DiffSuppressFunc: suppressIfSHAwasAdded(),
 									},
 									"labels": {
 										Type:        schema.TypeMap,
@@ -898,4 +902,84 @@ func resourceDockerService() *schema.Resource {
 			},
 		},
 	}
+}
+
+func suppressIfSHAwasAdded() schema.SchemaDiffSuppressFunc {
+	return func(k, old, new string, d *schema.ResourceData) bool {
+		// the initial case when the service is created
+		if old == "" && new != "" {
+			return false
+		}
+
+		oldURL, oldImage, oldTag, oldSHA, oldErr := splitImageName(old)
+		if oldErr != nil {
+			fmt.Printf("[INFO] invalid old image name: %s\n", oldErr.Error())
+			return false
+		}
+		fmt.Printf("[INFO] old image parse: %s, %s, %s, %s\n", oldURL, oldImage, oldTag, oldSHA)
+
+		newURL, newImage, newTag, newSHA, newErr := splitImageName(new)
+		if newErr != nil {
+			fmt.Printf("[INFO] invalid new image name: %s\n", newErr.Error())
+			return false
+		}
+		fmt.Printf("[INFO] new image parse: %s, %s, %s, %s\n", newURL, newImage, newTag, newSHA)
+
+		if oldURL != newURL || oldImage != newImage {
+			return false
+		}
+
+		if oldTag != newTag {
+			if (oldTag == "" && newTag == "latest") || (oldTag == "latest" || newTag == "") {
+				return true
+			}
+			return false
+		}
+
+		// tags are the same
+		if oldSHA == newSHA || (oldSHA == "" && newSHA != "") || (oldSHA != "" && newSHA == "") {
+			return true
+		}
+
+		if oldSHA != newSHA {
+			return false
+		}
+
+		return true
+	}
+}
+
+// spitImageName splits an image with name 127.0.0.1:15000/tftest-service:v1@sha256:24..
+// into its parts. Handles edge cases like no tag and no sha256.
+func splitImageName(imageNameToSplit string) (url, image, tag, sha string, err error) {
+	urlToRestSplit := strings.Split(imageNameToSplit, "/")
+	if len(urlToRestSplit) != 2 {
+		return "", "", "", "", fmt.Errorf("image name is not valid: %s", imageNameToSplit)
+	}
+	url = urlToRestSplit[0]
+	imageNameToRestSplit := strings.Split(urlToRestSplit[1], ":")
+	// we only have an image name without tag and sha256
+	if len(imageNameToRestSplit) == 1 {
+		image = imageNameToRestSplit[0]
+		return url, image, "", "", nil
+	}
+	// has tag and sha256
+	if len(imageNameToRestSplit) == 3 {
+		image = imageNameToRestSplit[0]
+		tag = strings.Replace(imageNameToRestSplit[1], "@sha256", "", 1)
+		sha = imageNameToRestSplit[2]
+		return url, image, tag, sha, nil
+	}
+	// can be either with tag or sha256, which implies 'latest' tag
+	if len(imageNameToRestSplit) == 2 {
+		image = imageNameToRestSplit[0]
+		if strings.Contains(imageNameToRestSplit[1], "sha256") {
+			sha = imageNameToRestSplit[1]
+			return url, image, "", sha, nil
+		}
+		tag = strings.Replace(imageNameToRestSplit[1], "@sha256", "", 1)
+		return url, image, tag, "", nil
+	}
+
+	return "", "", "", "", fmt.Errorf("image name is not valid: %s", imageNameToSplit)
 }
