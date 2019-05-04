@@ -167,6 +167,7 @@ func TestAccDockerService_minimalSpec(t *testing.T) {
 				),
 			},
 		},
+		CheckDestroy: checkAndRemoveImages,
 	})
 }
 
@@ -459,6 +460,7 @@ func TestAccDockerService_fullSpec(t *testing.T) {
 				),
 			},
 		},
+		CheckDestroy: checkAndRemoveImages,
 	})
 }
 
@@ -555,6 +557,7 @@ func TestAccDockerService_partialReplicationConfig(t *testing.T) {
 				),
 			},
 		},
+		CheckDestroy: checkAndRemoveImages,
 	})
 }
 
@@ -593,6 +596,7 @@ func TestAccDockerService_globalReplicationMode(t *testing.T) {
 				),
 			},
 		},
+		CheckDestroy: checkAndRemoveImages,
 	})
 }
 
@@ -621,6 +625,7 @@ func TestAccDockerService_ConflictingGlobalAndReplicated(t *testing.T) {
 				ExpectError: regexp.MustCompile(`.*conflicts with.*`),
 			},
 		},
+		CheckDestroy: checkAndRemoveImages,
 	})
 }
 
@@ -658,6 +663,7 @@ func TestAccDockerService_ConflictingGlobalModeAndConverge(t *testing.T) {
 				ExpectError: regexp.MustCompile(`.*conflicts with.*`),
 			},
 		},
+		CheckDestroy: checkAndRemoveImages,
 	})
 }
 
