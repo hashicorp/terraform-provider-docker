@@ -913,17 +913,17 @@ func suppressIfSHAwasAdded() schema.SchemaDiffSuppressFunc {
 
 		oldURL, oldImage, oldTag, oldSHA, oldErr := splitImageName(old)
 		if oldErr != nil {
-			fmt.Printf("[INFO] invalid old image name: %s\n", oldErr.Error())
+			fmt.Printf("[DEBUG] invalid old image name: %s\n", oldErr.Error())
 			return false
 		}
-		fmt.Printf("[INFO] old image parse: %s, %s, %s, %s\n", oldURL, oldImage, oldTag, oldSHA)
+		fmt.Printf("[DEBUG] old image parse: %s, %s, %s, %s\n", oldURL, oldImage, oldTag, oldSHA)
 
 		newURL, newImage, newTag, newSHA, newErr := splitImageName(new)
 		if newErr != nil {
-			fmt.Printf("[INFO] invalid new image name: %s\n", newErr.Error())
+			fmt.Printf("[DEBUG] invalid new image name: %s\n", newErr.Error())
 			return false
 		}
-		fmt.Printf("[INFO] new image parse: %s, %s, %s, %s\n", newURL, newImage, newTag, newSHA)
+		fmt.Printf("[DEBUG] new image parse: %s, %s, %s, %s\n", newURL, newImage, newTag, newSHA)
 
 		if oldURL != newURL || oldImage != newImage {
 			return false
