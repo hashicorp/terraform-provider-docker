@@ -463,14 +463,21 @@ func TestAccDockerService_fullSpec(t *testing.T) {
 }
 
 func TestAccDockerService_partialReplicationConfig(t *testing.T) {
-	t.Skip("will be revised")
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
 		Providers: testAccProviders,
 		Steps: []resource.TestStep{
 			{
 				Config: `
+				provider "docker" {
+					alias = "private"
+					registry_auth {
+						address = "127.0.0.1:15000"
+					}
+				}
+
 				resource "docker_service" "foo" {
+					provider = "docker.private"
 					name     = "tftest-service-basic"
 					task_spec {
 						container_spec = {
@@ -483,13 +490,21 @@ func TestAccDockerService_partialReplicationConfig(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-basic"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image", "127.0.0.1:15000/tftest-service:v1"),
+					resource.TestMatchResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image", regexp.MustCompile(`127.0.0.1:15000/tftest-service:v1@sha256.*`)),
 					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.0.replicas", "1"),
 				),
 			},
 			{
 				Config: `
+				provider "docker" {
+					alias = "private"
+					registry_auth {
+						address = "127.0.0.1:15000"
+					}
+				}
+
 				resource "docker_service" "foo" {
+					provider = "docker.private"
 					name     = "tftest-service-basic"
 					task_spec {
 						container_spec = {
@@ -504,13 +519,21 @@ func TestAccDockerService_partialReplicationConfig(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-basic"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image", "127.0.0.1:15000/tftest-service:v1"),
+					resource.TestMatchResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image", regexp.MustCompile(`127.0.0.1:15000/tftest-service:v1@sha256.*`)),
 					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.0.replicas", "1"),
 				),
 			},
 			{
 				Config: `
+				provider "docker" {
+					alias = "private"
+					registry_auth {
+						address = "127.0.0.1:15000"
+					}
+				}
+
 				resource "docker_service" "foo" {
+					provider = "docker.private"
 					name     = "tftest-service-basic"
 					task_spec {
 						container_spec = {
@@ -527,7 +550,7 @@ func TestAccDockerService_partialReplicationConfig(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-basic"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image", "127.0.0.1:15000/tftest-service:v1"),
+					resource.TestMatchResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image", regexp.MustCompile(`127.0.0.1:15000/tftest-service:v1@sha256.*`)),
 					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.0.replicas", "2"),
 				),
 			},
@@ -536,14 +559,21 @@ func TestAccDockerService_partialReplicationConfig(t *testing.T) {
 }
 
 func TestAccDockerService_globalReplicationMode(t *testing.T) {
-	t.Skip("will be revised")
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
 		Providers: testAccProviders,
 		Steps: []resource.TestStep{
 			{
 				Config: `
+				provider "docker" {
+					alias = "private"
+					registry_auth {
+						address = "127.0.0.1:15000"
+					}
+				}
+
 				resource "docker_service" "foo" {
+					provider = "docker.private"
 					name     = "tftest-service-basic"
 					task_spec {
 						container_spec = {
@@ -558,7 +588,7 @@ func TestAccDockerService_globalReplicationMode(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-basic"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image", "127.0.0.1:15000/tftest-service:v1"),
+					resource.TestMatchResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image", regexp.MustCompile(`127.0.0.1:15000/tftest-service:v1@sha256.*`)),
 					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.global", "true"),
 				),
 			},
@@ -567,7 +597,6 @@ func TestAccDockerService_globalReplicationMode(t *testing.T) {
 }
 
 func TestAccDockerService_ConflictingGlobalAndReplicated(t *testing.T) {
-	t.Skip("will be revised")
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
 		Providers: testAccProviders,
@@ -595,15 +624,22 @@ func TestAccDockerService_ConflictingGlobalAndReplicated(t *testing.T) {
 	})
 }
 
-func TestAccDockerService_globalReplicationModeConverge(t *testing.T) {
-	t.Skip("will be revised")
+func TestAccDockerService_ConflictingGlobalModeAndConverge(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
 		Providers: testAccProviders,
 		Steps: []resource.TestStep{
 			{
 				Config: `
+				provider "docker" {
+					alias = "private"
+					registry_auth {
+						address = "127.0.0.1:15000"
+					}
+				}
+
 				resource "docker_service" "foo" {
+					provider = "docker.private"
 					name     = "tftest-service-basic"
 					task_spec {
 						container_spec = {
