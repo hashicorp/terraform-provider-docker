@@ -868,6 +868,10 @@ resource "docker_service" "foo" {
 				%s
 			]
 
+			hosts = [
+				%s
+			]
+
 			configs = [
 				{
 					config_id   = "${docker_config.service_config.id}"
@@ -934,6 +938,12 @@ func TestAccDockerService_updateMultiplePropertiesConverge(t *testing.T) {
 			}
 		}
 	`
+	hosts := `
+		{
+			host = "testhost"
+			ip = "10.0.1.0"
+		}
+	`
 	healthcheckInterval := "1s"
 	healthcheckTimeout := "500ms"
 	replicas := 2
@@ -944,9 +954,6 @@ func TestAccDockerService_updateMultiplePropertiesConverge(t *testing.T) {
 		}
 	`
 
-	// network := "" // skip due to inconsistent daemon answer
-
-	// host := ""
 	// logging := ""
 	// secretData := ""
 
@@ -980,6 +987,12 @@ func TestAccDockerService_updateMultiplePropertiesConverge(t *testing.T) {
 			}
 		}
 	`
+	hosts2 := `
+		{
+			host = "testhost2"
+			ip = "10.0.2.2"
+		}
+	`
 	healthcheckTimeout2 := "800ms"
 	replicas2 := 6
 	portsSpec2 := `
@@ -997,6 +1010,7 @@ func TestAccDockerService_updateMultiplePropertiesConverge(t *testing.T) {
 	configData3 := configData2
 	image3 := image2
 	mounts3 := mounts2
+	hosts3 := hosts2
 	healthcheckInterval3 := healthcheckInterval2
 	healthcheckTimeout3 := healthcheckTimeout2
 	replicas3 := 3 // only decrease
@@ -1006,7 +1020,7 @@ func TestAccDockerService_updateMultiplePropertiesConverge(t *testing.T) {
 		Providers: testAccProviders,
 		Steps: []resource.TestStep{
 			{
-				Config: fmt.Sprintf(updateMultiplePropertiesConfigConverge, configData, image, mounts, healthcheckInterval, healthcheckTimeout, replicas, portsSpec),
+				Config: fmt.Sprintf(updateMultiplePropertiesConfigConverge, configData, image, mounts, hosts, healthcheckInterval, healthcheckTimeout, replicas, portsSpec),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-fnf-service-up-crihiadr"),
@@ -1031,7 +1045,7 @@ func TestAccDockerService_updateMultiplePropertiesConverge(t *testing.T) {
 				),
 			},
 			{
-				Config: fmt.Sprintf(updateMultiplePropertiesConfigConverge, configData2, image2, mounts2, healthcheckInterval2, healthcheckTimeout2, replicas2, portsSpec2),
+				Config: fmt.Sprintf(updateMultiplePropertiesConfigConverge, configData2, image2, mounts2, hosts2, healthcheckInterval2, healthcheckTimeout2, replicas2, portsSpec2),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-fnf-service-up-crihiadr"),
@@ -1058,7 +1072,7 @@ func TestAccDockerService_updateMultiplePropertiesConverge(t *testing.T) {
 				),
 			},
 			{
-				Config: fmt.Sprintf(updateMultiplePropertiesConfigConverge, configData3, image3, mounts3, healthcheckInterval3, healthcheckTimeout3, replicas3, portsSpec3),
+				Config: fmt.Sprintf(updateMultiplePropertiesConfigConverge, configData3, image3, mounts3, hosts3, healthcheckInterval3, healthcheckTimeout3, replicas3, portsSpec3),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-fnf-service-up-crihiadr"),
@@ -1255,130 +1269,6 @@ func TestAccDockerService_updateFailsAndRollbackConverge(t *testing.T) {
 }
 
 // TODO
-func TestAccDockerService_updateHostsConverge(t *testing.T) {
-	t.Skip("will be revised")
-	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testAccPreCheck(t) },
-		Providers: testAccProviders,
-		Steps: []resource.TestStep{
-			{
-				Config: `
-				resource "docker_service" "foo" {
-					name     = "tftest-service-up-hosts"
-					task_spec {
-						container_spec {
-							image    = "127.0.0.1:15000/tftest-service:v1"
-							hosts = [
-								{
-									host = "testhost"
-									ip = "10.0.1.0"
-								}
-							]
-							stop_grace_period = "10s"
-						}
-					}
-
-					mode {
-						replicated {
-							replicas = 2
-						}
-					}
-
-					converge_config {
-						delay    = "7s"
-						timeout  = "3m"
-					}
-				}
-				`,
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
-					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-hosts"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image", "127.0.0.1:15000/tftest-service:v1"),
-					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.0.replicas", "2"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.hosts.#", "1"),
-				),
-			},
-			{
-				Config: `
-				resource "docker_service" "foo" {
-					name     = "tftest-service-up-hosts"
-					task_spec {
-						container_spec {
-							image    = "127.0.0.1:15000/tftest-service:v1"
-							hosts = [
-								{
-									host = "testhost2"
-									ip = "10.0.2.2"
-								}
-							]
-							stop_grace_period = "10s"
-						}
-					}
-
-					mode {
-						replicated {
-							replicas = 2
-						}
-					}
-
-					converge_config {
-						delay    = "7s"
-						timeout  = "3m"
-					}
-
-				}
-				`,
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
-					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-hosts"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image", "127.0.0.1:15000/tftest-service:v1"),
-					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.0.replicas", "2"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.hosts.#", "1"),
-				),
-			},
-			{
-				Config: `
-				resource "docker_service" "foo" {
-					name     = "tftest-service-up-hosts"
-					task_spec {
-						container_spec {
-							image    = "127.0.0.1:15000/tftest-service:v1"
-							hosts = [
-								{
-									host = "testhost"
-									ip = "10.0.1.0"
-								},
-								{
-									host = "testhost2"
-									ip = "10.0.2.2"
-								}
-							]
-							stop_grace_period = "10s"
-						}
-					}
-					mode {
-						replicated {
-							replicas = 2
-						}
-					}
-
-					converge_config {
-						delay    = "7s"
-						timeout  = "3m"
-					}
-				}
-				`,
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
-					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-hosts"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image", "127.0.0.1:15000/tftest-service:v1"),
-					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.0.replicas", "2"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.hosts.#", "2"),
-				),
-			},
-		},
-	})
-}
 
 func TestAccDockerService_updateLoggingConverge(t *testing.T) {
 	t.Skip("will be revised")
