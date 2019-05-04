@@ -1163,149 +1163,104 @@ func TestAccDockerService_convergeAndStopGracefully(t *testing.T) {
 	})
 }
 
-// TODO
-
 func TestAccDockerService_updateFailsAndRollbackConverge(t *testing.T) {
-	t.Skip("will be revised")
+	image := "127.0.0.1:15000/tftest-service:v1"
+	imageFail := "127.0.0.1:15000/tftest-service:v3"
+
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
 		Providers: testAccProviders,
 		Steps: []resource.TestStep{
 			{
-				Config: `
-				resource "docker_service" "foo" {
-					name     = "tftest-service-updateFailsAndRollbackConverge"
-					task_spec {
-						container_spec {
-							image    = "127.0.0.1:15000/tftest-service:v1"
-
-							healthcheck {
-								test     = ["CMD", "curl", "-f", "localhost:8080/health"]
-								interval = "5s"
-								timeout  = "2s"
-								start_period = "0s"
-								retries  = 4
-							}
-						}
-					}
-
-					mode {
-						replicated {
-							replicas = 2
-						}
-					}
-
-					update_config {
-						parallelism       = 1
-						delay             = "5s"
-						failure_action    = "rollback"
-						monitor           = "10s"
-						max_failure_ratio = "0.0"
-						order             = "stop-first"
-					}
-
-					rollback_config {
-						parallelism       = 1
-						delay             = "1s"
-						failure_action    = "pause"
-						monitor           = "4s"
-						max_failure_ratio = "0.0"
-						order             = "stop-first"
-					}
-
-					endpoint_spec {
-						mode = "vip"
-						ports {
-							name = "random"
-							protocol     = "tcp"
-							target_port 		 = "8080"
-							published_port 		 = "8080"
-							publish_mode = "ingress"
-						}
-					}
-
-					converge_config {
-						delay    = "7s"
-						timeout  = "3m"
-					}
-				}
-				`,
+				Config: fmt.Sprintf(updateFailsAndRollbackConvergeConfig, image),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-updateFailsAndRollbackConverge"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image", "127.0.0.1:15000/tftest-service:v1"),
+					resource.TestMatchResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image", regexp.MustCompile(`127.0.0.1:15000/tftest-service:v1.*`)),
 					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.0.replicas", "2"),
 				),
 			},
 			{
-				Config: `
-				resource "docker_service" "foo" {
-					name     = "tftest-service-updateFailsAndRollbackConverge"
-					task_spec {
-						container_spec {
-							image    = "127.0.0.1:15000/tftest-service:v3"
-							healthcheck {
-								test     = ["CMD", "curl", "-f", "localhost:8080/health"]
-								interval = "5s"
-								timeout  = "2s"
-								start_period = "0s"
-								retries  = 4
-							}
-						}
-					}
-
-					mode {
-						replicated {
-							replicas = 2
-						}
-					}
-
-					update_config {
-						parallelism       = 1
-						delay             = "5s"
-						failure_action    = "rollback"
-						monitor           = "10s"
-						max_failure_ratio = "0.0"
-						order             = "stop-first"
-					}
-
-					rollback_config {
-						parallelism       = 1
-						delay             = "1s"
-						failure_action    = "pause"
-						monitor           = "4s"
-						max_failure_ratio = "0.0"
-						order             = "stop-first"
-					}
-
-					endpoint_spec {
-						mode = "vip"
-						ports {
-							name = "random"
-							protocol     = "tcp"
-							target_port 		 = "8080"
-							published_port 		 = "8080"
-							publish_mode = "ingress"
-						}
-					}
-
-					converge_config {
-						delay    = "7s"
-						timeout  = "3m"
-					}
-				}
-				`,
+				Config:      fmt.Sprintf(updateFailsAndRollbackConvergeConfig, imageFail),
 				ExpectError: regexp.MustCompile(`.*rollback completed.*`),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-updateFailsAndRollbackConverge"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image", "127.0.0.1:15000/tftest-service:v1"),
+					resource.TestMatchResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image", regexp.MustCompile(`127.0.0.1:15000/tftest-service:v1.*`)),
 					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.0.replicas", "2"),
 				),
 			},
 		},
+		CheckDestroy: checkAndRemoveImages,
 	})
 }
+
+const updateFailsAndRollbackConvergeConfig = `
+provider "docker" {
+	alias = "private"
+	registry_auth {
+		address = "127.0.0.1:15000"
+	}
+}
+
+resource "docker_service" "foo" {
+	provider = "docker.private"
+	name     = "tftest-service-updateFailsAndRollbackConverge"
+	task_spec {
+		container_spec {
+			image    = "%s"
+
+			healthcheck {
+				test     = ["CMD", "curl", "-f", "localhost:8080/health"]
+				interval = "5s"
+				timeout  = "2s"
+				start_period = "0s"
+				retries  = 4
+			}
+		}
+	}
+
+	mode {
+		replicated {
+			replicas = 2
+		}
+	}
+
+	update_config {
+		parallelism       = 1
+		delay             = "5s"
+		failure_action    = "rollback"
+		monitor           = "10s"
+		max_failure_ratio = "0.0"
+		order             = "stop-first"
+	}
+
+	rollback_config {
+		parallelism       = 1
+		delay             = "1s"
+		failure_action    = "pause"
+		monitor           = "4s"
+		max_failure_ratio = "0.0"
+		order             = "stop-first"
+	}
+
+	endpoint_spec {
+		mode = "vip"
+		ports {
+			name = "random"
+			protocol     = "tcp"
+			target_port 		 = "8080"
+			published_port 		 = "8080"
+			publish_mode = "ingress"
+		}
+	}
+
+	converge_config {
+		delay    = "7s"
+		timeout  = "3m"
+	}
+}
+`
 
 func TestAccDockerService_updateNetworksConverge(t *testing.T) {
 	// t.Skip("Skipped because response from daemon is not always consistent")
