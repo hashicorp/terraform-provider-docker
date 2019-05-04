@@ -3604,6 +3604,7 @@ func TestAccDockerService_privateConverge(t *testing.T) {
 }
 
 // Helpers
+// isServiceRemoved checks if a service was removed successfully
 func isServiceRemoved(serviceName string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		client := testAccProvider.Meta().(*ProviderConfig).DockerClient
@@ -3624,10 +3625,15 @@ func isServiceRemoved(serviceName string) resource.TestCheckFunc {
 	}
 }
 
+// checkAndRemoveImages checks and removes all private images with
+// the given pattern. This ensures that the image are not kept on the swarm nodes
+// and the tests are independent of each other
 func checkAndRemoveImages(s *terraform.State) error {
-	client := testAccProvider.Meta().(*ProviderConfig).DockerClient
-
+	retrySleepSeconds := 3
+	maxRetryDeleteCount := 6
 	imagePattern := "127.0.0.1:15000/tftest-service*"
+
+	client := testAccProvider.Meta().(*ProviderConfig).DockerClient
 
 	filters := filters.NewArgs()
 	filters.Add("reference", imagePattern)
@@ -3638,7 +3644,6 @@ func checkAndRemoveImages(s *terraform.State) error {
 		return err
 	}
 
-	maxRetryDeleteCount := 6
 	retryDeleteCount := 0
 	for i := 0; i < len(images); {
 		image := images[i]
@@ -3650,7 +3655,7 @@ func checkAndRemoveImages(s *terraform.State) error {
 				if retryDeleteCount == maxRetryDeleteCount {
 					return fmt.Errorf("could not delete image '%s' after %d retries", image.ID, maxRetryDeleteCount)
 				}
-				<-time.After(3 * time.Second)
+				<-time.After(time.Duration(retrySleepSeconds) * time.Second)
 				retryDeleteCount++
 				continue
 			}
