@@ -2,6 +2,7 @@ package docker
 
 import (
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/hashicorp/terraform/helper/schema"
@@ -911,37 +912,50 @@ func suppressIfSHAwasAdded() schema.SchemaDiffSuppressFunc {
 			return false
 		}
 
-		oldURL, oldImage, oldTag, oldSHA, oldErr := splitImageName(old)
+		oldURL, oldImage, oldTag, oldDigest, oldErr := splitImageName(old)
 		if oldErr != nil {
-			fmt.Printf("[DEBUG] invalid old image name: %s\n", oldErr.Error())
+			log.Printf("[DEBUG] invalid old image name: %s\n", oldErr.Error())
 			return false
 		}
-		fmt.Printf("[DEBUG] old image parse: %s, %s, %s, %s\n", oldURL, oldImage, oldTag, oldSHA)
+		log.Printf("[DEBUG] old image parse: %s, %s, %s, %s\n", oldURL, oldImage, oldTag, oldDigest)
 
-		newURL, newImage, newTag, newSHA, newErr := splitImageName(new)
+		newURL, newImage, newTag, newDigest, newErr := splitImageName(new)
 		if newErr != nil {
-			fmt.Printf("[DEBUG] invalid new image name: %s\n", newErr.Error())
+			log.Printf("[DEBUG] invalid new image name: %s\n", newErr.Error())
 			return false
 		}
-		fmt.Printf("[DEBUG] new image parse: %s, %s, %s, %s\n", newURL, newImage, newTag, newSHA)
+		log.Printf("[DEBUG] new image parse: %s, %s, %s, %s\n", newURL, newImage, newTag, newDigest)
 
 		if oldURL != newURL || oldImage != newImage {
 			return false
 		}
 
-		if oldTag != newTag {
-			if (oldTag == "" && newTag == "latest") || (oldTag == "latest" || newTag == "") {
+		// special case with latest
+		if oldTag == "latest" && (newTag == "" || newTag == "latest") {
+			if oldDigest != "" && newDigest == "" {
 				return true
 			}
+
 			return false
 		}
 
-		// tags are the same
-		if oldSHA == newSHA || (oldSHA == "" && newSHA != "") || (oldSHA != "" && newSHA == "") {
+		// https://success.docker.com/article/images-tagging-vs-digests
+		// we always pull if the tag changes, also in the empty and 'latest' case
+		if (oldTag == "latest" || newTag == "") || (oldTag == "" && newTag == "latest") {
+			return false
+		}
+
+		if oldTag != newTag {
+			return false
+		}
+
+		// tags are the same and so should be its digests
+		if oldDigest == newDigest || (oldDigest == "" && newDigest != "") || (oldDigest != "" && newDigest == "") {
 			return true
 		}
 
-		if oldSHA != newSHA {
+		// we only update if the digests are given and different
+		if oldDigest != newDigest {
 			return false
 		}
 
@@ -950,8 +964,8 @@ func suppressIfSHAwasAdded() schema.SchemaDiffSuppressFunc {
 }
 
 // spitImageName splits an image with name 127.0.0.1:15000/tftest-service:v1@sha256:24..
-// into its parts. Handles edge cases like no tag and no sha256.
-func splitImageName(imageNameToSplit string) (url, image, tag, sha string, err error) {
+// into its parts. Handles edge cases like no tag and no digest
+func splitImageName(imageNameToSplit string) (url, image, tag, digest string, err error) {
 	urlToRestSplit := strings.Split(imageNameToSplit, "/")
 	if len(urlToRestSplit) != 2 {
 		return "", "", "", "", fmt.Errorf("image name is not valid: %s", imageNameToSplit)
@@ -967,15 +981,15 @@ func splitImageName(imageNameToSplit string) (url, image, tag, sha string, err e
 	if len(imageNameToRestSplit) == 3 {
 		image = imageNameToRestSplit[0]
 		tag = strings.Replace(imageNameToRestSplit[1], "@sha256", "", 1)
-		sha = imageNameToRestSplit[2]
-		return url, image, tag, sha, nil
+		digest = imageNameToRestSplit[2]
+		return url, image, tag, digest, nil
 	}
 	// can be either with tag or sha256, which implies 'latest' tag
 	if len(imageNameToRestSplit) == 2 {
 		image = imageNameToRestSplit[0]
 		if strings.Contains(imageNameToRestSplit[1], "sha256") {
-			sha = imageNameToRestSplit[1]
-			return url, image, "", sha, nil
+			digest = imageNameToRestSplit[1]
+			return url, image, "", digest, nil
 		}
 		tag = strings.Replace(imageNameToRestSplit[1], "@sha256", "", 1)
 		return url, image, tag, "", nil
