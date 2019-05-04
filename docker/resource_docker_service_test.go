@@ -844,6 +844,12 @@ func TestAccDockerService_updateMultiplePropertiesConverge(t *testing.T) {
 		}
 	`
 
+	// network
+	// mounts
+	// host
+	// logging
+	// secrets
+
 	// Step 2
 	configData2 := "ewogICJwcmVmaXgiOiAiNTY3Igp9" // UPDATED to prefix: 567
 	image2 := "127.0.0.1:15000/tftest-service:v2"
