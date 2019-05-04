@@ -1031,7 +1031,6 @@ resource "docker_service" "foo" {
 `
 
 func TestAccDockerService_nonExistingPrivateImageConverge(t *testing.T) {
-	t.Skip("will be revised")
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
 		Providers: testAccProviders,
@@ -1068,7 +1067,6 @@ func TestAccDockerService_nonExistingPrivateImageConverge(t *testing.T) {
 }
 
 func TestAccDockerService_nonExistingPublicImageConverge(t *testing.T) {
-	t.Skip("will be revised")
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
 		Providers: testAccProviders,
@@ -1104,15 +1102,22 @@ func TestAccDockerService_nonExistingPublicImageConverge(t *testing.T) {
 	})
 }
 
-func TestAccDockerService_basicConvergeAndStopGracefully(t *testing.T) {
-	t.Skip("will be revised")
+func TestAccDockerService_convergeAndStopGracefully(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
 		Providers: testAccProviders,
 		Steps: []resource.TestStep{
 			{
 				Config: `
+				provider "docker" {
+					alias = "private"
+					registry_auth {
+						address = "127.0.0.1:15000"
+					}
+				}
+
 				resource "docker_service" "foo" {
+					provider = "docker.private"
 					name     = "tftest-service-basic-converge"
 					task_spec {
 						container_spec {
@@ -1149,11 +1154,12 @@ func TestAccDockerService_basicConvergeAndStopGracefully(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-basic-converge"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image", "127.0.0.1:15000/tftest-service:v1"),
+					resource.TestMatchResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image", regexp.MustCompile(`127.0.0.1:15000/tftest-service:v1.*`)),
 					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.0.replicas", "2"),
 				),
 			},
 		},
+		CheckDestroy: checkAndRemoveImages,
 	})
 }
 
