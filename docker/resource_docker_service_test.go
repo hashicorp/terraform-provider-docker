@@ -136,15 +136,22 @@ func TestDockerImageNameSuppress(t *testing.T) {
 // Fire and Forget
 var serviceIDRegex = regexp.MustCompile(`[A-Za-z0-9_\+\.-]+`)
 
-func TestAccDockerService_minimal(t *testing.T) {
-	t.Skip("will be revised")
+func TestAccDockerService_minimalSpec(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
 		Providers: testAccProviders,
 		Steps: []resource.TestStep{
 			{
 				Config: `
+				provider "docker" {
+					alias = "private"
+					registry_auth {
+						address = "127.0.0.1:15000"
+					}
+				}
+
 				resource "docker_service" "foo" {
+					provider = "docker.private"
 					name     = "tftest-service-basic"
 					task_spec {
 						container_spec {
@@ -156,21 +163,27 @@ func TestAccDockerService_minimal(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-basic"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image", "127.0.0.1:15000/tftest-service:v1"),
+					resource.TestMatchResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image", regexp.MustCompile(`127.0.0.1:15000/tftest-service:v1@sha256.*`)),
 				),
 			},
 		},
 	})
 }
 
-func TestAccDockerService_full(t *testing.T) {
-	t.Skip("will be revised")
+func TestAccDockerService_fullSpec(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
 		Providers: testAccProviders,
 		Steps: []resource.TestStep{
 			{
 				Config: `
+				provider "docker" {
+					alias = "private"
+					registry_auth {
+						address = "127.0.0.1:15000"
+					}
+				}
+
 				resource "docker_volume" "test_volume" {
 					name = "tftest-volume"
 				}
@@ -191,7 +204,8 @@ func TestAccDockerService_full(t *testing.T) {
 				}
 
 				resource "docker_service" "foo" {
-					name = "tftest-service-basic"
+					provider = "docker.private"
+					name     = "tftest-service-basic"
 
 					task_spec {
 						container_spec {
@@ -305,6 +319,14 @@ func TestAccDockerService_full(t *testing.T) {
 							prefs = [
 								"spread=node.role.manager",
 							]
+
+							platforms = [
+								{
+									architecture = "amd64"
+									os 			 = "linux"
+								}
+							]
+ 
 						}
 
 						force_update = 0
@@ -362,7 +384,7 @@ func TestAccDockerService_full(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-basic"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image", "127.0.0.1:15000/tftest-service:v1"),
+					resource.TestMatchResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image", regexp.MustCompile(`127.0.0.1:15000/tftest-service:v1@sha256.*`)),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.labels.foo", "bar"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.command.0", "ls"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.args.0", "-las"),
@@ -440,7 +462,7 @@ func TestAccDockerService_full(t *testing.T) {
 	})
 }
 
-func TestAccDockerService_partialReplicated(t *testing.T) {
+func TestAccDockerService_partialReplicationConfig(t *testing.T) {
 	t.Skip("will be revised")
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
@@ -513,7 +535,7 @@ func TestAccDockerService_partialReplicated(t *testing.T) {
 	})
 }
 
-func TestAccDockerService_basicGlobal(t *testing.T) {
+func TestAccDockerService_globalReplicationMode(t *testing.T) {
 	t.Skip("will be revised")
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
@@ -544,7 +566,7 @@ func TestAccDockerService_basicGlobal(t *testing.T) {
 	})
 }
 
-func TestAccDockerService_GlobalAndReplicated(t *testing.T) {
+func TestAccDockerService_ConflictingGlobalAndReplicated(t *testing.T) {
 	t.Skip("will be revised")
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
@@ -573,7 +595,7 @@ func TestAccDockerService_GlobalAndReplicated(t *testing.T) {
 	})
 }
 
-func TestAccDockerService_GlobalWithConvergeConfig(t *testing.T) {
+func TestAccDockerService_globalReplicationModeConverge(t *testing.T) {
 	t.Skip("will be revised")
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
@@ -996,6 +1018,53 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 }
 
 // Converging tests
+func TestAccDockerService_privateImageConverge(t *testing.T) {
+	registry := "127.0.0.1:15000"
+	image := "127.0.0.1:15000/tftest-service"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:  func() { testAccPreCheck(t) },
+		Providers: testAccProviders,
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(`
+					provider "docker" {
+						alias = "private"
+						registry_auth {
+							address = "%s"
+						}
+					}
+
+					resource "docker_service" "bar" {
+						provider = "docker.private"
+						name     = "tftest-service-bar"
+						task_spec {
+							container_spec {
+								image    = "%s"
+							}
+						}
+						mode {
+							replicated {
+								replicas = 2
+							}
+						}
+
+						converge_config {
+							delay    = "7s"
+							timeout  = "3m"
+						}
+					}
+				`, registry, image),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestMatchResourceAttr("docker_service.bar", "id", serviceIDRegex),
+					resource.TestCheckResourceAttr("docker_service.bar", "name", "tftest-service-bar"),
+					resource.TestMatchResourceAttr("docker_service.bar", "task_spec.0.container_spec.0.image", regexp.MustCompile(`127.0.0.1:15000/tftest-service:latest@sha256.*`)),
+				),
+			},
+		},
+		CheckDestroy: checkAndRemoveImages,
+	})
+}
 func TestAccDockerService_nonExistingPrivateImageConverge(t *testing.T) {
 	t.Skip("will be revised")
 	resource.Test(t, resource.TestCase{
@@ -3141,139 +3210,6 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthConverge(t *testing.
 	})
 }
 
-func TestAccDockerService_updateConfigAndDecreaseReplicasConverge(t *testing.T) {
-	configData1 := "ewogICJwcmVmaXgiOiAiMTIzIgp9"
-	configData2 := "ewogICJwcmVmaXgiOiAiNTY3Igp9" // UPDATED to prefix: 567
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testAccPreCheck(t) },
-		Providers: testAccProviders,
-		Steps: []resource.TestStep{
-			{
-				Config: fmt.Sprintf(updateConfigAndDecreaseReplicasConverge, configData1, 5),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
-					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-config-dec-repl"),
-					resource.TestMatchResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image", regexp.MustCompile(`127.0.0.1:15000/tftest-service:v1@sha256.*`)),
-					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.0.replicas", "5"),
-					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
-					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
-					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "pause"),
-					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.monitor", "1s"),
-					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.1"),
-					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.order", "start-first"),
-					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.#", "1"),
-					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.83412866.target_port", "8080"),
-					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.83412866.published_port", "8080"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.0", "CMD"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.1", "curl"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.2", "-f"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.3", "localhost:8080/health"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.interval", "1s"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.timeout", "500ms"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.retries", "4"),
-				),
-			},
-			{
-				Config: fmt.Sprintf(updateConfigAndDecreaseReplicasConverge, configData2, 1),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
-					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-config-dec-repl"),
-					resource.TestMatchResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image", regexp.MustCompile(`127.0.0.1:15000/tftest-service:v1@sha256.*`)),
-					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.0.replicas", "1"),
-					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
-					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
-					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "pause"),
-					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.monitor", "1s"),
-					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.1"),
-					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.order", "start-first"),
-					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.#", "1"),
-					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.83412866.target_port", "8080"),
-					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.83412866.published_port", "8080"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.0", "CMD"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.1", "curl"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.2", "-f"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.3", "localhost:8080/health"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.interval", "1s"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.timeout", "500ms"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.retries", "4"),
-				),
-			},
-		},
-		CheckDestroy: checkAndRemoveImages,
-	})
-}
-
-const updateConfigAndDecreaseReplicasConverge = `
-provider "docker" {
-	alias = "private"
-	registry_auth {
-		address = "127.0.0.1:15000"
-	}
-}
-
-resource "docker_config" "service_config" {
-	name 			 = "tftest-myconfig-${uuid()}"
-	data 			 = "%s"
-
-	lifecycle {
-		ignore_changes = ["name"]
-		create_before_destroy = true
-	}
-}
-
-resource "docker_service" "foo" {
-	provider = "docker.private"
-	name     = "tftest-service-up-config-dec-repl"
-	task_spec {
-		container_spec {
-			image    = "127.0.0.1:15000/tftest-service:v1"
-			configs = [
-				{
-					config_id   = "${docker_config.service_config.id}"
-					config_name = "${docker_config.service_config.name}"
-					file_name   = "/configs.json"
-				},
-			]
-			healthcheck {
-				test     = ["CMD", "curl", "-f", "localhost:8080/health"]
-				interval = "1s"
-				timeout  = "500ms"
-				retries  = 4
-			}
-			stop_grace_period = "10s"
-		}
-	}
-
-	mode {
-		replicated {
-			replicas = %d
-		}
-	}
-
-	update_config {
-		parallelism       = 1
-		delay             = "1s"
-		failure_action    = "pause"
-		monitor           = "1s"
-		max_failure_ratio = "0.1"
-		order             = "start-first"
-	}
-
-	endpoint_spec {
-		ports {
-			target_port    = "8080"
-			published_port = "8080"
-		}
-	}
-
-	converge_config {
-		delay    = "7s"
-		timeout  = "3m"
-	}
-}
-`
-
 func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseReplicasConverge(t *testing.T) {
 	t.Skip("will be revised")
 	resource.Test(t, resource.TestCase{
@@ -3555,53 +3491,138 @@ func TestAccDockerService_updateConfigReplicasImageAndHealthIncreaseAndDecreaseR
 	})
 }
 
-func TestAccDockerService_privateConverge(t *testing.T) {
-	registry := "127.0.0.1:15000"
-	image := "127.0.0.1:15000/tftest-service"
+func TestAccDockerService_updateConfigAndDecreaseReplicasConverge(t *testing.T) {
+	configData1 := "ewogICJwcmVmaXgiOiAiMTIzIgp9"
+	configData2 := "ewogICJwcmVmaXgiOiAiNTY3Igp9" // UPDATED to prefix: 567
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
 		Providers: testAccProviders,
 		Steps: []resource.TestStep{
 			{
-				Config: fmt.Sprintf(`
-					provider "docker" {
-						alias = "private"
-						registry_auth {
-							address = "%s"
-						}
-					}
-
-					resource "docker_service" "bar" {
-						provider = "docker.private"
-						name     = "tftest-service-bar"
-						task_spec {
-							container_spec {
-								image    = "%s"
-							}
-						}
-						mode {
-							replicated {
-								replicas = 2
-							}
-						}
-
-						converge_config {
-							delay    = "7s"
-							timeout  = "3m"
-						}
-					}
-				`, registry, image),
+				Config: fmt.Sprintf(updateConfigAndDecreaseReplicasConverge, configData1, 5),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestMatchResourceAttr("docker_service.bar", "id", serviceIDRegex),
-					resource.TestCheckResourceAttr("docker_service.bar", "name", "tftest-service-bar"),
-					resource.TestMatchResourceAttr("docker_service.bar", "task_spec.0.container_spec.0.image", regexp.MustCompile(`127.0.0.1:15000/tftest-service:latest@sha256.*`)),
+					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-config-dec-repl"),
+					resource.TestMatchResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image", regexp.MustCompile(`127.0.0.1:15000/tftest-service:v1@sha256.*`)),
+					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.0.replicas", "5"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "pause"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.monitor", "1s"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.order", "start-first"),
+					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.#", "1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.83412866.target_port", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.83412866.published_port", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.0", "CMD"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.1", "curl"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.2", "-f"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.3", "localhost:8080/health"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.interval", "1s"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.timeout", "500ms"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.retries", "4"),
+				),
+			},
+			{
+				Config: fmt.Sprintf(updateConfigAndDecreaseReplicasConverge, configData2, 1),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-up-config-dec-repl"),
+					resource.TestMatchResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image", regexp.MustCompile(`127.0.0.1:15000/tftest-service:v1@sha256.*`)),
+					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.0.replicas", "1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "1s"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "pause"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.monitor", "1s"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.order", "start-first"),
+					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.#", "1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.83412866.target_port", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.83412866.published_port", "8080"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.0", "CMD"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.1", "curl"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.2", "-f"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.3", "localhost:8080/health"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.interval", "1s"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.timeout", "500ms"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.retries", "4"),
 				),
 			},
 		},
 		CheckDestroy: checkAndRemoveImages,
 	})
 }
+
+const updateConfigAndDecreaseReplicasConverge = `
+provider "docker" {
+	alias = "private"
+	registry_auth {
+		address = "127.0.0.1:15000"
+	}
+}
+
+resource "docker_config" "service_config" {
+	name 			 = "tftest-myconfig-${uuid()}"
+	data 			 = "%s"
+
+	lifecycle {
+		ignore_changes = ["name"]
+		create_before_destroy = true
+	}
+}
+
+resource "docker_service" "foo" {
+	provider = "docker.private"
+	name     = "tftest-service-up-config-dec-repl"
+	task_spec {
+		container_spec {
+			image    = "127.0.0.1:15000/tftest-service:v1"
+			configs = [
+				{
+					config_id   = "${docker_config.service_config.id}"
+					config_name = "${docker_config.service_config.name}"
+					file_name   = "/configs.json"
+				},
+			]
+			healthcheck {
+				test     = ["CMD", "curl", "-f", "localhost:8080/health"]
+				interval = "1s"
+				timeout  = "500ms"
+				retries  = 4
+			}
+			stop_grace_period = "10s"
+		}
+	}
+
+	mode {
+		replicated {
+			replicas = %d
+		}
+	}
+
+	update_config {
+		parallelism       = 1
+		delay             = "1s"
+		failure_action    = "pause"
+		monitor           = "1s"
+		max_failure_ratio = "0.1"
+		order             = "start-first"
+	}
+
+	endpoint_spec {
+		ports {
+			target_port    = "8080"
+			published_port = "8080"
+		}
+	}
+
+	converge_config {
+		delay    = "7s"
+		timeout  = "3m"
+	}
+}
+`
 
 // Helpers
 // isServiceRemoved checks if a service was removed successfully
