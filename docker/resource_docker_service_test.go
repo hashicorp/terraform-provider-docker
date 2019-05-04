@@ -129,6 +129,13 @@ func TestDockerImageNameSuppress(t *testing.T) {
 	if suppress {
 		t.Fatalf("Expected no suppress for image tag but no digest update from old '%s' -> new '%s'", old, new)
 	}
+
+	old = "127.0.0.1:15000/tftest-service@sha256:74d04f400723d9770187ee284255d1eb556f3d51700792fb2bfd6ab13da50981"
+	new = "127.0.0.1:15000/tftest-service@sha256:c9d1055182f0607632b7d859d2f220126fb1c0d10aedc4451817840b30c1af86"
+	suppress = suppressFunc("k", old, new, nil)
+	if suppress {
+		t.Fatalf("Expected no suppress for image tag but no digest update from old '%s' -> new '%s'", old, new)
+	}
 }
 
 // ----------------------------------------
