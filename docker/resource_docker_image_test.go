@@ -131,7 +131,6 @@ func TestAccDockerImage_data_private_config_file(t *testing.T) {
 	image := "127.0.0.1:15000/tftest-service:v1"
 	wd, _ := os.Getwd()
 	dockerConfig := wd + "/../scripts/testing/dockerconfig.json"
-	fmt.Printf("########### wd: %s\n", wd)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                  func() { testAccPreCheck(t) },
