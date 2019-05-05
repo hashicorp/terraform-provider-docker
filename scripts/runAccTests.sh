@@ -53,8 +53,8 @@ run() {
   
   # for a single test comment the previous line and uncomment the next line
   TF_LOG=INFO TF_ACC=1 go test -v ./docker -run ^TestAccDockerImage_data_private_config_file$ -timeout 360s
-  #TF_LOG=INFO TF_ACC=1 go test -v ./docker -run ^TestAccDockerContainer_private_image$ -timeout 360s
-  #TF_LOG=INFO TF_ACC=1 go test -v ./docker -run ^TestAccDockerService_updateMultiplePropertiesConverge$ -timeout 360s
+  TF_LOG=INFO TF_ACC=1 go test -v ./docker -run ^TestAccDockerContainer_private_image$ -timeout 360s
+  TF_LOG=INFO TF_ACC=1 go test -v ./docker -run ^TestAccDockerService_updateMultiplePropertiesConverge$ -timeout 360s
   
   # keep the return value for the scripts to fail and clean properly
   return $?
