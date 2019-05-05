@@ -2,8 +2,7 @@
 	"auths": {
 		"127.0.0.1:15000": {
       "auth": "dGVzdHVzZXI6dGVzdHB3ZA=="
-    },
-		"https://127.0.0.1:15000": {}
+    }
 	},
 	"HttpHeaders": {
 		"User-Agent": "Docker-Client/18.03.1-ce (darwin)"
