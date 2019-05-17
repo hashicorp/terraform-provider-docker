@@ -1,11 +1,7 @@
 {
 	"auths": {
 		"127.0.0.1:15000": {
-      "auth": "dGVzdHVzZXI6dGVzdHB3ZA=="
-    }
-	},
-	"HttpHeaders": {
-		"User-Agent": "Docker-Client/18.03.1-ce (darwin)"
-	},
-	"credsStore": "osxkeychain"
+			"auth": "dGVzdHVzZXI6dGVzdHB3ZA=="
+		}
+	}
 }
