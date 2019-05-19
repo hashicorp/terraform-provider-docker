@@ -32,31 +32,11 @@ var (
 func resourceDockerContainerCreate(d *schema.ResourceData, meta interface{}) error {
 	var err error
 	client := meta.(*ProviderConfig).DockerClient
-
-	var data Data
-	if err := fetchLocalImages(&data, client); err != nil {
-		return err
-	}
-
+	authConfigs := meta.(*ProviderConfig).AuthConfigs
 	image := d.Get("image").(string)
-	if _, ok := data.DockerImages[image]; !ok {
-		if _, ok := data.DockerImages[image+":latest"]; !ok { // TODO (mvogel): mimics searchImages func. Unify
-			err = pullImage(&data, client, meta.(*ProviderConfig).AuthConfigs, image)
-			if err != nil {
-				return err
-			}
-			if err := fetchLocalImages(&data, client); err != nil {
-				return err
-			}
-			if _, ok := data.DockerImages[image]; !ok {
-				if _, ok := data.DockerImages[image+":latest"]; ok {
-					// if ':latest' was no provided we add it to the name now
-					image = image + ":latest"
-				} else {
-					return fmt.Errorf("Unable to find or pull image %s", image)
-				}
-			}
-		}
+	_, err = findImage(image, client, authConfigs)
+	if err != nil {
+		return fmt.Errorf("Unable to create container with image %s", image)
 	}
 
 	config := &container.Config{

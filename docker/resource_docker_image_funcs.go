@@ -17,7 +17,8 @@ import (
 
 func resourceDockerImageCreate(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*ProviderConfig).DockerClient
-	apiImage, err := findImage(d, client, meta.(*ProviderConfig).AuthConfigs)
+	imageName := d.Get("name").(string)
+	apiImage, err := findImage(imageName, client, meta.(*ProviderConfig).AuthConfigs)
 	if err != nil {
 		return fmt.Errorf("Unable to read Docker image into resource: %s", err)
 	}
@@ -49,7 +50,8 @@ func resourceDockerImageUpdate(d *schema.ResourceData, meta interface{}) error {
 	// We need to re-read in case switching parameters affects
 	// the value of "latest" or others
 	client := meta.(*ProviderConfig).DockerClient
-	apiImage, err := findImage(d, client, meta.(*ProviderConfig).AuthConfigs)
+	imageName := d.Get("name").(string)
+	apiImage, err := findImage(imageName, client, meta.(*ProviderConfig).AuthConfigs)
 	if err != nil {
 		return fmt.Errorf("Unable to read Docker image into resource: %s", err)
 	}
@@ -210,8 +212,7 @@ func parseImageOptions(image string) internalPullImageOptions {
 	return pullOpts
 }
 
-func findImage(d *schema.ResourceData, client *client.Client, authConfig *AuthConfigs) (*types.ImageSummary, error) {
-	imageName := d.Get("name").(string)
+func findImage(imageName string, client *client.Client, authConfig *AuthConfigs) (*types.ImageSummary, error) {
 	if imageName == "" {
 		return nil, fmt.Errorf("Empty image name is not allowed")
 	}
