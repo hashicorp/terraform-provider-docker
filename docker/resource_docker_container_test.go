@@ -177,6 +177,38 @@ func TestAccDockerContainer_volume(t *testing.T) {
 	})
 }
 
+func TestAccDockerContainer_mounts(t *testing.T) {
+	var c types.ContainerJSON
+
+	testCheck := func(*terraform.State) error {
+		if len(c.Mounts) != 2 {
+			return fmt.Errorf("Incorrect number of mounts: expected 2, got %d", len(c.Mounts))
+		}
+
+		for _, v := range c.Mounts {
+			if v.Destination != "/mount/test" && v.Destination != "/mount/tmpfs" {
+				return fmt.Errorf("Bad destination on mount: expected /mount/test or /mount/tmpfs, got %q", v.Destination)
+			}
+		}
+
+		return nil
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:  func() { testAccPreCheck(t) },
+		Providers: testAccProviders,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDockerContainerMountsConfig,
+				Check: resource.ComposeTestCheckFunc(
+					testAccContainerRunning("docker_container.foo_mounts", &c),
+					testCheck,
+				),
+			},
+		},
+	})
+}
+
 func TestAccDockerContainer_customized(t *testing.T) {
 	var c types.ContainerJSON
 
@@ -1177,6 +1209,34 @@ resource "docker_container" "foo" {
         container_path = "/tmp/volume"
         read_only = false
     }
+}
+`
+
+const testAccDockerContainerMountsConfig = `
+resource "docker_image" "foo_mounts" {
+	name = "nginx:latest"
+}
+
+resource "docker_volume" "foo_mounts" {
+    name = "testAccDockerContainerMounts_volume"
+}
+
+resource "docker_container" "foo_mounts" {
+	name = "tf-test"
+	image = "${docker_image.foo_mounts.latest}"
+
+	mounts = [
+		{
+			target      = "/mount/test"
+			source      = "${docker_volume.foo_mounts.name}"
+			type        = "volume"
+			read_only   = true
+		},
+		{
+			target  = "/mount/tmpfs"
+			type    = "tmpfs"
+		}
+	]
 }
 `
 
