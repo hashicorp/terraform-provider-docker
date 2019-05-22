@@ -203,7 +203,7 @@ func resourceDockerService() *schema.Resource {
 												"source": {
 													Type:        schema.TypeString,
 													Description: "Mount source (e.g. a volume name, a host path)",
-													Required:    true,
+													Optional:    true,
 												},
 												"type": {
 													Type:         schema.TypeString,
