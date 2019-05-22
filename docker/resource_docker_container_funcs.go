@@ -226,6 +226,10 @@ func resourceDockerContainerCreate(d *schema.ResourceData, meta interface{}) err
 		},
 	}
 
+	if v, ok := d.GetOk("tmpfs"); ok {
+		hostConfig.Tmpfs = mapTypeMapValsToString(v.(map[string]interface{}))
+	}
+
 	if len(portBindings) != 0 {
 		hostConfig.PortBindings = portBindings
 	}
