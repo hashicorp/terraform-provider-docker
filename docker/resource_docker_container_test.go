@@ -209,6 +209,38 @@ func TestAccDockerContainer_mounts(t *testing.T) {
 	})
 }
 
+func TestAccDockerContainer_tmpfs(t *testing.T) {
+	var c types.ContainerJSON
+
+	testCheck := func(*terraform.State) error {
+		if len(c.HostConfig.Tmpfs) != 1 {
+			return fmt.Errorf("Incorrect number of tmpfs: expected 1, got %d", len(c.HostConfig.Tmpfs))
+		}
+
+		for mountPath, _ := range c.HostConfig.Tmpfs {
+			if mountPath != "/mount/tmpfs" {
+				return fmt.Errorf("Bad destination on tmpfs: expected /mount/tmpfs, got %q", mountPath)
+			}
+		}
+
+		return nil
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:  func() { testAccPreCheck(t) },
+		Providers: testAccProviders,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDockerContainerTmpfsConfig,
+				Check: resource.ComposeTestCheckFunc(
+					testAccContainerRunning("docker_container.foo", &c),
+					testCheck,
+				),
+			},
+		},
+	})
+}
+
 func TestAccDockerContainer_customized(t *testing.T) {
 	var c types.ContainerJSON
 
@@ -1237,6 +1269,21 @@ resource "docker_container" "foo_mounts" {
 			type    = "tmpfs"
 		}
 	]
+}
+`
+
+const testAccDockerContainerTmpfsConfig = `
+resource "docker_image" "foo" {
+	name = "nginx:latest"
+}
+
+resource "docker_container" "foo" {
+	name = "tf-test"
+	image = "${docker_image.foo.latest}"
+
+	tmpfs = {
+		"/mount/tmpfs" = "rw,noexec,nosuid"
+	}
 }
 `
 
