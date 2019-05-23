@@ -36,7 +36,7 @@ func resourceDockerContainerCreate(d *schema.ResourceData, meta interface{}) err
 	image := d.Get("image").(string)
 	_, err = findImage(image, client, authConfigs)
 	if err != nil {
-		return fmt.Errorf("Unable to create container with image %s", image)
+		return fmt.Errorf("Unable to create container with image %s: %s", image, err)
 	}
 
 	config := &container.Config{
