@@ -50,8 +50,9 @@ github.com/blang/semver
 github.com/davecgh/go-spew/spew
 # github.com/docker/distribution v0.0.0-20180522175653-f0cc92778478
 github.com/docker/distribution/reference
+github.com/docker/distribution/registry/api/errcode
 github.com/docker/distribution/digestset
-# github.com/docker/docker v0.0.0-20180530012807-65bd038fc5e4
+# github.com/docker/docker v0.7.3-0.20190525203055-f25e0c6f3093
 github.com/docker/docker/api/types
 github.com/docker/docker/api/types/container
 github.com/docker/docker/api/types/filters
@@ -64,6 +65,7 @@ github.com/docker/docker/api/types/registry
 github.com/docker/docker/api/types/blkiodev
 github.com/docker/docker/api/types/strslice
 github.com/docker/docker/api/types/versions
+github.com/docker/docker/errdefs
 github.com/docker/docker/api/types/swarm/runtime
 github.com/docker/docker/api
 github.com/docker/docker/api/types/events
@@ -161,6 +163,8 @@ github.com/hashicorp/terraform/svchost/auth
 github.com/hashicorp/yamux
 # github.com/jmespath/go-jmespath v0.0.0-20160803190731-bd40a432e4c7
 github.com/jmespath/go-jmespath
+# github.com/konsorten/go-windows-terminal-sequences v1.0.1
+github.com/konsorten/go-windows-terminal-sequences
 # github.com/mattn/go-isatty v0.0.0-20161123143637-30a891c33c7c
 github.com/mattn/go-isatty
 # github.com/mitchellh/cli v0.0.0-20171129193617-33edc47170b5
@@ -193,6 +197,8 @@ github.com/posener/complete
 github.com/posener/complete/cmd/install
 github.com/posener/complete/cmd
 github.com/posener/complete/match
+# github.com/sirupsen/logrus v1.4.2
+github.com/sirupsen/logrus
 # github.com/ulikunitz/xz v0.5.4
 github.com/ulikunitz/xz
 github.com/ulikunitz/xz/internal/xlog
@@ -217,7 +223,6 @@ golang.org/x/crypto/blowfish
 golang.org/x/crypto/cast5
 golang.org/x/crypto/openpgp/elgamal
 # golang.org/x/net v0.0.0-20180530034148-89e543239a64
-golang.org/x/net/context/ctxhttp
 golang.org/x/net/context
 golang.org/x/net/html
 golang.org/x/net/proxy
@@ -229,9 +234,9 @@ golang.org/x/net/http/httpguts
 golang.org/x/net/http2/hpack
 golang.org/x/net/idna
 golang.org/x/net/internal/timeseries
-# golang.org/x/sys v0.0.0-20181026203630-95b1ffbd15a5
-golang.org/x/sys/windows
+# golang.org/x/sys v0.0.0-20190422165155-953cdadca894
 golang.org/x/sys/unix
+golang.org/x/sys/windows
 # golang.org/x/text v0.3.0
 golang.org/x/text/unicode/norm
 golang.org/x/text/transform
@@ -245,6 +250,7 @@ google.golang.org/grpc/credentials
 google.golang.org/grpc/health
 google.golang.org/grpc/health/grpc_health_v1
 google.golang.org/grpc/codes
+google.golang.org/grpc/status
 google.golang.org/grpc/connectivity
 google.golang.org/grpc/grpclb/grpc_lb_v1
 google.golang.org/grpc/grpclog
@@ -254,6 +260,5 @@ google.golang.org/grpc/metadata
 google.golang.org/grpc/naming
 google.golang.org/grpc/peer
 google.golang.org/grpc/stats
-google.golang.org/grpc/status
 google.golang.org/grpc/tap
 google.golang.org/grpc/transport
