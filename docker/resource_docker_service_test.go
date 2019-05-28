@@ -815,9 +815,9 @@ func TestAccDockerService_updateMultiplePropertiesConverge(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.0.replicas", strconv.Itoa(replicas)),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "3s"),
-					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "pause"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "continue"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.monitor", "3s"),
-					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.5"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.order", "start-first"),
 					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.#", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.3541714906.target_port", "8080"),
@@ -860,9 +860,9 @@ func TestAccDockerService_updateMultiplePropertiesConverge(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.0.replicas", strconv.Itoa(replicas2)),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "3s"),
-					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "pause"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "continue"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.monitor", "3s"),
-					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.5"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.order", "start-first"),
 					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.#", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.3541714906.target_port", "8080"),
@@ -907,9 +907,9 @@ func TestAccDockerService_updateMultiplePropertiesConverge(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.0.replicas", strconv.Itoa(replicas3)),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "3s"),
-					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "pause"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.failure_action", "continue"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.monitor", "3s"),
-					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.max_failure_ratio", "0.5"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.order", "start-first"),
 					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.#", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "endpoint_spec.0.ports.3541714906.target_port", "8080"),
@@ -1197,9 +1197,9 @@ resource "docker_service" "foo" {
 	update_config {
 		parallelism       = 2
 		delay             = "3s"
-		failure_action    = "pause"
+		failure_action    = "continue"
 		monitor           = "3s"
-		max_failure_ratio = "0.1"
+		max_failure_ratio = "0.5"
 		order             = "start-first"
 	}
 
