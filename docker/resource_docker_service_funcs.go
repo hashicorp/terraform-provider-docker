@@ -63,6 +63,11 @@ func resourceDockerServiceCreate(d *schema.ResourceData, meta interface{}) error
 		auth = authToServiceAuth(v.(map[string]interface{}))
 	} else {
 		authConfigs := meta.(*ProviderConfig).AuthConfigs.Configs
+		if len(authConfigs) == 0 {
+			log.Printf("[DEBUG] AuthConfigs empty on create. Wait 3s and try again")
+			<-time.After(3 * time.Second)
+			authConfigs = meta.(*ProviderConfig).AuthConfigs.Configs
+		}
 		log.Printf("[DEBUG] Getting configs from '%v'", authConfigs)
 		auth = fromRegistryAuth(d.Get("task_spec.0.container_spec.0.image").(string), authConfigs)
 	}
@@ -166,8 +171,16 @@ func resourceDockerServiceUpdate(d *schema.ResourceData, meta interface{}) error
 	if v, ok := d.GetOk("auth"); ok {
 		auth = authToServiceAuth(v.(map[string]interface{}))
 	} else {
-		auth = fromRegistryAuth(d.Get("task_spec.0.container_spec.0.image").(string), meta.(*ProviderConfig).AuthConfigs.Configs)
+		authConfigs := meta.(*ProviderConfig).AuthConfigs.Configs
+		if len(authConfigs) == 0 {
+			log.Printf("[DEBUG] AuthConfigs empty on update. Wait 3s and try again")
+			<-time.After(3 * time.Second)
+			authConfigs = meta.(*ProviderConfig).AuthConfigs.Configs
+		}
+		log.Printf("[DEBUG] Getting configs from '%v'", authConfigs)
+		auth = fromRegistryAuth(d.Get("task_spec.0.container_spec.0.image").(string), authConfigs)
 	}
+
 	encodedJSON, err := json.Marshal(auth)
 	if err != nil {
 		return fmt.Errorf("error creating auth config: %s", err)
