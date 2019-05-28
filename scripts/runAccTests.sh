@@ -45,6 +45,10 @@ setup() {
   done
   # Remove images from host machine before starting the tests
   for i in $(docker images -aq 127.0.0.1:15000/tftest-service); do docker rmi -f "$i"; done
+
+  # debug
+  cat ~/.docker/config.json
+  docker images
 }
 
 run() {
@@ -52,7 +56,7 @@ run() {
   #TF_ACC=1 go test ./docker -v -timeout 120m
   
   # for a single test comment the previous line and uncomment the next line
-  TF_LOG=INFO TF_ACC=1 go test -v ./docker -run ^TestAccDockerService_updateMultiplePropertiesConverge$ -timeout 360s
+  TF_LOG=INFO TF_ACC=1 go test -v ./docker -run ^TestAccDockerService_updateMultiplePropertiesConverge$ -timeout 600s
   
   # keep the return value for the scripts to fail and clean properly
   return $?
