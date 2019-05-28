@@ -52,7 +52,7 @@ run() {
   #TF_ACC=1 go test ./docker -v -timeout 120m
   
   # for a single test comment the previous line and uncomment the next line
-  TF_LOG=DEBUG TF_ACC=1 go test -v ./docker -run ^TestAccDockerService_updateMultiplePropertiesConverge$ -timeout 600s
+  TF_LOG=DEBUG TF_ACC=1 go test -v ./docker -run ^TestAccDockerService_updateMultiplePropertiesConverge$ -timeout 360s
   
   # keep the return value for the scripts to fail and clean properly
   return $?
