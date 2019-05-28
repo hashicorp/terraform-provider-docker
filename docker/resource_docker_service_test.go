@@ -1211,7 +1211,7 @@ resource "docker_service" "foo" {
 
 	converge_config {
 		delay    = "7s"
-		timeout  = "10m"
+		timeout  = "6m"
 	}
 }
 `
