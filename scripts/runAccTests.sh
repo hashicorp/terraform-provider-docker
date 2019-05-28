@@ -45,10 +45,6 @@ setup() {
   done
   # Remove images from host machine before starting the tests
   for i in $(docker images -aq 127.0.0.1:15000/tftest-service); do docker rmi -f "$i"; done
-
-  # debug
-  cat ~/.docker/config.json
-  docker images
 }
 
 run() {
