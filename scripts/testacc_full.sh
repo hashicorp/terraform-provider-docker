@@ -1,6 +1,12 @@
 #!/bin/bash
 set -e
 
+log() {	
+  echo "####################"	
+  echo "## ->  $1 "	
+  echo "####################"	
+}
+
 setup() {
   sh "$(pwd)"/scripts/testacc_setup.sh
 }
