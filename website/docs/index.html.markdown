@@ -59,7 +59,7 @@ provider "docker" {
 
   registry_auth {
     address = "registry.hub.docker.com"
-    config_file = "~/.docker/config.json"
+    config_file = "${pathexpand("~/.docker/config.json")}"
   }
 
   registry_auth {
