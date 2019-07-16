@@ -35,6 +35,16 @@ resource "docker_image" "ubuntu" {
 }
 ```
 
+-> **Note**
+You can also use the `ssh` protocol to connect to the docker host on a remote machine.
+The configuration would look as follows:
+
+```hcl
+provider "docker" {
+  host = "ssh://user@remote-host:22"
+}
+```
+
 ## Registry Credentials
 
 Registry credentials can be provided on a per-registry basis with the `registry_auth`
