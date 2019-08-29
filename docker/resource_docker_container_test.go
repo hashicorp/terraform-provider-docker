@@ -452,6 +452,10 @@ func TestAccDockerContainer_customized(t *testing.T) {
 			return fmt.Errorf("Container doesn't have a correct userns mode")
 		}
 
+		if c.HostConfig.IpcMode != "private" {
+			return fmt.Errorf("Container doesn't have a correct ipc mode")
+		}
+
 		return nil
 	}
 
@@ -1432,6 +1436,8 @@ resource "docker_container" "foo" {
 
 	pid_mode 		= "host"
 	userns_mode = "testuser:231072:65536"
+
+	ipc_mode = "private"
 }
 
 resource "docker_network" "test_network" {
