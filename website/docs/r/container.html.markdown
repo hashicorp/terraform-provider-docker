@@ -207,8 +207,8 @@ One of `from_container`, `host_path` or `volume_name` must be set.
 files to upload to the container before starting it. Either `content` or `content_base64` has to be set.
 Each `upload` supports the following
 
-* `content` - (Optional, string, conflicts with `content_base64`) A content of a file to upload. This should be used for small strings.
-* `content_base64` - (Optional, string, conflicts with `content`) A base64-encoded content of a large file to upload. See [here](https://github.com/terraform-providers/terraform-provider-docker/issues/48#issuecomment-374174588) for the reason.
+* `content` - (Optional, string, conflicts with `content_base64`) Literal string value to use as the object content, which will be uploaded as UTF-8-encoded text.
+* `content_base64` - (Optional, string, conflicts with `content`) Base64-encoded data that will be decoded and uploaded as raw bytes for the object content. This allows safely uploading non-UTF8 binary data, but is recommended only for no too large content such as the result of the `base64encode` interpolation function with small text strings See [here](https://github.com/terraform-providers/terraform-provider-docker/issues/48#issuecomment-374174588) for the reason.
 * `file` - (Required, string) path to a file in the container.
 * `executable` - (Optional, bool) If true, the file will be uploaded with user
   executable permission.
