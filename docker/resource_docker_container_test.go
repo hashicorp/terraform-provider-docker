@@ -610,6 +610,93 @@ func TestAccDockerContainer_upload(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccContainerRunning("docker_container.foo", &c),
 					testCheck,
+					resource.TestCheckResourceAttr("docker_container.foo", "name", "tf-test"),
+					resource.TestCheckResourceAttr("docker_container.foo", "upload.#", "1"),
+					// TODO mavogel: although they are in the state they are not found... check fails
+					// resource.TestCheckResourceAttr("docker_container.foo", "upload.0.content", "foo"),
+					// resource.TestCheckResourceAttr("docker_container.foo", "upload.0.content_base64", ""),
+					// resource.TestCheckResourceAttr("docker_container.foo", "upload.0.executable", "true"),
+					// resource.TestCheckResourceAttr("docker_container.foo", "upload.0.file", "/terraform/test.txt"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccDockerContainer_uploadLargeBinary(t *testing.T) {
+	var c types.ContainerJSON
+
+	testCheck := func(srcPath, wantedContent, filePerm string) func(*terraform.State) error {
+		return func(*terraform.State) error {
+			client := testAccProvider.Meta().(*ProviderConfig).DockerClient
+
+			r, _, err := client.CopyFromContainer(context.Background(), c.ID, srcPath)
+			if err != nil {
+				return fmt.Errorf("Unable to download a file from container: %s", err)
+			}
+
+			tr := tar.NewReader(r)
+			if header, err := tr.Next(); err != nil {
+				return fmt.Errorf("Unable to read content of tar archive: %s", err)
+			} else {
+				mode := strconv.FormatInt(header.Mode, 8)
+				if !strings.HasSuffix(mode, filePerm) {
+					return fmt.Errorf("File permissions are incorrect: %s", mode)
+				}
+			}
+
+			fbuf := new(bytes.Buffer)
+			fbuf.ReadFrom(tr)
+			gotContent := fbuf.String()
+
+			if wantedContent != gotContent {
+				return fmt.Errorf("file content is invalid: want: %q, got: %q", wantedContent, gotContent)
+			}
+
+			return nil
+		}
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:  func() { testAccPreCheck(t) },
+		Providers: testAccProviders,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDockerContainerUploadLargeBinaryConfig,
+				Check: resource.ComposeTestCheckFunc(
+					testAccContainerRunning("docker_container.foo", &c),
+					testCheck("/terraform/test1.txt", "894fc3f56edf2d3a4c5fb5cb71df910f958a2ed8", "744"),
+					testCheck("/terraform/test2.txt", "foobar", "100644"),
+					resource.TestCheckResourceAttr("docker_container.foo", "name", "tf-test"),
+					resource.TestCheckResourceAttr("docker_container.foo", "upload.#", "2"),
+					// resource.TestCheckResourceAttr("docker_container.foo", "upload.0.content", ""),
+					// resource.TestCheckResourceAttr("docker_container.foo", "upload.0.content_base64", "ODk0ZmMzZjU2ZWRmMmQzYTRjNWZiNWNiNzFkZjkxMGY5NThhMmVkOA=="),
+					// resource.TestCheckResourceAttr("docker_container.foo", "upload.0.executable", "true"),
+					// resource.TestCheckResourceAttr("docker_container.foo", "upload.0.file", "/terraform/test1.txt"),
+					// resource.TestCheckResourceAttr("docker_container.foo", "upload.1.content", "foo"),
+					// resource.TestCheckResourceAttr("docker_container.foo", "upload.1.content_base64", ""),
+					// resource.TestCheckResourceAttr("docker_container.foo", "upload.1.executable", "false"),
+					// resource.TestCheckResourceAttr("docker_container.foo", "upload.1.file", "/terraform/test2.txt"),
+				),
+			},
+			// We add a second on purpose to detect if there is a dirty plan
+			// although the file content did not change
+			{
+				Config: testAccDockerContainerUploadLargeBinaryConfig,
+				Check: resource.ComposeTestCheckFunc(
+					testAccContainerRunning("docker_container.foo", &c),
+					testCheck("/terraform/test1.txt", "894fc3f56edf2d3a4c5fb5cb71df910f958a2ed8", "744"),
+					testCheck("/terraform/test2.txt", "foobar", "100644"),
+					resource.TestCheckResourceAttr("docker_container.foo", "name", "tf-test"),
+					resource.TestCheckResourceAttr("docker_container.foo", "upload.#", "2"),
+					// resource.TestCheckResourceAttr("docker_container.foo", "upload.0.content", ""),
+					// resource.TestCheckResourceAttr("docker_container.foo", "upload.0.content_base64", "ODk0ZmMzZjU2ZWRmMmQzYTRjNWZiNWNiNzFkZjkxMGY5NThhMmVkOA=="),
+					// resource.TestCheckResourceAttr("docker_container.foo", "upload.0.executable", "true"),
+					// resource.TestCheckResourceAttr("docker_container.foo", "upload.0.file", "/terraform/test1.txt"),
+					// resource.TestCheckResourceAttr("docker_container.foo", "upload.1.content", "foo"),
+					// resource.TestCheckResourceAttr("docker_container.foo", "upload.1.content_base64", ""),
+					// resource.TestCheckResourceAttr("docker_container.foo", "upload.1.executable", "false"),
+					// resource.TestCheckResourceAttr("docker_container.foo", "upload.1.file", "/terraform/test2.txt"),
 				),
 			},
 		},
@@ -1531,6 +1618,7 @@ resource "docker_network" "test_network" {
 const testAccDockerContainerUploadConfig = `
 resource "docker_image" "foo" {
 	name = "nginx:latest"
+	keep_locally = true
 }
 
 resource "docker_container" "foo" {
@@ -1541,6 +1629,29 @@ resource "docker_container" "foo" {
 		content = "foo"
 		file = "/terraform/test.txt"
 		executable = true
+	}
+}
+`
+
+const testAccDockerContainerUploadLargeBinaryConfig = `
+resource "docker_image" "foo" {
+	name         = "nginx:latest"
+	keep_locally = true
+}
+
+resource "docker_container" "foo" {
+	name  = "tf-test"
+	image = "${docker_image.foo.latest}"
+
+	upload {
+		content_base64 = "${base64encode("894fc3f56edf2d3a4c5fb5cb71df910f958a2ed8")}"
+		file           = "/terraform/test1.txt"
+		executable     = true
+	}
+
+	upload {
+		content = "foobar"
+		file    = "/terraform/test2.txt"
 	}
 }
 `
