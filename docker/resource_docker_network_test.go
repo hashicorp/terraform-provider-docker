@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"context"
+
 	"github.com/docker/docker/api/types"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
@@ -12,6 +13,7 @@ import (
 
 func TestAccDockerNetwork_basic(t *testing.T) {
 	var n types.NetworkResource
+	resourceName := "docker_network.foo"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
@@ -20,8 +22,13 @@ func TestAccDockerNetwork_basic(t *testing.T) {
 			{
 				Config: testAccDockerNetworkConfig,
 				Check: resource.ComposeTestCheckFunc(
-					testAccNetwork("docker_network.foo", &n),
+					testAccNetwork(resourceName, &n),
 				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	})
@@ -67,6 +74,7 @@ resource "docker_network" "foo" {
 
 func TestAccDockerNetwork_internal(t *testing.T) {
 	var n types.NetworkResource
+	resourceName := "docker_network.foo"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
@@ -75,9 +83,14 @@ func TestAccDockerNetwork_internal(t *testing.T) {
 			{
 				Config: testAccDockerNetworkInternalConfig,
 				Check: resource.ComposeTestCheckFunc(
-					testAccNetwork("docker_network.foo", &n),
+					testAccNetwork(resourceName, &n),
 					testAccNetworkInternal(&n, true),
 				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	})
@@ -101,6 +114,7 @@ resource "docker_network" "foo" {
 
 func TestAccDockerNetwork_attachable(t *testing.T) {
 	var n types.NetworkResource
+	resourceName := "docker_network.foo"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
@@ -109,9 +123,14 @@ func TestAccDockerNetwork_attachable(t *testing.T) {
 			{
 				Config: testAccDockerNetworkAttachableConfig,
 				Check: resource.ComposeTestCheckFunc(
-					testAccNetwork("docker_network.foo", &n),
+					testAccNetwork(resourceName, &n),
 					testAccNetworkAttachable(&n, true),
 				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	})
@@ -169,6 +188,7 @@ resource "docker_network" "foo" {
 
 func TestAccDockerNetwork_ipv4(t *testing.T) {
 	var n types.NetworkResource
+	resourceName := "docker_network.foo"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
@@ -177,10 +197,16 @@ func TestAccDockerNetwork_ipv4(t *testing.T) {
 			{
 				Config: testAccDockerNetworkIPv4Config,
 				Check: resource.ComposeTestCheckFunc(
-					testAccNetwork("docker_network.foo", &n),
+					testAccNetwork(resourceName, &n),
 					testAccNetworkIPv4(&n, true),
 				),
 			},
+			// TODO mavogel
+			// {
+			// 	ResourceName:      resourceName,
+			// 	ImportState:       true,
+			// 	ImportStateVerify: true,
+			// },
 		},
 	})
 }
@@ -208,6 +234,7 @@ resource "docker_network" "foo" {
 
 func TestAccDockerNetwork_ipv6(t *testing.T) {
 	var n types.NetworkResource
+	resourceName := "docker_network.foo"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
@@ -216,10 +243,16 @@ func TestAccDockerNetwork_ipv6(t *testing.T) {
 			{
 				Config: testAccDockerNetworkIPv6Config,
 				Check: resource.ComposeTestCheckFunc(
-					testAccNetwork("docker_network.foo", &n),
+					testAccNetwork(resourceName, &n),
 					testAccNetworkIPv6(&n, true),
 				),
 			},
+			// TODO mavogel
+			// {
+			// 	ResourceName:      resourceName,
+			// 	ImportState:       true,
+			// 	ImportStateVerify: true,
+			// },
 		},
 	})
 }
@@ -251,6 +284,7 @@ resource "docker_network" "foo" {
 
 func TestAccDockerNetwork_labels(t *testing.T) {
 	var n types.NetworkResource
+	resourceName := "docker_network.foo"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
@@ -259,11 +293,17 @@ func TestAccDockerNetwork_labels(t *testing.T) {
 			{
 				Config: testAccDockerNetworkLabelsConfig,
 				Check: resource.ComposeTestCheckFunc(
-					testAccNetwork("docker_network.foo", &n),
+					testAccNetwork(resourceName, &n),
 					testAccNetworkLabel(&n, "com.docker.compose.network", "foo"),
 					testAccNetworkLabel(&n, "com.docker.compose.project", "test"),
 				),
 			},
+			// TODO mavogel
+			// {
+			// 	ResourceName:      resourceName,
+			// 	ImportState:       true,
+			// 	ImportStateVerify: true,
+			// },
 		},
 	})
 }
