@@ -204,10 +204,11 @@ One of `from_container`, `host_path` or `volume_name` must be set.
 ### File Upload
 
 `upload` is a block within the configuration that can be repeated to specify
-files to upload to the container before starting it.
+files to upload to the container before starting it. Either `content` or `content_base64` has to be set.
 Each `upload` supports the following
 
-* `content` - (Required, string) A content of a file to upload.
+* `content` - (Optional, string, conflicts with `content_base64`) A content of a file to upload. This should be used for small strings.
+* `content_base64` - (Optional, string, conflicts with `content`) A base64-encoded content of a large file to upload. See [here](https://github.com/terraform-providers/terraform-provider-docker/issues/48#issuecomment-374174588) for the reason.
 * `file` - (Required, string) path to a file in the container.
 * `executable` - (Optional, bool) If true, the file will be uploaded with user
   executable permission.
