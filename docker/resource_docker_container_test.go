@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -703,6 +704,64 @@ func TestAccDockerContainer_uploadAsBase64(t *testing.T) {
 					// resource.TestCheckResourceAttr("docker_container.foo", "upload.1.executable", "false"),
 					// resource.TestCheckResourceAttr("docker_container.foo", "upload.1.file", "/terraform/test2.txt"),
 				),
+			},
+		},
+	})
+}
+
+func TestAccDockerContainer_multipleUploadContentsConfig(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:  func() { testAccPreCheck(t) },
+		Providers: testAccProviders,
+		Steps: []resource.TestStep{
+			{
+				Config: `
+				resource "docker_image" "foo" {
+					name         = "nginx:latest"
+					keep_locally = true
+				}
+				
+				resource "docker_container" "foo" {
+					name  = "tf-test"
+					image = "${docker_image.foo.latest}"
+				
+					upload {
+						content        = "foobar"
+						content_base64 = "${base64encode("barbaz")}"
+						file           = "/terraform/test1.txt"
+						executable     = true
+					}
+				}
+				`,
+				ExpectError: regexp.MustCompile(`.*only one of 'content' or 'content_base64' can be specified.*`),
+			},
+		},
+	})
+}
+
+func TestAccDockerContainer_noUploadContentsConfig(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:  func() { testAccPreCheck(t) },
+		Providers: testAccProviders,
+		Steps: []resource.TestStep{
+			{
+				Config: `
+				resource "docker_image" "foo" {
+					name         = "nginx:latest"
+					keep_locally = true
+				}
+				
+				resource "docker_container" "foo" {
+					name  = "tf-test"
+					image = "${docker_image.foo.latest}"
+				
+					upload {
+						file           = "/terraform/test1.txt"
+						executable     = true
+					}
+				}
+				`,
+				ExpectError: regexp.MustCompile(`.* neither 'content', nor 'content_base64' was set.*`),
 			},
 		},
 	})

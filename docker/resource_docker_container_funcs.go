@@ -387,6 +387,9 @@ func resourceDockerContainerCreate(d *schema.ResourceData, meta interface{}) err
 			if content == "" && contentBase64 == "" {
 				return fmt.Errorf("Error with upload content: neither 'content', nor 'content_base64' was set")
 			}
+			if content != "" && contentBase64 != "" {
+				return fmt.Errorf("Error with upload content: only one of 'content' or 'content_base64' can be specified")
+			}
 			var contentToUpload string
 			if content != "" {
 				contentToUpload = content
