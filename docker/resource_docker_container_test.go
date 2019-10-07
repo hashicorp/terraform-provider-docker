@@ -612,7 +612,10 @@ func TestAccDockerContainer_upload(t *testing.T) {
 					testCheck,
 					resource.TestCheckResourceAttr("docker_container.foo", "name", "tf-test"),
 					resource.TestCheckResourceAttr("docker_container.foo", "upload.#", "1"),
-					// TODO mavogel: although they are in the state they are not found... check fails
+					// NOTE mavogel: current the terraform-plugin-sdk it's likely that
+					// the acceptance testing framework shims (still using the older flatmap-style addressing)
+					// are missing a conversion with the hashes.
+					// See https://github.com/hashicorp/terraform-plugin-sdk/issues/196
 					// resource.TestCheckResourceAttr("docker_container.foo", "upload.0.content", "foo"),
 					// resource.TestCheckResourceAttr("docker_container.foo", "upload.0.content_base64", ""),
 					// resource.TestCheckResourceAttr("docker_container.foo", "upload.0.executable", "true"),
@@ -623,7 +626,7 @@ func TestAccDockerContainer_upload(t *testing.T) {
 	})
 }
 
-func TestAccDockerContainer_uploadLargeBinary(t *testing.T) {
+func TestAccDockerContainer_uploadAsBase64(t *testing.T) {
 	var c types.ContainerJSON
 
 	testCheck := func(srcPath, wantedContent, filePerm string) func(*terraform.State) error {
@@ -662,13 +665,14 @@ func TestAccDockerContainer_uploadLargeBinary(t *testing.T) {
 		Providers: testAccProviders,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDockerContainerUploadLargeBinaryConfig,
+				Config: testAccDockerContainerUploadBase64Config,
 				Check: resource.ComposeTestCheckFunc(
 					testAccContainerRunning("docker_container.foo", &c),
 					testCheck("/terraform/test1.txt", "894fc3f56edf2d3a4c5fb5cb71df910f958a2ed8", "744"),
 					testCheck("/terraform/test2.txt", "foobar", "100644"),
 					resource.TestCheckResourceAttr("docker_container.foo", "name", "tf-test"),
 					resource.TestCheckResourceAttr("docker_container.foo", "upload.#", "2"),
+					// NOTE: see comment above
 					// resource.TestCheckResourceAttr("docker_container.foo", "upload.0.content", ""),
 					// resource.TestCheckResourceAttr("docker_container.foo", "upload.0.content_base64", "ODk0ZmMzZjU2ZWRmMmQzYTRjNWZiNWNiNzFkZjkxMGY5NThhMmVkOA=="),
 					// resource.TestCheckResourceAttr("docker_container.foo", "upload.0.executable", "true"),
@@ -682,13 +686,14 @@ func TestAccDockerContainer_uploadLargeBinary(t *testing.T) {
 			// We add a second on purpose to detect if there is a dirty plan
 			// although the file content did not change
 			{
-				Config: testAccDockerContainerUploadLargeBinaryConfig,
+				Config: testAccDockerContainerUploadBase64Config,
 				Check: resource.ComposeTestCheckFunc(
 					testAccContainerRunning("docker_container.foo", &c),
 					testCheck("/terraform/test1.txt", "894fc3f56edf2d3a4c5fb5cb71df910f958a2ed8", "744"),
 					testCheck("/terraform/test2.txt", "foobar", "100644"),
 					resource.TestCheckResourceAttr("docker_container.foo", "name", "tf-test"),
 					resource.TestCheckResourceAttr("docker_container.foo", "upload.#", "2"),
+					// NOTE: see comment above
 					// resource.TestCheckResourceAttr("docker_container.foo", "upload.0.content", ""),
 					// resource.TestCheckResourceAttr("docker_container.foo", "upload.0.content_base64", "ODk0ZmMzZjU2ZWRmMmQzYTRjNWZiNWNiNzFkZjkxMGY5NThhMmVkOA=="),
 					// resource.TestCheckResourceAttr("docker_container.foo", "upload.0.executable", "true"),
@@ -1633,7 +1638,7 @@ resource "docker_container" "foo" {
 }
 `
 
-const testAccDockerContainerUploadLargeBinaryConfig = `
+const testAccDockerContainerUploadBase64Config = `
 resource "docker_image" "foo" {
 	name         = "nginx:latest"
 	keep_locally = true
