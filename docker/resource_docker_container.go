@@ -662,15 +662,16 @@ func resourceDockerContainer() *schema.Resource {
 							Optional: true,
 							// This is intentional. The container is mutated once, and never updated later.
 							// New configuration forces a new deployment, even with the same binaries.
-							ForceNew:      true,
-							ConflictsWith: []string{"upload.content_base64"},
+							ForceNew: true,
+							// ConflictsWith in lists/sets is not supported yet: https://github.com/hashicorp/terraform-plugin-sdk/issues/71
+							// ConflictsWith: []string{"upload.content_base64"},
 						},
 						"content_base64": {
-							Type:          schema.TypeString,
-							Optional:      true,
-							ForceNew:      true,
-							ValidateFunc:  validateStringIsBase64Encoded(),
-							ConflictsWith: []string{"upload.content"},
+							Type:         schema.TypeString,
+							Optional:     true,
+							ForceNew:     true,
+							ValidateFunc: validateStringIsBase64Encoded(),
+							// ConflictsWith: []string{"upload.content"},
 						},
 						"file": {
 							Type:     schema.TypeString,
