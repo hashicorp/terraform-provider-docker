@@ -722,8 +722,9 @@ func TestAccDockerContainer_multipleUploadContentsConfig(t *testing.T) {
 				}
 				
 				resource "docker_container" "foo" {
-					name  = "tf-test"
-					image = "${docker_image.foo.latest}"
+					name     = "tf-test"
+					image    = "${docker_image.foo.latest}"
+					must_run = "false"
 				
 					upload {
 						content        = "foobar"
@@ -752,8 +753,9 @@ func TestAccDockerContainer_noUploadContentsConfig(t *testing.T) {
 				}
 				
 				resource "docker_container" "foo" {
-					name  = "tf-test"
-					image = "${docker_image.foo.latest}"
+					name     = "tf-test"
+					image    = "${docker_image.foo.latest}"
+					must_run = "false"
 				
 					upload {
 						file           = "/terraform/test1.txt"
