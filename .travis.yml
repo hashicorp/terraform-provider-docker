@@ -3,8 +3,6 @@ sudo: required
 services:
   - docker
 language: go
-go:
-  - "1.11.x"
 
 before_install:
 # locally: docker run -it ubuntu:16.04 bash
@@ -26,13 +24,6 @@ install:
 - sudo cat /etc/default/docker
 - sudo service docker restart
 
-script:
-- make vet
-- make test
-- make testacc
-- make compile
-- make website-test
-
 branches:
   only:
   - master
@@ -40,5 +31,28 @@ matrix:
   fast_finish: true
   allow_failures:
   - go: tip
+  include:
+    - go: "1.13.x"
+      name: "Unit-tests & vet"
+      script:
+        - make vet
+        - make test
+    - go: "1.13.x"
+      name: "Acceptance tests"
+        - make testacc
+    - go: "1.13.x"
+      name: "Build (golang current)"
+        - make compile
+    - go: "1.13.x"
+      name: "Website"
+        - make website-test
+    - go: "1.12.x"
+      name: "Build (golang previous)"
+      script:
+        - make compile
+    - go: "1.11.x"
+      name: "Build (golang old)"
+      script:
+        - make compile
 env:
   - GOFLAGS=-mod=vendor GO111MODULE=on
