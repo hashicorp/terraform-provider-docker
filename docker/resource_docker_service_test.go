@@ -1130,11 +1130,6 @@ func TestAccDockerService_convergeAndStopGracefully(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.0.replicas", "2"),
 				),
 			},
-			{
-				ResourceName:      "docker_service.foo",
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
 		},
 		CheckDestroy: checkAndRemoveImages,
 	})
