@@ -66,7 +66,7 @@ func resourceDockerNetworkCreate(d *schema.ResourceData, meta interface{}) error
 	}
 
 	d.SetId(retNetwork.ID)
-
+	// d.Set("check_duplicate") TODO
 	return resourceDockerNetworkRead(d, meta)
 }
 
@@ -154,11 +154,12 @@ func resourceDockerNetworkReadRefreshFunc(
 
 		d.Set("name", retNetwork.Name)
 		d.Set("labels", retNetwork.Labels)
+		d.Set("driver", retNetwork.Driver)
 		d.Set("internal", retNetwork.Internal)
 		d.Set("attachable", retNetwork.Attachable)
 		d.Set("ingress", retNetwork.Ingress)
 		d.Set("ipv6", retNetwork.EnableIPv6)
-		d.Set("driver", retNetwork.Driver)
+		d.Set("ipam_driver", retNetwork.IPAM.Driver)
 		d.Set("scope", retNetwork.Scope)
 		if retNetwork.Scope == "overlay" {
 			if retNetwork.Options != nil && len(retNetwork.Options) != 0 {
