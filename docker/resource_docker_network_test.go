@@ -34,6 +34,8 @@ func TestAccDockerNetwork_basic(t *testing.T) {
 	})
 }
 
+// TODO mavogel: add full network config test
+
 func testAccNetwork(n string, network *types.NetworkResource) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
