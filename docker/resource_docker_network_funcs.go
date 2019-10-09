@@ -153,6 +153,7 @@ func resourceDockerNetworkReadRefreshFunc(
 		log.Printf("[DEBUG] Docker network inspect: %s", jsonObj)
 
 		d.Set("name", retNetwork.Name)
+		d.Set("labels", retNetwork.Labels)
 		d.Set("internal", retNetwork.Internal)
 		d.Set("attachable", retNetwork.Attachable)
 		d.Set("ingress", retNetwork.Ingress)
