@@ -170,6 +170,10 @@ func resourceDockerNetworkReadRefreshFunc(
 			d.Set("options", retNetwork.Options)
 		}
 
+		if err = d.Set("ipam_config", flattenIpamConfigSpec(retNetwork.IPAM.Config)); err != nil {
+			log.Printf("[WARN] failed to set ipam config from API: %s", err)
+		}
+
 		log.Println("[DEBUG] all network fields exposed")
 		return networkID, "all_fields", nil
 	}
@@ -196,4 +200,28 @@ func resourceDockerNetworkRemoveRefreshFunc(
 
 		return networkID, "removed", nil
 	}
+}
+
+// TODO mavogel: separate structure file
+func flattenIpamConfigSpec(in []network.IPAMConfig) *schema.Set {
+	var out = make([]interface{}, len(in), len(in))
+	for i, v := range in {
+		m := make(map[string]interface{})
+		if len(v.Subnet) > 0 {
+			m["subnet"] = v.Subnet
+		}
+		if len(v.IPRange) > 0 {
+			m["ip_range"] = v.IPRange
+		}
+		if len(v.Gateway) > 0 {
+			m["gateway"] = v.Gateway
+		}
+		if len(v.AuxAddress) > 0 {
+			m["aux_address"] = v.AuxAddress
+		}
+		out[i] = m
+	}
+	imapConfigsResource := resourceDockerNetwork().Schema["ipam_config"].Elem.(*schema.Resource)
+	f := schema.HashResource(imapConfigsResource)
+	return schema.NewSet(f, out)
 }

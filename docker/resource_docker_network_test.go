@@ -201,12 +201,11 @@ func TestAccDockerNetwork_ipv4(t *testing.T) {
 					testAccNetworkIPv4(&n, true),
 				),
 			},
-			// TODO mavogel
-			// {
-			// 	ResourceName:      resourceName,
-			// 	ImportState:       true,
-			// 	ImportStateVerify: true,
-			// },
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
 		},
 	})
 }
