@@ -577,6 +577,9 @@ func resourceDockerContainerRead(d *schema.ResourceData, meta interface{}) error
 		}
 	}
 
+	// TODO all the other attributes
+	d.SetId(container.ID)
+
 	return nil
 }
 
