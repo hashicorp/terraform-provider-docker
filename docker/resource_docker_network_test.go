@@ -248,7 +248,8 @@ func TestAccDockerNetwork_ipv6(t *testing.T) {
 					testAccNetworkIPv6(&n, true),
 				),
 			},
-			// TODO mavogel
+			// TODO mavogel: ipam config goes from 2->1
+			// probably suppress diff
 			// {
 			// 	ResourceName:      resourceName,
 			// 	ImportState:       true,
@@ -299,12 +300,11 @@ func TestAccDockerNetwork_labels(t *testing.T) {
 					testAccNetworkLabel(&n, "com.docker.compose.project", "test"),
 				),
 			},
-			// TODO mavogel
-			// {
-			// 	ResourceName:      resourceName,
-			// 	ImportState:       true,
-			// 	ImportStateVerify: true,
-			// },
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
 		},
 	})
 }
