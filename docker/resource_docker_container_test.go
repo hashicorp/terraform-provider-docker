@@ -1267,6 +1267,7 @@ func TestAccDockerContainer_ipv4address(t *testing.T) {
 }
 
 func TestAccDockerContainer_ipv6address(t *testing.T) {
+	t.Skip("mavogel: need to fix ipv6 network state")
 	var c types.ContainerJSON
 
 	testCheck := func(*terraform.State) error {
