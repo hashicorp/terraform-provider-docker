@@ -159,7 +159,9 @@ func resourceDockerNetworkReadRefreshFunc(
 		d.Set("attachable", retNetwork.Attachable)
 		d.Set("ingress", retNetwork.Ingress)
 		d.Set("ipv6", retNetwork.EnableIPv6)
+		// if len(retNetwork.IPAM.Driver) > 0 {
 		d.Set("ipam_driver", retNetwork.IPAM.Driver)
+		// }
 		d.Set("scope", retNetwork.Scope)
 		if retNetwork.Scope == "overlay" {
 			if retNetwork.Options != nil && len(retNetwork.Options) != 0 {
@@ -205,9 +207,11 @@ func resourceDockerNetworkRemoveRefreshFunc(
 }
 
 // TODO mavogel: separate structure file
-func flattenIpamConfigSpec(in []network.IPAMConfig) *schema.Set {
+// TODO 2: seems like we can replace the set hash generation with plain lists
+func flattenIpamConfigSpec(in []network.IPAMConfig) *schema.Set { // []interface{} {
 	var out = make([]interface{}, len(in), len(in))
 	for i, v := range in {
+		log.Printf("[DEBUG] flatten ipam %d: %#v", i, v)
 		m := make(map[string]interface{})
 		if len(v.Subnet) > 0 {
 			m["subnet"] = v.Subnet
@@ -223,7 +227,9 @@ func flattenIpamConfigSpec(in []network.IPAMConfig) *schema.Set {
 		}
 		out[i] = m
 	}
+	// log.Printf("[INFO] flatten ipam out: %#v", out)
 	imapConfigsResource := resourceDockerNetwork().Schema["ipam_config"].Elem.(*schema.Resource)
 	f := schema.HashResource(imapConfigsResource)
 	return schema.NewSet(f, out)
+	// return out
 }

@@ -1,11 +1,6 @@
 package docker
 
 import (
-	"bytes"
-	"fmt"
-	"sort"
-
-	"github.com/hashicorp/terraform-plugin-sdk/helper/hashcode"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 )
 
@@ -41,7 +36,7 @@ func resourceDockerNetwork() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true,
-				Computed: true,
+				Default:  "bridge",
 			},
 
 			"options": {
@@ -80,11 +75,13 @@ func resourceDockerNetwork() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true,
+				Default:  "default",
 			},
 
 			"ipam_config": {
 				Type:     schema.TypeSet,
 				Optional: true,
+				Computed: true,
 				ForceNew: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
@@ -113,7 +110,6 @@ func resourceDockerNetwork() *schema.Resource {
 						},
 					},
 				},
-				Set: resourceDockerIpamConfigHash,
 			},
 
 			"scope": {
@@ -122,39 +118,4 @@ func resourceDockerNetwork() *schema.Resource {
 			},
 		},
 	}
-}
-
-func resourceDockerIpamConfigHash(v interface{}) int {
-	var buf bytes.Buffer
-	m := v.(map[string]interface{})
-
-	if v, ok := m["subnet"]; ok {
-		buf.WriteString(fmt.Sprintf("%v-", v.(string)))
-	}
-
-	if v, ok := m["ip_range"]; ok {
-		buf.WriteString(fmt.Sprintf("%v-", v.(string)))
-	}
-
-	if v, ok := m["gateway"]; ok {
-		buf.WriteString(fmt.Sprintf("%v-", v.(string)))
-	}
-
-	if v, ok := m["aux_address"]; ok {
-		auxAddress := v.(map[string]interface{})
-
-		keys := make([]string, len(auxAddress))
-		i := 0
-		for k := range auxAddress {
-			keys[i] = k
-			i++
-		}
-		sort.Strings(keys)
-
-		for _, k := range keys {
-			buf.WriteString(fmt.Sprintf("%v-%v-", k, auxAddress[k].(string)))
-		}
-	}
-
-	return hashcode.String(buf.String())
 }
