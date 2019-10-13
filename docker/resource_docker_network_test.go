@@ -269,7 +269,7 @@ func testAccNetworkIPv6(network *types.NetworkResource, internal bool) resource.
 			return fmt.Errorf("Bad value for IPAM configuration count: %d", len(network.IPAM.Config))
 		}
 		if network.IPAM.Config[1].Subnet != "fd00::1/64" {
-			return fmt.Errorf("Bad value for attribute 'subnet': %v", network.IPAM.Config[0].Subnet)
+			return fmt.Errorf("Bad value for attribute 'subnet': %v", network.IPAM.Config[1].Subnet)
 		}
 		return nil
 	}
@@ -282,6 +282,10 @@ resource "docker_network" "foo" {
   ipam_config {
     subnet = "fd00::1/64"
   }
+  # TODO mavogel: Would work but BC
+  #   ipam_config {
+  #     subnet = "10.0.1.0/24"
+  #   }
 }
 `
 
