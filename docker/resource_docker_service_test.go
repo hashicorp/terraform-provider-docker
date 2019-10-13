@@ -699,8 +699,8 @@ func TestAccDockerService_privateImageConverge(t *testing.T) {
 						}
 					}
 
-					resource "docker_service" "bar" {
-						name     = "tftest-service-bar"
+					resource "docker_service" "foo" {
+						name     = "tftest-service-foo"
 						task_spec {
 							container_spec {
 								image    = "%s"
@@ -719,15 +719,10 @@ func TestAccDockerService_privateImageConverge(t *testing.T) {
 					}
 				`, registry, image),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestMatchResourceAttr("docker_service.bar", "id", serviceIDRegex),
-					resource.TestCheckResourceAttr("docker_service.bar", "name", "tftest-service-bar"),
-					resource.TestMatchResourceAttr("docker_service.bar", "task_spec.0.container_spec.0.image", regexp.MustCompile(`127.0.0.1:15000/tftest-service:v1@sha256.*`)),
+					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
+					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-foo"),
+					resource.TestMatchResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image", regexp.MustCompile(`127.0.0.1:15000/tftest-service:v1@sha256.*`)),
 				),
-			},
-			{
-				ResourceName:      "docker_service.foo",
-				ImportState:       true,
-				ImportStateVerify: true,
 			},
 		},
 		CheckDestroy: checkAndRemoveImages,
