@@ -735,7 +735,6 @@ func hashLabel(v interface{}) int {
 
 func mapToLabelSet(labels map[string]string) *schema.Set {
 	var mapped []interface{}
-	schema.S
 	for k, v := range labels {
 		mapped = append(mapped, map[string]interface{}{
 			"label": k,
