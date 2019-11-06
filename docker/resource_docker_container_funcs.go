@@ -728,15 +728,21 @@ func labelSetToMap(labels *schema.Set) map[string]string {
 	return mapped
 }
 
+func hashLabel(v interface{}) int {
+	labelMap := v.(map[string]interface{})
+	return schema.HashString(labelMap["label"].(string))
+}
+
 func mapToLabelSet(labels map[string]string) *schema.Set {
 	var mapped []interface{}
+	schema.S
 	for k, v := range labels {
 		mapped = append(mapped, map[string]interface{}{
 			"label": k,
 			"value": v,
 		})
 	}
-	return schema.NewSet(schema.HashString, mapped)
+	return schema.NewSet(hashLabel, mapped)
 }
 
 func mapTypeMapValsToString(typeMap map[string]interface{}) map[string]string {
