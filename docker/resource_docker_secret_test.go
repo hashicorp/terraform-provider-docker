@@ -85,19 +85,23 @@ func TestAccDockerSecret_labels(t *testing.T) {
 				resource "docker_secret" "foo" {
 					name = "foo-secret"
 					data = "Ymxhc2RzYmxhYmxhMTI0ZHNkd2VzZA=="
-					labels = {
-						label = "test1"
-						value = "foo"
-					}
-					labels = {
-						label = "test2"
-						value = "bar"
-					}
+					labels = [
+						{
+							label = "test1"
+							value = "foo"
+						},
+						{
+							label = "test2"
+							value = "bar"
+						}
+					]
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("docker_secret.foo", "labels.test1", "foo"),
-					resource.TestCheckResourceAttr("docker_secret.foo", "labels.test2", "bar"),
+					resource.TestCheckResourceAttr("docker_secret.foo", "labels.0.label", "test1"),
+					resource.TestCheckResourceAttr("docker_secret.foo", "labels.0.valkue", "foo"),
+					resource.TestCheckResourceAttr("docker_secret.foo", "labels.0.label", "test2"),
+					resource.TestCheckResourceAttr("docker_secret.foo", "labels.0.valkue", "bar"),
 				),
 			},
 		},
