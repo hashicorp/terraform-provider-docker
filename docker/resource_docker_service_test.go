@@ -742,16 +742,14 @@ func TestAccDockerService_updateMultiplePropertiesConverge(t *testing.T) {
 		type   = "volume"
 		read_only = true
 		volume_options {
-			labels = [
-				{
-					label = "env"
-					value = "dev"
-				},
-				{
-					label = "terraform"
-					value = "true"
-				}
-			]
+			labels {
+				label = "env"
+				value = "dev"
+			}
+			labels {
+				label = "terraform"
+				value = "true"
+			}
 		}
 	}
 	`
