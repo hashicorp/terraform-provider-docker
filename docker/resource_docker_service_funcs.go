@@ -118,7 +118,7 @@ func resourceDockerServiceRead(d *schema.ResourceData, meta interface{}) error {
 
 	d.SetId(service.ID)
 	d.Set("name", service.Spec.Name)
-	d.Set("labels", mapToLabelSlice(service.Spec.Labels))
+	d.Set("labels", mapToLabelSet(service.Spec.Labels))
 
 	if err = d.Set("task_spec", flattenTaskSpec(service.Spec.TaskTemplate)); err != nil {
 		log.Printf("[WARN] failed to set task spec from API: %s", err)
