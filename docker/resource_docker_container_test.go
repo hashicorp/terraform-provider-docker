@@ -1660,16 +1660,14 @@ resource "docker_container" "foo" {
 	dns = ["8.8.8.8"]
 	dns_opts = ["rotate"]
 	dns_search = ["example.com"]
-	labels = [
-		{
-			label = "env"
-			value = "prod"
-		},
-		{
-			label = "role"
-			value = "test"
-		}
-	]
+	labels {
+		label = "env"
+		value = "prod"
+	}
+	labels {
+		label = "role"
+		value = "test"
+	}
 	log_driver = "json-file"
 	log_opts = {
 		max-size = "10m"
