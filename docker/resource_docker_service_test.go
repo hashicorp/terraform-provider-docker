@@ -227,8 +227,9 @@ func TestAccDockerService_fullSpec(t *testing.T) {
 						container_spec {
 							image = "127.0.0.1:15000/tftest-service:v1"
 
-							labels = {
-								foo = "bar"
+							labels {
+								label = "foo"
+								value = "bar"
 							}
 
 							command  = ["ls"]
@@ -264,8 +265,9 @@ func TestAccDockerService_fullSpec(t *testing.T) {
 
 								volume_options {
 									no_copy = true
-									labels = {
-										foo = "bar"
+									labels {
+										label = "foo"
+										value = "bar"
 									}
 									driver_name = "random-driver"
 									driver_options = {
@@ -738,9 +740,13 @@ func TestAccDockerService_updateMultiplePropertiesConverge(t *testing.T) {
 		type   = "volume"
 		read_only = true
 		volume_options {
-			labels = {
-				env = "dev"
-				terraform = "true"
+			labels {
+				label = "env"
+				value = "dev"
+			}
+			labels {
+				label = "terraform"
+				value = "true"
 			}
 		}
 	}
@@ -781,9 +787,13 @@ func TestAccDockerService_updateMultiplePropertiesConverge(t *testing.T) {
 		type   = "volume"
 		read_only = true
 		volume_options {
-			labels = {
-				env = "dev"
-				terraform = "true"
+			labels {
+				label = "env"
+				value = "dev"
+			}
+			labels {
+				label = "terraform"
+				value = "true"
 			}
 		}
 	}
@@ -793,9 +803,13 @@ func TestAccDockerService_updateMultiplePropertiesConverge(t *testing.T) {
 		type   = "volume"
 		read_only = true
 		volume_options {
-			labels  = {
-				env = "dev"
-				terraform = "true"
+			labels {
+				label = "env"
+				value = "dev"
+			}
+			labels {
+				label = "terraform"
+				value = "true"
 			}
 		}
 	}

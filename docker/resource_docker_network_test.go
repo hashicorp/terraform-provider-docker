@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"context"
+
 	"github.com/docker/docker/api/types"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
@@ -280,9 +281,13 @@ func testAccNetworkLabel(network *types.NetworkResource, name string, value stri
 const testAccDockerNetworkLabelsConfig = `
 resource "docker_network" "foo" {
   name = "test_foo"
-  labels = {
-    "com.docker.compose.network" = "foo"
-    "com.docker.compose.project" = "test"
+  labels {
+    label = "com.docker.compose.network"
+    value = "foo"
+  }
+  labels {
+    label = "com.docker.compose.project"
+    value = "test"
   }
 }
 `

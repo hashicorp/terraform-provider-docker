@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"context"
+
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 )
@@ -85,8 +86,12 @@ func TestAccDockerSecret_labels(t *testing.T) {
 					name = "foo-secret"
 					data = "Ymxhc2RzYmxhYmxhMTI0ZHNkd2VzZA=="
 					labels = {
-						"test1" = "foo"
-						"test2" = "bar"
+						label = "test1"
+						value = "foo"
+					}
+					labels = {
+						label = "test2"
+						value = "bar"
 					}
 				}
 				`,
