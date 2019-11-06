@@ -265,10 +265,10 @@ func TestAccDockerService_fullSpec(t *testing.T) {
 
 								volume_options {
 									no_copy = true
-									labels = [{
+									labels {
 										label = "foo"
 										value = "bar"
-									}]
+									}
 									driver_name = "random-driver"
 									driver_options = {
 										op1 = "val1"
