@@ -256,10 +256,23 @@ func resourceDockerContainer() *schema.Resource {
 										Optional:    true,
 									},
 									"labels": {
-										Type:        schema.TypeMap,
+										Type:        schema.TypeSet,
 										Description: "User-defined key/value metadata",
 										Optional:    true,
-										Elem:        &schema.Schema{Type: schema.TypeString},
+										Elem: &schema.Resource{
+											Schema: map[string]*schema.Schema{
+												"label": {
+													Type:        schema.TypeString,
+													Description: "Name of the label",
+													Required:    true,
+												},
+												"value": {
+													Type:        schema.TypeString,
+													Description: "Value of the label",
+													Required:    true,
+												},
+											},
+										},
 									},
 									"driver_name": {
 										Type:        schema.TypeString,
@@ -536,9 +549,24 @@ func resourceDockerContainer() *schema.Resource {
 			},
 
 			"labels": {
-				Type:     schema.TypeMap,
-				Optional: true,
-				ForceNew: true,
+				Type:        schema.TypeSet,
+				Description: "User-defined key/value metadata",
+				Optional:    true,
+				ForceNew:    true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"label": {
+							Type:        schema.TypeString,
+							Description: "Name of the label",
+							Required:    true,
+						},
+						"value": {
+							Type:        schema.TypeString,
+							Description: "Value of the label",
+							Required:    true,
+						},
+					},
+				},
 			},
 
 			"memory": {

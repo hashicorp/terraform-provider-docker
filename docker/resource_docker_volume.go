@@ -3,13 +3,14 @@ package docker
 import (
 	"context"
 	"fmt"
+	"log"
+	"strings"
+	"time"
+
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/volume"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"log"
-	"strings"
-	"time"
 )
 
 func resourceDockerVolume() *schema.Resource {
@@ -26,9 +27,24 @@ func resourceDockerVolume() *schema.Resource {
 				ForceNew: true,
 			},
 			"labels": {
-				Type:     schema.TypeMap,
-				Optional: true,
-				ForceNew: true,
+				Type:        schema.TypeSet,
+				Description: "User-defined key/value metadata",
+				Optional:    true,
+				ForceNew:    true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"label": {
+							Type:        schema.TypeString,
+							Description: "Name of the label",
+							Required:    true,
+						},
+						"value": {
+							Type:        schema.TypeString,
+							Description: "Value of the label",
+							Required:    true,
+						},
+					},
+				},
 			},
 			"driver": {
 				Type:     schema.TypeString,
@@ -59,7 +75,7 @@ func resourceDockerVolumeCreate(d *schema.ResourceData, meta interface{}) error 
 		createOpts.Name = v.(string)
 	}
 	if v, ok := d.GetOk("labels"); ok {
-		createOpts.Labels = mapTypeMapValsToString(v.(map[string]interface{}))
+		createOpts.Labels = labelSliceToMap(v.([]map[string]interface{}))
 	}
 	if v, ok := d.GetOk("driver"); ok {
 		createOpts.Driver = v.(string)

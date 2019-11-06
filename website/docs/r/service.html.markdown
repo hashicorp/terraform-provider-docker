@@ -80,7 +80,8 @@ resource "docker_service" "foo" {
       image = "repo.mycompany.com:8080/foo-service:v1"
 
       labels {
-        foo = "bar"
+        label = "foo"
+        value = "bar"
       }
 
       command  = ["ls"]

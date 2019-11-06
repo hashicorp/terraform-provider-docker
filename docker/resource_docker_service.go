@@ -53,11 +53,24 @@ func resourceDockerService() *schema.Resource {
 				ForceNew:    true,
 			},
 			"labels": {
-				Type:        schema.TypeMap,
+				Type:        schema.TypeSet,
 				Description: "User-defined key/value metadata",
 				Optional:    true,
 				Computed:    true,
-				Elem:        &schema.Schema{Type: schema.TypeString},
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"label": {
+							Type:        schema.TypeString,
+							Description: "Name of the label",
+							Required:    true,
+						},
+						"value": {
+							Type:        schema.TypeString,
+							Description: "Value of the label",
+							Required:    true,
+						},
+					},
+				},
 			},
 			"task_spec": {
 				Type:        schema.TypeList,
@@ -80,10 +93,23 @@ func resourceDockerService() *schema.Resource {
 										DiffSuppressFunc: suppressIfSHAwasAdded(),
 									},
 									"labels": {
-										Type:        schema.TypeMap,
+										Type:        schema.TypeSet,
 										Description: "User-defined key/value metadata",
 										Optional:    true,
-										Elem:        &schema.Schema{Type: schema.TypeString},
+										Elem: &schema.Resource{
+											Schema: map[string]*schema.Schema{
+												"label": {
+													Type:        schema.TypeString,
+													Description: "Name of the label",
+													Required:    true,
+												},
+												"value": {
+													Type:        schema.TypeString,
+													Description: "Value of the label",
+													Required:    true,
+												},
+											},
+										},
 									},
 									"command": {
 										Type:        schema.TypeList,
@@ -250,10 +276,23 @@ func resourceDockerService() *schema.Resource {
 																Optional:    true,
 															},
 															"labels": {
-																Type:        schema.TypeMap,
+																Type:        schema.TypeSet,
 																Description: "User-defined key/value metadata",
 																Optional:    true,
-																Elem:        &schema.Schema{Type: schema.TypeString},
+																Elem: &schema.Resource{
+																	Schema: map[string]*schema.Schema{
+																		"label": {
+																			Type:        schema.TypeString,
+																			Description: "Name of the label",
+																			Required:    true,
+																		},
+																		"value": {
+																			Type:        schema.TypeString,
+																			Description: "Value of the label",
+																			Required:    true,
+																		},
+																	},
+																},
 															},
 															"driver_name": {
 																Type:        schema.TypeString,
