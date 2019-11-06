@@ -104,7 +104,7 @@ func resourceDockerContainerCreate(d *schema.ResourceData, meta interface{}) err
 	}
 
 	if v, ok := d.GetOk("labels"); ok {
-		config.Labels = labelSliceToMap(v.([]map[string]interface{}))
+		config.Labels = labelSetToMap(v.(*schema.Set))
 	}
 
 	if value, ok := d.GetOk("healthcheck"); ok {
@@ -168,7 +168,7 @@ func resourceDockerContainerCreate(d *schema.ResourceData, meta interface{}) err
 								mountInstance.VolumeOptions.NoCopy = value.(bool)
 							}
 							if value, ok := rawVolumeOptions["labels"]; ok {
-								mountInstance.VolumeOptions.Labels = labelSliceToMap(value.([]map[string]interface{}))
+								mountInstance.VolumeOptions.Labels = labelSetToMap(value.(*schema.Set))
 							}
 							// because it is not possible to nest maps
 							if value, ok := rawVolumeOptions["driver_name"]; ok {
@@ -713,15 +713,16 @@ func stringSetToStringSlice(stringSet *schema.Set) []string {
 	return ret
 }
 
-//TODO what data type is it mapping FROM?
 func labelToPair(label map[string]interface{}) (string, string) {
 	return label["label"].(string), label["value"].(string)
 }
 
-func labelSliceToMap(labels []map[string]interface{}) map[string]string {
-	mapped := make(map[string]string, len(labels))
-	for _, label := range labels {
-		l, v := labelToPair(label)
+func labelSetToMap(labels *schema.Set) map[string]string {
+	labelsSlice := labels.List()
+
+	mapped := make(map[string]string, len(labelsSlice))
+	for _, label := range labelsSlice {
+		l, v := labelToPair(label.(map[string]interface{}))
 		mapped[l] = v
 	}
 	return mapped

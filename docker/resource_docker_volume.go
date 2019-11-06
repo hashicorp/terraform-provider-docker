@@ -75,7 +75,7 @@ func resourceDockerVolumeCreate(d *schema.ResourceData, meta interface{}) error 
 		createOpts.Name = v.(string)
 	}
 	if v, ok := d.GetOk("labels"); ok {
-		createOpts.Labels = labelSliceToMap(v.([]map[string]interface{}))
+		createOpts.Labels = labelSetToMap(v.(*schema.Set))
 	}
 	if v, ok := d.GetOk("driver"); ok {
 		createOpts.Driver = v.(string)

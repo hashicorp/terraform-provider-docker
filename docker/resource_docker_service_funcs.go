@@ -607,7 +607,7 @@ func createServiceSpec(d *schema.ResourceData) (swarm.ServiceSpec, error) {
 // createServiceLabels creates the labels for the service
 func createServiceLabels(d *schema.ResourceData) (map[string]string, error) {
 	if v, ok := d.GetOk("labels"); ok {
-		return labelSliceToMap(v.([]map[string]interface{})), nil
+		return labelSetToMap(v.(*schema.Set)), nil
 	}
 	return nil, nil
 }
@@ -686,7 +686,7 @@ func createContainerSpec(v interface{}) (*swarm.ContainerSpec, error) {
 				containerSpec.Image = value.(string)
 			}
 			if value, ok := rawContainerSpec["labels"]; ok {
-				containerSpec.Labels = labelSliceToMap(value.([]map[string]interface{}))
+				containerSpec.Labels = labelSetToMap(value.(*schema.Set))
 			}
 			if value, ok := rawContainerSpec["command"]; ok {
 				containerSpec.Command = stringListToStringSlice(value.([]interface{}))
@@ -796,7 +796,7 @@ func createContainerSpec(v interface{}) (*swarm.ContainerSpec, error) {
 										mountInstance.VolumeOptions.NoCopy = value.(bool)
 									}
 									if value, ok := rawVolumeOptions["labels"]; ok {
-										mountInstance.VolumeOptions.Labels = labelSliceToMap(value.([]map[string]interface{}))
+										mountInstance.VolumeOptions.Labels = labelSetToMap(value.(*schema.Set))
 									}
 									// because it is not possible to nest maps
 									if value, ok := rawVolumeOptions["driver_name"]; ok {

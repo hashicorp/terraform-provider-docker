@@ -69,7 +69,7 @@ func resourceDockerSecretCreate(d *schema.ResourceData, meta interface{}) error 
 	}
 
 	if v, ok := d.GetOk("labels"); ok {
-		secretSpec.Annotations.Labels = labelSliceToMap(v.([]map[string]interface{}))
+		secretSpec.Annotations.Labels = labelSetToMap(v.(*schema.Set))
 	}
 
 	secret, err := client.SecretCreate(context.Background(), secretSpec)
