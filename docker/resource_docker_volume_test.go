@@ -98,6 +98,5 @@ resource "docker_volume" "foo" {
     label = "com.docker.compose.volume"
     value = "foo"
   }
-  ]
 }
 `
