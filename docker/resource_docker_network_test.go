@@ -34,7 +34,7 @@ func TestAccDockerNetwork_basic(t *testing.T) {
 	})
 }
 
-// TODO mavogel: add full network config test
+// TODO mavogel: add full network config test in #219
 
 func testAccNetwork(n string, network *types.NetworkResource) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
@@ -250,7 +250,7 @@ func TestAccDockerNetwork_ipv6(t *testing.T) {
 				),
 			},
 			// TODO mavogel: ipam config goes from 2->1
-			// probably suppress diff
+			// probably suppress diff -> #219
 			{
 				ResourceName:      resourceName,
 				ImportState:       true,
@@ -282,7 +282,7 @@ resource "docker_network" "foo" {
   ipam_config {
     subnet = "fd00::1/64"
   }
-  # TODO mavogel: Would work but BC
+  # TODO mavogel: Would work but BC - 219
   #   ipam_config {
   #     subnet = "10.0.1.0/24"
   #   }

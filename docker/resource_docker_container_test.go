@@ -66,7 +66,7 @@ func TestAccDockerContainer_basic(t *testing.T) {
 					testAccContainerRunning(resourceName, &c),
 				),
 			},
-			// TODO mavogel: waiting for feedback
+			// TODO mavogel: Will be done in #219
 			// {
 			// 	ResourceName:      resourceName,
 			// 	ImportState:       true,
