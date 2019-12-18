@@ -199,7 +199,6 @@ func providerSetToRegistryAuth(authSet *schema.Set) (*AuthConfigs, error) {
 			// neverthelesss config_file_content is set or not. The default has to be kept to check for the
 			// environment variable and to be backwards compatible
 		} else if configFileContent, ok := auth["config_file_content"]; ok && configFileContent.(string) != "" {
-			// TODO refactor
 			log.Println("[DEBUG] Parsing file content for registry auths:", configFileContent.(string))
 			r := strings.NewReader(configFileContent.(string))
 
