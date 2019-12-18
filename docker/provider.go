@@ -194,10 +194,16 @@ func providerSetToRegistryAuth(authSet *schema.Set) (*AuthConfigs, error) {
 			log.Println("[DEBUG] Using username for registry auths:", username)
 			authConfig.Username = auth["username"].(string)
 			authConfig.Password = auth["password"].(string)
+
+			// Note: check for config_file_content first because config_file has a default which would be used
+			// neverthelesss config_file_content is set or not. The default has to be kept to check for the
+			// environment variable and to be backwards compatible
 		} else if configFileContent, ok := auth["config_file_content"]; ok && configFileContent.(string) != "" {
 			// TODO refactor
-			log.Println("[DEBUG] Parsing file content for registry auths:", configFileContent.(string)[:15])
+			log.Println("[DEBUG] Parsing file content for registry auths:", configFileContent.(string))
 			r := strings.NewReader(configFileContent.(string))
+
+			// Parse and set the auth
 			auths, err := newAuthConfigurations(r)
 			if err != nil {
 				return nil, fmt.Errorf("Error parsing docker registry config json: %v", err)
@@ -215,9 +221,14 @@ func providerSetToRegistryAuth(authSet *schema.Set) (*AuthConfigs, error) {
 			if !foundRegistry {
 				return nil, fmt.Errorf("Couldn't find registry config for '%s' in file content", authConfig.ServerAddress)
 			}
+
+			// As last step we check if a config file path is given
 		} else if configFile, ok := auth["config_file"]; ok && configFile.(string) != "" {
 			filePath := configFile.(string)
 			log.Println("[DEBUG] Parsing file for registry auths:", filePath)
+
+			// We manually expand the path and do not use the 'pathexpand' interpolation function
+			// because in the default of this varable we refer to '~/.docker/config.json'
 			if strings.HasPrefix(filePath, "~/") {
 				usr, err := user.Current()
 				if err != nil {
@@ -231,6 +242,7 @@ func providerSetToRegistryAuth(authSet *schema.Set) (*AuthConfigs, error) {
 				return nil, fmt.Errorf("Error opening docker registry config file: %v", err)
 			}
 
+			// Parse and set the auth
 			auths, err := newAuthConfigurations(r)
 			if err != nil {
 				return nil, fmt.Errorf("Error parsing docker registry config json: %v", err)
