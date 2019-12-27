@@ -491,7 +491,7 @@ func flattenTaskLogDriver(in *swarm.Driver) []interface{} {
 
 ///// end TaskSpec
 ///// start EndpointSpec
-func flattenServicePorts(in []swarm.PortConfig) []interface{} { //*schema.Set {
+func flattenServicePorts(in []swarm.PortConfig) []interface{} {
 	var out = make([]interface{}, len(in), len(in))
 	for i, v := range in {
 		m := make(map[string]interface{})
