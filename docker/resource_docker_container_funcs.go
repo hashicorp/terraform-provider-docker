@@ -580,9 +580,89 @@ func resourceDockerContainerRead(d *schema.ResourceData, meta interface{}) error
 
 	// TODO all the other attributes
 	d.SetId(container.ID)
-	// d.Set("name", container.Name) // api prefixes with '/' ...
-	// d.Set("image", container.Image)
-	// d.Set("log_driver", container.HostConfig.LogConfig.Type)
+	d.Set("name", strings.TrimLeft(container.Name, "/")) // api prefixes with '/' ...
+	d.Set("rm", container.HostConfig.AutoRemove)
+	d.Set("read_only", container.HostConfig.ReadonlyRootfs)
+	// "start" can't be imported
+	// attach
+	// logs
+	// "must_run" can't be imported
+	// container_logs
+	d.Set("image", container.Image)
+	d.Set("hostname", container.Config.Hostname)
+	d.Set("domainname", container.Config.Domainname)
+	d.Set("command", container.Config.Cmd)
+	d.Set("entrypoint", container.Config.Entrypoint)
+	d.Set("user", container.Config.User)
+	d.Set("dns", container.HostConfig.DNS)
+	d.Set("dns_opts", container.HostConfig.DNSOptions)
+	d.Set("dns_search", container.HostConfig.DNSSearch)
+	d.Set("publish_all_ports", container.HostConfig.PublishAllPorts)
+	d.Set("restart", container.HostConfig.RestartPolicy.Name)
+	d.Set("max_retry_count", container.HostConfig.RestartPolicy.MaximumRetryCount)
+	d.Set("working_dir", container.Config.WorkingDir)
+	d.Set("capabilities", []interface{}{
+		map[string]interface{}{
+			"add":  container.HostConfig.CapAdd,
+			"drop": container.HostConfig.CapDrop,
+		},
+	})
+	// mounts
+	// volumes
+	d.Set("tmpfs", container.HostConfig.Tmpfs)
+	d.Set("host", container.HostConfig.ExtraHosts)
+	// d.Set("ulimit", container.HostConfig.Ulimits)
+	d.Set("env", container.Config.Env)
+	d.Set("links", container.HostConfig.Links)
+	d.Set("privileged", container.HostConfig.Privileged)
+	devices := make([]interface{}, len(container.HostConfig.Devices))
+	for i, device := range container.HostConfig.Devices {
+		devices[i] = map[string]interface{}{
+			"host_path":      device.PathOnHost,
+			"container_path": device.PathInContainer,
+			"permissions":    device.CgroupPermissions,
+		}
+	}
+	d.Set("devices", devices)
+	// "destroy_grace_seconds" can't be imported
+	labels := make([]interface{}, len(container.Config.Labels))
+	i := 0
+	for k, v := range container.Config.Labels {
+		labels[i] = map[string]interface{}{
+			"label": k,
+			"value": v,
+		}
+		i++
+	}
+	d.Set("labels", labels)
+	d.Set("memory", container.HostConfig.Memory/1024/1024)
+	d.Set("memory_swap", container.HostConfig.MemorySwap/1024/1024)
+	d.Set("shm_size", container.HostConfig.ShmSize/1024/1024)
+	d.Set("cpu_shares", container.HostConfig.CPUShares)
+	d.Set("cpu_set", container.HostConfig.CpusetCpus)
+	d.Set("log_driver", container.HostConfig.LogConfig.Type)
+	d.Set("log_opts", container.HostConfig.LogConfig.Config)
+	// d.Set("network_alias", container.HostConfig.LogConfig.Config)
+	d.Set("network_mode", container.HostConfig.NetworkMode)
+	// networks
+	// network_advanced
+	d.Set("pid_mode", container.HostConfig.PidMode)
+	d.Set("userns_mode", container.HostConfig.UsernsMode)
+	// upload
+	if container.Config.Healthcheck != nil {
+		d.Set("healthcheck", []interface{}{
+			map[string]interface{}{
+				"test":         container.Config.Healthcheck.Test,
+				"interval":     container.Config.Healthcheck.Interval.String(),
+				"timeout":      container.Config.Healthcheck.Timeout.String(),
+				"start_period": container.Config.Healthcheck.StartPeriod.String(),
+				"retries":      container.Config.Healthcheck.Retries,
+			},
+		})
+	}
+	d.Set("sysctls", container.HostConfig.Sysctls)
+	d.Set("ipc_mode", container.HostConfig.IpcMode)
+	d.Set("group_add", container.HostConfig.GroupAdd)
 	return nil
 }
 
