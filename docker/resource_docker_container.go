@@ -186,7 +186,7 @@ func resourceDockerContainer() *schema.Resource {
 				Optional: true,
 				ForceNew: true,
 			},
-			"working_dir": &schema.Schema{
+			"working_dir": {
 				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true,
@@ -936,7 +936,7 @@ func resourceDockerContainerV1() *schema.Resource {
 				Optional: true,
 				ForceNew: true,
 			},
-			"working_dir": &schema.Schema{
+			"working_dir": {
 				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true,
