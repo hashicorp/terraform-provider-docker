@@ -114,6 +114,7 @@ func resourceDockerContainer() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true,
+				Computed: true,
 			},
 
 			"domainname": {
@@ -576,6 +577,7 @@ func resourceDockerContainer() *schema.Resource {
 				Type:         schema.TypeInt,
 				Optional:     true,
 				ForceNew:     true,
+				Computed:     true,
 				ValidateFunc: validateIntegerGeqThan(0),
 			},
 
@@ -763,6 +765,7 @@ func resourceDockerContainer() *schema.Resource {
 				Description: "IPC sharing mode for the container",
 				Optional:    true,
 				ForceNew:    true,
+				Computed:    true,
 			},
 			"group_add": {
 				Type:        schema.TypeSet,
