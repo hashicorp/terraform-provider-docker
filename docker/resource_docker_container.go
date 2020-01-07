@@ -55,6 +55,10 @@ func resourceDockerContainer() *schema.Resource {
 				Type:     schema.TypeBool,
 				Default:  true,
 				Optional: true,
+				DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+					// ignore diff because "start" can't be imported
+					return true
+				},
 			},
 
 			"attach": {
@@ -88,6 +92,10 @@ func resourceDockerContainer() *schema.Resource {
 				Type:     schema.TypeBool,
 				Default:  true,
 				Optional: true,
+				DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+					// ignore diff because "must_run" can't be imported
+					return true
+				},
 			},
 
 			"exit_code": {
@@ -623,6 +631,16 @@ func resourceDockerContainer() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true,
+				DiffSuppressFunc: func(k, oldV, newV string, d *schema.ResourceData) bool {
+					// treat "" as "default", which is Docker's default value
+					if oldV == "" {
+						oldV = "default"
+					}
+					if newV == "" {
+						newV = "default"
+					}
+					return oldV == newV
+				},
 			},
 
 			"networks": {
@@ -933,6 +951,16 @@ func resourceDockerContainerV1() *schema.Resource {
 				ForceNew:     true,
 				Default:      "no",
 				ValidateFunc: validateStringMatchesPattern(`^(no|on-failure|always|unless-stopped)$`),
+				DiffSuppressFunc: func(k, oldV, newV string, d *schema.ResourceData) bool {
+					// treat "" as "no", which is Docker's default value
+					if oldV == "" {
+						oldV = "no"
+					}
+					if newV == "" {
+						newV = "no"
+					}
+					return oldV == newV
+				},
 			},
 
 			"max_retry_count": {
