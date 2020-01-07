@@ -197,6 +197,7 @@ func resourceDockerContainer() *schema.Resource {
 				Optional: true,
 				ForceNew: true,
 				MaxItems: 1,
+				// TODO implement DiffSuppressFunc
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"add": {

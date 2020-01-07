@@ -601,12 +601,15 @@ func resourceDockerContainerRead(d *schema.ResourceData, meta interface{}) error
 	d.Set("restart", container.HostConfig.RestartPolicy.Name)
 	d.Set("max_retry_count", container.HostConfig.RestartPolicy.MaximumRetryCount)
 	d.Set("working_dir", container.Config.WorkingDir)
-	d.Set("capabilities", []interface{}{
-		map[string]interface{}{
-			"add":  container.HostConfig.CapAdd,
-			"drop": container.HostConfig.CapDrop,
-		},
-	})
+	if len(container.HostConfig.CapAdd) > 0 || len(container.HostConfig.CapDrop) > 0 {
+		// TODO implement DiffSuppressFunc
+		d.Set("capabilities", []interface{}{
+			map[string]interface{}{
+				"add":  container.HostConfig.CapAdd,
+				"drop": container.HostConfig.CapDrop,
+			},
+		})
+	}
 	// mounts
 	// volumes
 	d.Set("tmpfs", container.HostConfig.Tmpfs)
