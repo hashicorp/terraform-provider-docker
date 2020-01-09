@@ -55,10 +55,6 @@ func resourceDockerContainer() *schema.Resource {
 				Type:     schema.TypeBool,
 				Default:  true,
 				Optional: true,
-				DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
-					// ignore diff because "start" can't be imported
-					return true
-				},
 			},
 
 			"attach": {
