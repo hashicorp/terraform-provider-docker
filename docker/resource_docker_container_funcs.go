@@ -193,7 +193,7 @@ func resourceDockerContainerCreate(d *schema.ResourceData, meta interface{}) err
 						for _, rawTmpfsOptions := range value.([]interface{}) {
 							rawTmpfsOptions := rawTmpfsOptions.(map[string]interface{})
 							if value, ok := rawTmpfsOptions["size_bytes"]; ok {
-								mountInstance.TmpfsOptions.SizeBytes = value.(int64)
+								mountInstance.TmpfsOptions.SizeBytes = (int64)(value.(int))
 							}
 							if value, ok := rawTmpfsOptions["mode"]; ok {
 								mountInstance.TmpfsOptions.Mode = os.FileMode(value.(int))
