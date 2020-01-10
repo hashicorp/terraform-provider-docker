@@ -80,13 +80,13 @@ func TestAccDockerContainer_basic(t *testing.T) {
 					"start",
 					"container_logs",
 					"destroy_grace_seconds",
+					"upload",
 
 					// TODO mavogel: Will be done in #219
 					"volumes",
 					"network_alias",
 					"networks",
 					"network_advanced",
-					"upload",
 				},
 			},
 		},

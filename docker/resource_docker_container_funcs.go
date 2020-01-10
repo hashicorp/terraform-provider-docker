@@ -657,13 +657,13 @@ func resourceDockerContainerRead(d *schema.ResourceData, meta interface{}) error
 	d.Set("cpu_set", container.HostConfig.CpusetCpus)
 	d.Set("log_driver", container.HostConfig.LogConfig.Type)
 	d.Set("log_opts", container.HostConfig.LogConfig.Config)
-	// d.Set("network_alias", container.HostConfig.LogConfig.Config)
+	// "network_alias" is deprecated
 	d.Set("network_mode", container.HostConfig.NetworkMode)
 	// networks
-	// network_advanced
+	// networks_advanced
 	d.Set("pid_mode", container.HostConfig.PidMode)
 	d.Set("userns_mode", container.HostConfig.UsernsMode)
-	// upload
+	// "upload" can't be imported
 	if container.Config.Healthcheck != nil {
 		d.Set("healthcheck", []interface{}{
 			map[string]interface{}{
