@@ -639,7 +639,11 @@ func resourceDockerContainerRead(d *schema.ResourceData, meta interface{}) error
 	}
 	d.Set("labels", labels)
 	d.Set("memory", container.HostConfig.Memory/1024/1024)
-	d.Set("memory_swap", container.HostConfig.MemorySwap/1024/1024)
+	if container.HostConfig.MemorySwap > 0 {
+		d.Set("memory_swap", container.HostConfig.MemorySwap/1024/1024)
+	} else {
+		d.Set("memory_swap", container.HostConfig.MemorySwap)
+	}
 	d.Set("shm_size", container.HostConfig.ShmSize/1024/1024)
 	d.Set("cpu_shares", container.HostConfig.CPUShares)
 	d.Set("cpu_set", container.HostConfig.CpusetCpus)
