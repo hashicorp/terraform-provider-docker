@@ -257,7 +257,7 @@ func TestAccDockerContainer_tmpfs(t *testing.T) {
 			return fmt.Errorf("Incorrect number of tmpfs: expected 1, got %d", len(c.HostConfig.Tmpfs))
 		}
 
-		for mountPath, _ := range c.HostConfig.Tmpfs {
+		for mountPath := range c.HostConfig.Tmpfs {
 			if mountPath != "/mount/tmpfs" {
 				return fmt.Errorf("Bad destination on tmpfs: expected /mount/tmpfs, got %q", mountPath)
 			}
