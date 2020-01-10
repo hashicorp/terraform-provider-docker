@@ -66,21 +66,31 @@ func TestAccDockerContainer_basic(t *testing.T) {
 					testAccContainerRunning(resourceName, &c),
 				),
 			},
-			// TODO mavogel: Will be done in #219
-			// {
-			// 	ResourceName:      resourceName,
-			// 	ImportState:       true,
-			// 	ImportStateVerify: true,
-			// 	ImportStateVerifyIgnore: []string{
-			// 		"attach",
-			// 		"log_driver",
-			// 		"logs",
-			// 		"must_run",
-			// 		"restart",
-			// 		"rm",
-			// 		"start",
-			// 	},
-			// },
+			{
+				ResourceName:      "docker_container.foo",
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"attach",
+					"log_driver",
+					"logs",
+					"must_run",
+					"restart",
+					"rm",
+					"start",
+					"container_logs",
+					"destroy_grace_seconds",
+
+					// TODO mavogel: Will be done in #219
+					"mounts",
+					"volumes",
+					"ulimit",
+					"network_alias",
+					"networks",
+					"network_advanced",
+					"upload",
+				},
+			},
 		},
 	})
 }
