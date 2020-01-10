@@ -610,7 +610,7 @@ func resourceDockerContainerRead(d *schema.ResourceData, meta interface{}) error
 			},
 		})
 	}
-	// mounts
+	d.Set("mounts", getDockerContainerMounts(container))
 	// volumes
 	d.Set("tmpfs", container.HostConfig.Tmpfs)
 	d.Set("host", container.HostConfig.ExtraHosts)
@@ -967,4 +967,51 @@ func deviceSetToDockerDevices(devices *schema.Set) []container.DeviceMapping {
 		retDevices = append(retDevices, device)
 	}
 	return retDevices
+}
+
+func getDockerContainerMounts(container types.ContainerJSON) []map[string]interface{} {
+	mounts := []map[string]interface{}{}
+	for _, mount := range container.HostConfig.Mounts {
+		m := map[string]interface{}{
+			"target":    mount.Target,
+			"source":    mount.Source,
+			"type":      mount.Type,
+			"read_only": mount.ReadOnly,
+		}
+		if mount.BindOptions != nil {
+			m["bind_options"] = []map[string]interface{}{
+				{
+					"propagation": mount.BindOptions.Propagation,
+				},
+			}
+		}
+		if mount.VolumeOptions != nil {
+			labels := []map[string]string{}
+			for k, v := range mount.VolumeOptions.Labels {
+				labels = append(labels, map[string]string{
+					"label":  k,
+					"volume": v,
+				})
+			}
+			m["volume_options"] = []map[string]interface{}{
+				{
+					"no_copy":        mount.VolumeOptions.NoCopy,
+					"labels":         labels,
+					"driver_name":    mount.VolumeOptions.DriverConfig.Name,
+					"driver_options": mount.VolumeOptions.DriverConfig.Options,
+				},
+			}
+		}
+		if mount.TmpfsOptions != nil {
+			m["tmpfs_options"] = []map[string]interface{}{
+				{
+					"size_bytes": mount.TmpfsOptions.SizeBytes,
+					"mode":       mount.TmpfsOptions.Mode,
+				},
+			}
+		}
+		mounts = append(mounts, m)
+	}
+
+	return mounts
 }

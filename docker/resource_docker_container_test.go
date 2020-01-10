@@ -82,7 +82,6 @@ func TestAccDockerContainer_basic(t *testing.T) {
 					"destroy_grace_seconds",
 
 					// TODO mavogel: Will be done in #219
-					"mounts",
 					"volumes",
 					"network_alias",
 					"networks",
