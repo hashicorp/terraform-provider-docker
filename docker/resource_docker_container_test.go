@@ -567,7 +567,7 @@ func TestAccDockerContainer_customized(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccContainerRunning("docker_container.foo", &c),
 					testCheck,
-					testCheckLabelMap("docker_container.foo", "labels", map[string]string{"env": "prod", "role": "test"}),
+					testCheckLabelMap("docker_container.foo", "labels", map[string]string{"env": "prod", "role": "test", "maintainer": "NGINX Docker Maintainers <docker-maint@nginx.com>"}),
 				),
 			},
 		},
@@ -1548,10 +1548,16 @@ provider "docker" {
 	}
 }
 
+resource "docker_image" "foo" {
+	provider = "docker.private"
+	name  = "%s"
+	keep_locally = true
+}
+
 resource "docker_container" "foo" {
 	provider = "docker.private"
 	name  = "tf-test"
-	image = "%s"
+	image = docker_image.foo.latest
 }
 `
 
@@ -1686,6 +1692,10 @@ resource "docker_container" "foo" {
 		label = "role"
 		value = "test"
 	}
+	labels {
+		label = "maintainer"
+		value = "NGINX Docker Maintainers <docker-maint@nginx.com>"
+	}
 	log_driver = "json-file"
 	log_opts = {
 		max-size = "10m"
@@ -1784,6 +1794,7 @@ resource "docker_container" "foo" {
 	devices {
     	host_path = "/dev/zero"
     	container_path = "/dev/zero_test"
+      permissions = "rwm"
 	}
 }
 `
@@ -1920,7 +1931,7 @@ resource "docker_image" "foo" {
 
 resource "docker_container" "foo" {
   name     = "tf-test"
-  image    = "nginx:latest"
+  image    = docker_image.foo.latest
   start    = false
   must_run = false
 }
