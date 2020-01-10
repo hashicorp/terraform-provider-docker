@@ -84,7 +84,6 @@ func TestAccDockerContainer_basic(t *testing.T) {
 					// TODO mavogel: Will be done in #219
 					"mounts",
 					"volumes",
-					"ulimit",
 					"network_alias",
 					"networks",
 					"network_advanced",

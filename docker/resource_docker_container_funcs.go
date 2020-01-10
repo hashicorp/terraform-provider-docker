@@ -614,7 +614,15 @@ func resourceDockerContainerRead(d *schema.ResourceData, meta interface{}) error
 	// volumes
 	d.Set("tmpfs", container.HostConfig.Tmpfs)
 	d.Set("host", container.HostConfig.ExtraHosts)
-	// d.Set("ulimit", container.HostConfig.Ulimits)
+	ulimits := make([]interface{}, len(container.HostConfig.Ulimits))
+	for i, ul := range container.HostConfig.Ulimits {
+		ulimits[i] = map[string]interface{}{
+			"name": ul.Name,
+			"soft": ul.Soft,
+			"hard": ul.Hard,
+		}
+	}
+	d.Set("ulimit", ulimits)
 	d.Set("env", container.Config.Env)
 	d.Set("links", container.HostConfig.Links)
 	d.Set("privileged", container.HostConfig.Privileged)
