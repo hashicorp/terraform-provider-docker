@@ -811,7 +811,7 @@ func TestAccDockerContainer_multipleUploadContentsConfig(t *testing.T) {
 					}
 				}
 				`,
-				ExpectError: regexp.MustCompile(`.*only one of 'content' or 'content_base64' can be specified.*`),
+				ExpectError: regexp.MustCompile(`.*only one of 'content', 'content_base64', or 'source' can be set.*`),
 			},
 		},
 	})
@@ -840,7 +840,7 @@ func TestAccDockerContainer_noUploadContentsConfig(t *testing.T) {
 					}
 				}
 				`,
-				ExpectError: regexp.MustCompile(`.* neither 'content', nor 'content_base64' was set.*`),
+				ExpectError: regexp.MustCompile(`.* one of 'content', 'content_base64', or 'source' must be set.*`),
 			},
 		},
 	})
