@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+echo -n "foo" > "$(pwd)/scripts/testing/testingFile"
+
 # Create self signed certs
 mkdir -p "$(pwd)"/scripts/testing/certs
 openssl req \

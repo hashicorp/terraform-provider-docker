@@ -644,6 +644,66 @@ func TestAccDockerContainer_upload(t *testing.T) {
 	})
 }
 
+func TestAccDockerContainer_uploadSource(t *testing.T) {
+	var c types.ContainerJSON
+
+	wd, _ := os.Getwd()
+	testFile := wd + "/../scripts/testing/testingFile"
+
+	testCheck := func(*terraform.State) error {
+		client := testAccProvider.Meta().(*ProviderConfig).DockerClient
+
+		srcPath := "/terraform/test.txt"
+		r, _, err := client.CopyFromContainer(context.Background(), c.ID, srcPath)
+		if err != nil {
+			return fmt.Errorf("Unable to download a file from container: %s", err)
+		}
+
+		tr := tar.NewReader(r)
+		if header, err := tr.Next(); err != nil {
+			return fmt.Errorf("Unable to read content of tar archive: %s", err)
+		} else {
+			mode := strconv.FormatInt(header.Mode, 8)
+			if !strings.HasSuffix(mode, "744") {
+				return fmt.Errorf("File permissions are incorrect: %s", mode)
+			}
+		}
+
+		fbuf := new(bytes.Buffer)
+		fbuf.ReadFrom(tr)
+		content := fbuf.String()
+		if content != "foo" {
+			return fmt.Errorf("file content is invalid")
+		}
+
+		return nil
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:  func() { testAccPreCheck(t) },
+		Providers: testAccProviders,
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(testAccDockerContainerUploadSourceConfig, testFile),
+				Check: resource.ComposeTestCheckFunc(
+					testAccContainerRunning("docker_container.foo", &c),
+					testCheck,
+					resource.TestCheckResourceAttr("docker_container.foo", "name", "tf-test"),
+					resource.TestCheckResourceAttr("docker_container.foo", "upload.#", "1"),
+					// NOTE mavogel: current the terraform-plugin-sdk it's likely that
+					// the acceptance testing framework shims (still using the older flatmap-style addressing)
+					// are missing a conversion with the hashes.
+					// See https://github.com/hashicorp/terraform-plugin-sdk/issues/196
+					// resource.TestCheckResourceAttr("docker_container.foo", "upload.0.content", "foo"),
+					// resource.TestCheckResourceAttr("docker_container.foo", "upload.0.content_base64", ""),
+					// resource.TestCheckResourceAttr("docker_container.foo", "upload.0.executable", "true"),
+					// resource.TestCheckResourceAttr("docker_container.foo", "upload.0.file", "/terraform/test.txt"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccDockerContainer_uploadAsBase64(t *testing.T) {
 	var c types.ContainerJSON
 
@@ -1743,6 +1803,24 @@ resource "docker_container" "foo" {
 
 	upload {
 		content = "foo"
+		file = "/terraform/test.txt"
+		executable = true
+	}
+}
+`
+
+const testAccDockerContainerUploadSourceConfig = `
+resource "docker_image" "foo" {
+	name = "nginx:latest"
+	keep_locally = true
+}
+
+resource "docker_container" "foo" {
+	name = "tf-test"
+	image = "${docker_image.foo.latest}"
+
+	upload {
+		source = "%s"
 		file = "/terraform/test.txt"
 		executable = true
 	}
