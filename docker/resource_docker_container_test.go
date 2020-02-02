@@ -67,7 +67,7 @@ func TestAccDockerContainer_basic(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccDockerContainerConfig2,
+				Config: testAccDockerContainerUpdateConfig,
 				Check: resource.ComposeTestCheckFunc(
 					testAccContainerRunning(resourceName, &c),
 				),
@@ -1586,7 +1586,7 @@ resource "docker_container" "foo" {
 }
 `
 
-const testAccDockerContainerConfig2 = `
+const testAccDockerContainerUpdateConfig = `
 resource "docker_image" "foo" {
 	name = "nginx:latest"
 }

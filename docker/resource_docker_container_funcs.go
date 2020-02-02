@@ -690,6 +690,8 @@ func resourceDockerContainerUpdate(d *schema.ResourceData, meta interface{}) err
 
 			// TODO update ulimits
 			// Updating ulimits seems not to work well.
+			// It succeeds to run `DockerClient.ContainerUpdate` with `ulimit` but actually `ulimit` aren't changed.
+			// https://github.com/terraform-providers/terraform-provider-docker/pull/236#discussion_r373819536
 			// ulimits := []*units.Ulimit{}
 			// if v, ok := d.GetOk("ulimit"); ok {
 			// 	ulimits = ulimitsToDockerUlimits(v.(*schema.Set))
@@ -704,8 +706,6 @@ func resourceDockerContainerUpdate(d *schema.ResourceData, meta interface{}) err
 					CPUShares:  int64(d.Get("cpu_shares").(int)),
 					Memory:     int64(d.Get("memory").(int)) * 1024 * 1024,
 					CpusetCpus: d.Get("cpu_set").(string),
-					// TODO update ulimits
-					// Updating ulimits seems not to work well.
 					// Ulimits:    ulimits,
 				},
 			}
