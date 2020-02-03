@@ -94,49 +94,90 @@ func resourceDockerServiceCreate(d *schema.ResourceData, meta interface{}) error
 		}
 	}
 
+	d.SetId(service.ID)
 	return resourceDockerServiceRead(d, meta)
 }
 
 func resourceDockerServiceRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderConfig).DockerClient
+	log.Printf("[INFO] Waiting for service: '%s' to expose all fields: max '%v seconds'", d.Id(), 30)
 
-	apiService, err := fetchDockerService(d.Id(), d.Get("name").(string), client)
+	stateConf := &resource.StateChangeConf{
+		Pending:    []string{"pending"},
+		Target:     []string{"all_fields", "removed"},
+		Refresh:    resourceDockerServiceReadRefreshFunc(d, meta),
+		Timeout:    30 * time.Second,
+		MinTimeout: 5 * time.Second,
+		Delay:      2 * time.Second,
+	}
+
+	// Wait, catching any errors
+	_, err := stateConf.WaitForState()
 	if err != nil {
 		return err
 	}
-	if apiService == nil {
-		d.SetId("")
-		return nil
-	}
-	service, _, err := client.ServiceInspectWithRaw(context.Background(), apiService.ID, types.ServiceInspectOptions{})
-	if err != nil {
-		return fmt.Errorf("Error inspecting service %s: %s", apiService.ID, err)
-	}
-
-	jsonObj, _ := json.MarshalIndent(service, "", "\t")
-	log.Printf("[DEBUG] Docker service inspect: %s", jsonObj)
-
-	d.SetId(service.ID)
-	d.Set("name", service.Spec.Name)
-	d.Set("labels", mapToLabelSet(service.Spec.Labels))
-
-	if err = d.Set("task_spec", flattenTaskSpec(service.Spec.TaskTemplate)); err != nil {
-		log.Printf("[WARN] failed to set task spec from API: %s", err)
-	}
-	if err = d.Set("mode", flattenServiceMode(service.Spec.Mode)); err != nil {
-		log.Printf("[WARN] failed to set mode from API: %s", err)
-	}
-	if err := d.Set("update_config", flattenServiceUpdateOrRollbackConfig(service.Spec.UpdateConfig)); err != nil {
-		log.Printf("[WARN] failed to set update_config from API: %s", err)
-	}
-	if err = d.Set("rollback_config", flattenServiceUpdateOrRollbackConfig(service.Spec.RollbackConfig)); err != nil {
-		log.Printf("[WARN] failed to set rollback_config from API: %s", err)
-	}
-	if err = d.Set("endpoint_spec", flattenServiceEndpointSpec(service.Endpoint)); err != nil {
-		log.Printf("[WARN] failed to set endpoint spec from API: %s", err)
-	}
 
 	return nil
+}
+
+func resourceDockerServiceReadRefreshFunc(
+	d *schema.ResourceData, meta interface{}) resource.StateRefreshFunc {
+	return func() (interface{}, string, error) {
+		client := meta.(*ProviderConfig).DockerClient
+		serviceID := d.Id()
+
+		apiService, err := fetchDockerService(serviceID, d.Get("name").(string), client)
+		if err != nil {
+			return nil, "", err
+		}
+		if apiService == nil {
+			log.Printf("[WARN] Service (%s) not found, removing from state", serviceID)
+			d.SetId("")
+			return serviceID, "removed", nil
+		}
+		service, _, err := client.ServiceInspectWithRaw(context.Background(), apiService.ID, types.ServiceInspectOptions{})
+		if err != nil {
+			return serviceID, "", fmt.Errorf("Error inspecting service %s: %s", apiService.ID, err)
+		}
+
+		jsonObj, _ := json.MarshalIndent(service, "", "\t")
+		log.Printf("[DEBUG] Docker service inspect: %s", jsonObj)
+
+		if string(service.Endpoint.Spec.Mode) == "" && string(service.Spec.EndpointSpec.Mode) == "" {
+			log.Printf("[DEBUG] Service %s does not expose endpoint spec yet", apiService.ID)
+			return serviceID, "pending", nil
+		}
+
+		d.SetId(service.ID)
+		d.Set("name", service.Spec.Name)
+		d.Set("labels", mapToLabelSet(service.Spec.Labels))
+
+		if err = d.Set("task_spec", flattenTaskSpec(service.Spec.TaskTemplate)); err != nil {
+			log.Printf("[WARN] failed to set task spec from API: %s", err)
+		}
+		if err = d.Set("mode", flattenServiceMode(service.Spec.Mode)); err != nil {
+			log.Printf("[WARN] failed to set mode from API: %s", err)
+		}
+		if err := d.Set("update_config", flattenServiceUpdateOrRollbackConfig(service.Spec.UpdateConfig)); err != nil {
+			log.Printf("[WARN] failed to set update_config from API: %s", err)
+		}
+		if err = d.Set("rollback_config", flattenServiceUpdateOrRollbackConfig(service.Spec.RollbackConfig)); err != nil {
+			log.Printf("[WARN] failed to set rollback_config from API: %s", err)
+		}
+
+		if service.Endpoint.Spec.Mode != "" {
+			if err = d.Set("endpoint_spec", flattenServiceEndpoint(service.Endpoint)); err != nil {
+				log.Printf("[WARN] failed to set endpoint spec from API: %s", err)
+			}
+		} else if service.Spec.EndpointSpec.Mode != "" {
+			if err = d.Set("endpoint_spec", flattenServiceEndpointSpec(service.Spec.EndpointSpec)); err != nil {
+				log.Printf("[WARN] failed to set endpoint spec from API: %s", err)
+			}
+		} else {
+			return serviceID, "", fmt.Errorf("Error no endpoint spec for service %s", apiService.ID)
+		}
+
+		return serviceID, "all_fields", nil
+	}
 }
 
 func resourceDockerServiceUpdate(d *schema.ResourceData, meta interface{}) error {

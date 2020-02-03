@@ -114,6 +114,7 @@ func resourceDockerContainer() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true,
+				Computed: true,
 			},
 
 			"domainname": {
@@ -126,6 +127,7 @@ func resourceDockerContainer() *schema.Resource {
 				Type:     schema.TypeList,
 				Optional: true,
 				ForceNew: true,
+				Computed: true,
 				Elem:     &schema.Schema{Type: schema.TypeString},
 			},
 
@@ -133,6 +135,7 @@ func resourceDockerContainer() *schema.Resource {
 				Type:     schema.TypeList,
 				Optional: true,
 				ForceNew: true,
+				Computed: true,
 				Elem:     &schema.Schema{Type: schema.TypeString},
 			},
 
@@ -176,7 +179,6 @@ func resourceDockerContainer() *schema.Resource {
 			"restart": {
 				Type:         schema.TypeString,
 				Optional:     true,
-				ForceNew:     true,
 				Default:      "no",
 				ValidateFunc: validateStringMatchesPattern(`^(no|on-failure|always|unless-stopped)$`),
 			},
@@ -184,9 +186,8 @@ func resourceDockerContainer() *schema.Resource {
 			"max_retry_count": {
 				Type:     schema.TypeInt,
 				Optional: true,
-				ForceNew: true,
 			},
-			"working_dir": &schema.Schema{
+			"working_dir": {
 				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true,
@@ -196,6 +197,7 @@ func resourceDockerContainer() *schema.Resource {
 				Optional: true,
 				ForceNew: true,
 				MaxItems: 1,
+				// TODO implement DiffSuppressFunc
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"add": {
@@ -295,6 +297,7 @@ func resourceDockerContainer() *schema.Resource {
 							Type:        schema.TypeList,
 							Description: "Optional configuration for the tmpfs type",
 							Optional:    true,
+							ForceNew:    true,
 							MaxItems:    1,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
@@ -452,6 +455,7 @@ func resourceDockerContainer() *schema.Resource {
 				Type:     schema.TypeSet,
 				Optional: true,
 				ForceNew: true,
+				Computed: true,
 				Elem:     &schema.Schema{Type: schema.TypeString},
 				Set:      schema.HashString,
 			},
@@ -555,20 +559,19 @@ func resourceDockerContainer() *schema.Resource {
 				Type:     schema.TypeSet,
 				Optional: true,
 				ForceNew: true,
+				Computed: true,
 				Elem:     labelSchema,
 			},
 
 			"memory": {
 				Type:         schema.TypeInt,
 				Optional:     true,
-				ForceNew:     true,
 				ValidateFunc: validateIntegerGeqThan(0),
 			},
 
 			"memory_swap": {
 				Type:         schema.TypeInt,
 				Optional:     true,
-				ForceNew:     true,
 				ValidateFunc: validateIntegerGeqThan(-1),
 			},
 
@@ -576,20 +579,19 @@ func resourceDockerContainer() *schema.Resource {
 				Type:         schema.TypeInt,
 				Optional:     true,
 				ForceNew:     true,
+				Computed:     true,
 				ValidateFunc: validateIntegerGeqThan(0),
 			},
 
 			"cpu_shares": {
 				Type:         schema.TypeInt,
 				Optional:     true,
-				ForceNew:     true,
 				ValidateFunc: validateIntegerGeqThan(0),
 			},
 
 			"cpu_set": {
 				Type:         schema.TypeString,
 				Optional:     true,
-				ForceNew:     true,
 				ValidateFunc: validateStringMatchesPattern(`^\d+([,-]\d+)*$`),
 			},
 
@@ -620,6 +622,16 @@ func resourceDockerContainer() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true,
+				DiffSuppressFunc: func(k, oldV, newV string, d *schema.ResourceData) bool {
+					// treat "" as "default", which is Docker's default value
+					if oldV == "" {
+						oldV = "default"
+					}
+					if newV == "" {
+						newV = "default"
+					}
+					return oldV == newV
+				},
 			},
 
 			"networks": {
@@ -773,6 +785,7 @@ func resourceDockerContainer() *schema.Resource {
 				Description: "IPC sharing mode for the container",
 				Optional:    true,
 				ForceNew:    true,
+				Computed:    true,
 			},
 			"group_add": {
 				Type:        schema.TypeSet,
@@ -939,6 +952,16 @@ func resourceDockerContainerV1() *schema.Resource {
 				ForceNew:     true,
 				Default:      "no",
 				ValidateFunc: validateStringMatchesPattern(`^(no|on-failure|always|unless-stopped)$`),
+				DiffSuppressFunc: func(k, oldV, newV string, d *schema.ResourceData) bool {
+					// treat "" as "no", which is Docker's default value
+					if oldV == "" {
+						oldV = "no"
+					}
+					if newV == "" {
+						newV = "no"
+					}
+					return oldV == newV
+				},
 			},
 
 			"max_retry_count": {
@@ -946,7 +969,7 @@ func resourceDockerContainerV1() *schema.Resource {
 				Optional: true,
 				ForceNew: true,
 			},
-			"working_dir": &schema.Schema{
+			"working_dir": {
 				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true,
@@ -1319,7 +1342,6 @@ func resourceDockerContainerV1() *schema.Resource {
 			"memory": {
 				Type:         schema.TypeInt,
 				Optional:     true,
-				ForceNew:     true,
 				ValidateFunc: validateIntegerGeqThan(0),
 			},
 
@@ -1347,7 +1369,6 @@ func resourceDockerContainerV1() *schema.Resource {
 			"cpu_set": {
 				Type:         schema.TypeString,
 				Optional:     true,
-				ForceNew:     true,
 				ValidateFunc: validateStringMatchesPattern(`^\d+([,-]\d+)*$`),
 			},
 
