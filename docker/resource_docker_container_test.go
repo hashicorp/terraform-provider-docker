@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"reflect"
 	"regexp"
@@ -663,6 +664,7 @@ func TestAccDockerContainer_uploadSource(t *testing.T) {
 
 	wd, _ := os.Getwd()
 	testFile := wd + "/../scripts/testing/testingFile"
+	testFileContent, _ := ioutil.ReadFile(testFile)
 
 	testCheck := func(*terraform.State) error {
 		client := testAccProvider.Meta().(*ProviderConfig).DockerClient
@@ -686,7 +688,7 @@ func TestAccDockerContainer_uploadSource(t *testing.T) {
 		fbuf := new(bytes.Buffer)
 		fbuf.ReadFrom(tr)
 		content := fbuf.String()
-		if content != "foo" {
+		if content != string(testFileContent) {
 			return fmt.Errorf("file content is invalid")
 		}
 
@@ -712,6 +714,51 @@ func TestAccDockerContainer_uploadSource(t *testing.T) {
 					// resource.TestCheckResourceAttr("docker_container.foo", "upload.0.content_base64", ""),
 					// resource.TestCheckResourceAttr("docker_container.foo", "upload.0.executable", "true"),
 					// resource.TestCheckResourceAttr("docker_container.foo", "upload.0.file", "/terraform/test.txt"),
+				),
+			},
+		},
+	})
+}
+
+//
+func TestAccDockerContainer_uploadSourceHash(t *testing.T) {
+	var c types.ContainerJSON
+	var firstRunId string
+
+	wd, _ := os.Getwd()
+	testFile := wd + "/../scripts/testing/testingFile"
+	hash, _ := ioutil.ReadFile(testFile + ".base64")
+	grabFirstCheck := func(*terraform.State) error {
+		firstRunId = c.ID
+		return nil
+	}
+	testCheck := func(*terraform.State) error {
+		if c.ID == firstRunId {
+			return fmt.Errorf("Container should have been recreated due to changed hash")
+		}
+		return nil
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:  func() { testAccPreCheck(t) },
+		Providers: testAccProviders,
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(testAccDockerContainerUploadSourceHashConfig, testFile, string(hash)),
+				Check: resource.ComposeTestCheckFunc(
+					testAccContainerRunning("docker_container.foo", &c),
+					grabFirstCheck,
+					resource.TestCheckResourceAttr("docker_container.foo", "name", "tf-test"),
+					resource.TestCheckResourceAttr("docker_container.foo", "upload.#", "1"),
+				),
+			},
+			{
+				Config: fmt.Sprintf(testAccDockerContainerUploadSourceHashConfig, testFile, string(hash)+"arbitrary"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccContainerRunning("docker_container.foo", &c),
+					testCheck,
+					resource.TestCheckResourceAttr("docker_container.foo", "name", "tf-test"),
+					resource.TestCheckResourceAttr("docker_container.foo", "upload.#", "1"),
 				),
 			},
 		},
@@ -1863,6 +1910,25 @@ resource "docker_container" "foo" {
 
 	upload {
 		source = "%s"
+		file = "/terraform/test.txt"
+		executable = true
+	}
+}
+`
+
+const testAccDockerContainerUploadSourceHashConfig = `
+resource "docker_image" "foo" {
+	name = "nginx:latest"
+	keep_locally = true
+}
+
+resource "docker_container" "foo" {
+	name = "tf-test"
+	image = "${docker_image.foo.latest}"
+
+	upload {
+		source = "%s"
+		source_hash = "%s"
 		file = "/terraform/test.txt"
 		executable = true
 	}
