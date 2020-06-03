@@ -600,7 +600,7 @@ func resourceDockerContainer() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true,
-				Default:  "json-file",
+				Computed: true,
 			},
 
 			"log_opts": {
