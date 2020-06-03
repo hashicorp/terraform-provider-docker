@@ -972,6 +972,7 @@ func resourceDockerContainerV1() *schema.Resource {
 			"working_dir": {
 				Type:     schema.TypeString,
 				Optional: true,
+				Computed: true,
 				ForceNew: true,
 			},
 			"capabilities": {
