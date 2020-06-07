@@ -559,7 +559,6 @@ func resourceDockerContainer() *schema.Resource {
 				Type:     schema.TypeSet,
 				Optional: true,
 				ForceNew: true,
-				Computed: true,
 				Elem:     labelSchema,
 			},
 
