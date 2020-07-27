@@ -42,6 +42,33 @@ func resourceDockerImage() *schema.Resource {
 				Elem:     &schema.Schema{Type: schema.TypeString},
 				Set:      schema.HashString,
 			},
+
+			"build": {
+				Type:          schema.TypeSet,
+				Optional:      true,
+				MaxItems:      1,
+				ConflictsWith: []string{"pull_triggers", "pull_trigger"},
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"path": {
+							Type:        schema.TypeString,
+							Description: "Context path",
+							Required:    true,
+						},
+						"dockerfile": {
+							Type:        schema.TypeString,
+							Description: "Name of the Dockerfile (Default is 'PATH/Dockerfile')",
+							Optional:    true,
+							Default:     "Dockerfile",
+						},
+						"tag": {
+							Type:        schema.TypeString,
+							Description: "Name and optionally a tag in the 'name:tag' format",
+							Optional:    true,
+						},
+					},
+				},
+			},
 		},
 	}
 }

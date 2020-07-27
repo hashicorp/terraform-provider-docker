@@ -3,6 +3,7 @@ package docker
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"strings"
 
@@ -12,11 +13,47 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
+	"github.com/docker/docker/pkg/archive"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/mitchellh/go-homedir"
 )
+
+func getContext(filePath string) io.Reader {
+	// Use homedir.Expand to resolve paths like '~/repos/myrepo'
+	filePath, _ = homedir.Expand(filePath)
+	ctx, _ := archive.TarWithOptions(filePath, &archive.TarOptions{})
+	return ctx
+}
 
 func resourceDockerImageCreate(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*ProviderConfig).DockerClient
+
+	if value, ok := d.GetOk("build"); ok {
+		for _, rawBuild := range value.(*schema.Set).List() {
+			rawBuild := rawBuild.(map[string]interface{})
+			log.Printf("BUILD PATH %s", rawBuild["path"].(string))
+			log.Printf("BUILD DOCKERFILE %s", rawBuild["dockerfile"].(string))
+			log.Printf("BUILD TAG %s", rawBuild["tag"].(string))
+
+			buildOptions := types.ImageBuildOptions{}
+
+			buildOptions.Version = types.BuilderV1
+			buildOptions.Dockerfile = rawBuild["dockerfile"].(string)
+			// buildOptions.AuthConfigs = meta.(*ProviderConfig).AuthConfigs
+			// buildOptions.RemoteContext = rawBuild["path"].(string)
+			buildOptions.Tags = []string{rawBuild["tag"].(string)}
+
+			response, err := client.ImageBuild(context.Background(), getContext(rawBuild["path"].(string)), buildOptions)
+			if err != nil {
+				return err
+			}
+			defer response.Body.Close()
+			buf := new(bytes.Buffer)
+			buf.ReadFrom(response.Body)
+			newStr := buf.String()
+			log.Printf(newStr)
+		}
+	}
 	imageName := d.Get("name").(string)
 	apiImage, err := findImage(imageName, client, meta.(*ProviderConfig).AuthConfigs)
 	if err != nil {
