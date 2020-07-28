@@ -15,17 +15,40 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/archive"
+	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/mitchellh/go-homedir"
 )
 
-func getContext(filePath string, excludes []string) io.Reader {
-	// Use homedir.Expand to resolve paths like '~/repos/myrepo'
+func getBuildContext(filePath string, excludes []string) io.Reader {
 	filePath, _ = homedir.Expand(filePath)
 	ctx, _ := archive.TarWithOptions(filePath, &archive.TarOptions{
 		ExcludePatterns: excludes,
 	})
 	return ctx
+}
+
+func decodeBuildMessages(response types.ImageBuildResponse) (string, error) {
+	buf := new(bytes.Buffer)
+	buildErr := error(nil)
+
+	dec := json.NewDecoder(response.Body)
+	for dec.More() {
+		var m jsonmessage.JSONMessage
+		err := dec.Decode(&m)
+		if err != nil {
+			return buf.String(), fmt.Errorf("Problem decoding message from docker daemon: %s", err)
+		}
+
+		m.Display(buf, false)
+
+		if m.Error != nil {
+			buildErr = fmt.Errorf("Unable to build image")
+		}
+	}
+	log.Printf("[DEBUG] %s", buf.String())
+
+	return buf.String(), buildErr
 }
 
 func resourceDockerImageCreate(d *schema.ResourceData, meta interface{}) error {
@@ -34,9 +57,6 @@ func resourceDockerImageCreate(d *schema.ResourceData, meta interface{}) error {
 	if value, ok := d.GetOk("build"); ok {
 		for _, rawBuild := range value.(*schema.Set).List() {
 			rawBuild := rawBuild.(map[string]interface{})
-			log.Printf("BUILD PATH %s", rawBuild["path"].(string))
-			log.Printf("BUILD DOCKERFILE %s", rawBuild["dockerfile"].(string))
-			log.Printf("BUILD TAG %s", rawBuild["tag"].(string))
 
 			buildOptions := types.ImageBuildOptions{}
 
@@ -53,15 +73,17 @@ func resourceDockerImageCreate(d *schema.ResourceData, meta interface{}) error {
 			}
 			excludes = build.TrimBuildFilesFromExcludes(excludes, buildOptions.Dockerfile, false)
 
-			response, err := client.ImageBuild(context.Background(), getContext(contextDir, excludes), buildOptions)
+			var response types.ImageBuildResponse
+			response, err = client.ImageBuild(context.Background(), getBuildContext(contextDir, excludes), buildOptions)
 			if err != nil {
 				return err
 			}
 			defer response.Body.Close()
-			buf := new(bytes.Buffer)
-			buf.ReadFrom(response.Body)
-			newStr := buf.String()
-			log.Printf(newStr)
+
+			buildResult, err := decodeBuildMessages(response)
+			if err != nil {
+				return fmt.Errorf("%s:\n\n%s", err, buildResult)
+			}
 		}
 	}
 	imageName := d.Get("name").(string)

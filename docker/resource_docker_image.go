@@ -43,6 +43,14 @@ func resourceDockerImage() *schema.Resource {
 				Set:      schema.HashString,
 			},
 
+			"output": {
+				Type:     schema.TypeString,
+				Computed: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+
 			"build": {
 				Type:          schema.TypeSet,
 				Optional:      true,
