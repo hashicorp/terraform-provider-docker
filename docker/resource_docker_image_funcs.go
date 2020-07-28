@@ -11,6 +11,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 
+	"github.com/docker/cli/cli/command/image/build"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/archive"
@@ -18,10 +19,12 @@ import (
 	"github.com/mitchellh/go-homedir"
 )
 
-func getContext(filePath string) io.Reader {
+func getContext(filePath string, excludes []string) io.Reader {
 	// Use homedir.Expand to resolve paths like '~/repos/myrepo'
 	filePath, _ = homedir.Expand(filePath)
-	ctx, _ := archive.TarWithOptions(filePath, &archive.TarOptions{})
+	ctx, _ := archive.TarWithOptions(filePath, &archive.TarOptions{
+		ExcludePatterns: excludes,
+	})
 	return ctx
 }
 
@@ -43,7 +46,14 @@ func resourceDockerImageCreate(d *schema.ResourceData, meta interface{}) error {
 			// buildOptions.RemoteContext = rawBuild["path"].(string)
 			buildOptions.Tags = []string{rawBuild["tag"].(string)}
 
-			response, err := client.ImageBuild(context.Background(), getContext(rawBuild["path"].(string)), buildOptions)
+			contextDir := rawBuild["path"].(string)
+			excludes, err := build.ReadDockerignore(contextDir)
+			if err != nil {
+				return err
+			}
+			excludes = build.TrimBuildFilesFromExcludes(excludes, buildOptions.Dockerfile, false)
+
+			response, err := client.ImageBuild(context.Background(), getContext(contextDir, excludes), buildOptions)
 			if err != nil {
 				return err
 			}
