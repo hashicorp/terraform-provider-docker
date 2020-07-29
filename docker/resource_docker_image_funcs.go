@@ -53,40 +53,18 @@ func decodeBuildMessages(response types.ImageBuildResponse) (string, error) {
 
 func resourceDockerImageCreate(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*ProviderConfig).DockerClient
+	imageName := d.Get("name").(string)
 
 	if value, ok := d.GetOk("build"); ok {
 		for _, rawBuild := range value.(*schema.Set).List() {
 			rawBuild := rawBuild.(map[string]interface{})
 
-			buildOptions := types.ImageBuildOptions{}
-
-			buildOptions.Version = types.BuilderV1
-			buildOptions.Dockerfile = rawBuild["dockerfile"].(string)
-			// buildOptions.AuthConfigs = meta.(*ProviderConfig).AuthConfigs
-			// buildOptions.RemoteContext = rawBuild["path"].(string)
-			buildOptions.Tags = []string{rawBuild["tag"].(string)}
-
-			contextDir := rawBuild["path"].(string)
-			excludes, err := build.ReadDockerignore(contextDir)
+			err := buildDockerImage(rawBuild, imageName, client)
 			if err != nil {
 				return err
-			}
-			excludes = build.TrimBuildFilesFromExcludes(excludes, buildOptions.Dockerfile, false)
-
-			var response types.ImageBuildResponse
-			response, err = client.ImageBuild(context.Background(), getBuildContext(contextDir, excludes), buildOptions)
-			if err != nil {
-				return err
-			}
-			defer response.Body.Close()
-
-			buildResult, err := decodeBuildMessages(response)
-			if err != nil {
-				return fmt.Errorf("%s:\n\n%s", err, buildResult)
 			}
 		}
 	}
-	imageName := d.Get("name").(string)
 	apiImage, err := findImage(imageName, client, meta.(*ProviderConfig).AuthConfigs)
 	if err != nil {
 		return fmt.Errorf("Unable to read Docker image into resource: %s", err)
@@ -316,4 +294,57 @@ func findImage(imageName string, client *client.Client, authConfig *AuthConfigs)
 	}
 
 	return nil, fmt.Errorf("Unable to find or pull image %s", imageName)
+}
+
+func buildDockerImage(rawBuild map[string]interface{}, imageName string, client *client.Client) error {
+	buildOptions := types.ImageBuildOptions{}
+
+	buildOptions.Version = types.BuilderV1
+	buildOptions.Dockerfile = rawBuild["dockerfile"].(string)
+
+	tags := []string{imageName}
+	for _, t := range rawBuild["tag"].([]interface{}) {
+		tags = append(tags, t.(string))
+	}
+	buildOptions.Tags = tags
+
+	buildOptions.ForceRemove = rawBuild["force_remove"].(bool)
+	buildOptions.Remove = rawBuild["remove"].(bool)
+	buildOptions.NoCache = rawBuild["no_cache"].(bool)
+	buildOptions.Target = rawBuild["target"].(string)
+
+	buildArgs := make(map[string]*string)
+	for k, v := range rawBuild["build_arg"].(map[string]interface{}) {
+		val := v.(string)
+		buildArgs[k] = &val
+	}
+	buildOptions.BuildArgs = buildArgs
+	log.Printf("[DEBUG] Build Args: %v\n", buildArgs)
+
+	labels := make(map[string]string)
+	for k, v := range rawBuild["label"].(map[string]interface{}) {
+		labels[k] = v.(string)
+	}
+	buildOptions.Labels = labels
+	log.Printf("[DEBUG] Labels: %v\n", labels)
+
+	contextDir := rawBuild["path"].(string)
+	excludes, err := build.ReadDockerignore(contextDir)
+	if err != nil {
+		return err
+	}
+	excludes = build.TrimBuildFilesFromExcludes(excludes, buildOptions.Dockerfile, false)
+
+	var response types.ImageBuildResponse
+	response, err = client.ImageBuild(context.Background(), getBuildContext(contextDir, excludes), buildOptions)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+
+	buildResult, err := decodeBuildMessages(response)
+	if err != nil {
+		return fmt.Errorf("%s\n\n%s", err, buildResult)
+	}
+	return nil
 }

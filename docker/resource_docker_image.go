@@ -62,17 +62,60 @@ func resourceDockerImage() *schema.Resource {
 							Type:        schema.TypeString,
 							Description: "Context path",
 							Required:    true,
+							ForceNew:    true,
 						},
 						"dockerfile": {
 							Type:        schema.TypeString,
 							Description: "Name of the Dockerfile (Default is 'PATH/Dockerfile')",
 							Optional:    true,
 							Default:     "Dockerfile",
+							ForceNew:    true,
 						},
 						"tag": {
-							Type:        schema.TypeString,
+							Type:        schema.TypeList,
 							Description: "Name and optionally a tag in the 'name:tag' format",
 							Optional:    true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+						"force_remove": {
+							Type:        schema.TypeBool,
+							Description: "Always remove intermediate containers",
+							Optional:    true,
+						},
+						"remove": {
+							Type:        schema.TypeBool,
+							Description: "Remove intermediate containers after a successful build (default true)",
+							Default:     true,
+							Optional:    true,
+						},
+						"no_cache": {
+							Type:        schema.TypeBool,
+							Description: "Do not use cache when building the image",
+							Optional:    true,
+						},
+						"target": {
+							Type:        schema.TypeString,
+							Description: "Set the target build stage to build",
+							Optional:    true,
+						},
+						"build_arg": {
+							Type:        schema.TypeMap,
+							Description: "Set build-time variables",
+							Optional:    true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+							ForceNew: true,
+						},
+						"label": {
+							Type:        schema.TypeMap,
+							Description: "Set metadata for an image",
+							Optional:    true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
 						},
 					},
 				},
