@@ -105,6 +105,3 @@ matrix:
       go: tip
       script:
         - make compile
-
-env:
-  - GOFLAGS=-mod=vendor GO111MODULE=on
