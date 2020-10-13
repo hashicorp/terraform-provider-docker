@@ -58,7 +58,7 @@ matrix:
     - os: linux
       name: "Build (golang previous amd64)"
       dist: bionic
-      go: "1.12.x"
+      go: "1.14.x"
       script:
         - make compile
 
