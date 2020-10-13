@@ -7,6 +7,9 @@ install:
 # See: https://github.com/golang/go/issues/12933
 - bash scripts/gogetcookie.sh
 
+env:	
+  - GOPROXY=https://gocenter.io,https://proxy.golang.org,direct
+
 branches:
   only:
   - master
