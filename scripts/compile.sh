@@ -26,5 +26,4 @@ gox \
   -ldflags "${LD_FLAGS}" \
   -output "$TARGET_DIR/{{.OS}}_{{.Arch}}/terraform-provider-${PROVIDER_NAME}_v0.0.0_x4" \
   -verbose \
-  -rebuild \
   .

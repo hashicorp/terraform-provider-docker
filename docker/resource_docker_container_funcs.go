@@ -83,7 +83,7 @@ func resourceDockerContainerCreate(d *schema.ResourceData, meta interface{}) err
 	}
 	extraHosts := []string{}
 	if v, ok := d.GetOk("host"); ok {
-		extraHosts = extraHostsSetToDockerExtraHosts(v.(*schema.Set))
+		extraHosts = extraHostsSetToDockerExtraHosts(v.(*schema.Set), ":")
 	}
 
 	extraUlimits := []*units.Ulimit{}
@@ -956,14 +956,20 @@ func ulimitsToDockerUlimits(extraUlimits *schema.Set) []*units.Ulimit {
 
 	return retExtraUlimits
 }
-func extraHostsSetToDockerExtraHosts(extraHosts *schema.Set) []string {
+
+func extraHostsSetToDockerExtraHosts(extraHosts *schema.Set, separator string) []string {
 	retExtraHosts := []string{}
 
 	for _, hostInt := range extraHosts.List() {
 		host := hostInt.(map[string]interface{})
 		ip := host["ip"].(string)
 		hostname := host["host"].(string)
-		retExtraHosts = append(retExtraHosts, hostname+":"+ip)
+        hostData := hostname+separator+ip
+		if (separator == " ") {
+		    hostData = ip+separator+hostname
+		}
+
+		retExtraHosts = append(retExtraHosts, hostData)
 	}
 
 	return retExtraHosts
