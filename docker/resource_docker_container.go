@@ -223,6 +223,14 @@ func resourceDockerContainer() *schema.Resource {
 					},
 				},
 			},
+			"security_opts": {
+				Type:        schema.TypeSet,
+				Optional:    true,
+				ForceNew:    true,
+				Elem:        &schema.Schema{Elem: schema.TypeString},
+				Description: "List of string values to customize labels for MLS systems, such as SELinux. See https://docs.docker.com/engine/reference/run/#security-configuration",
+				Set:         schema.HashString,
+			},
 			"mounts": {
 				Type:        schema.TypeSet,
 				Description: "Specification for mounts to be added to containers created as part of the service",
