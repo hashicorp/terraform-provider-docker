@@ -227,6 +227,7 @@ func resourceDockerContainer() *schema.Resource {
 				Type:        schema.TypeSet,
 				Optional:    true,
 				ForceNew:    true,
+				Computed:    true,
 				Elem:        &schema.Schema{Type: schema.TypeString},
 				Description: "List of string values to customize labels for MLS systems, such as SELinux. See https://docs.docker.com/engine/reference/run/#security-configuration",
 				Set:         schema.HashString,
