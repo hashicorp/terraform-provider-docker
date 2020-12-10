@@ -1,3 +1,19 @@
+Please Note: As part of our introduction to self-service publishing in the Terraform Registry, this copy of the provider has been archived, and ownership has been transferred to its active maintainers in the community. Please see the new location on the [Terraform Registry](https://registry.terraform.io/providers/kreuzwerker/docker/latest). You can use the provider from its new location in the Registry by updating your configuration in Terraform with the following:
+
+```hcl
+terraform {
+  required_providers {
+    docker = {
+      source = "kreuzwerker/docker"
+    }
+  }
+}
+
+provider "docker" {
+  # Configuration options
+}
+```
+
 Terraform Provider
 ==================
 
