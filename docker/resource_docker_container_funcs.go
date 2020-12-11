@@ -462,52 +462,63 @@ func resourceDockerContainerCreate(d *schema.ResourceData, meta interface{}) err
 	if d.Get("start").(bool) {
 		creationTime = time.Now()
 		options := types.ContainerStartOptions{}
-		if err := client.ContainerStart(context.Background(), retContainer.ID, options); err != nil {
-			return fmt.Errorf("Unable to start container: %s", err)
-		}
-	}
+		if d.Get("attach").(bool) {
+			var b bytes.Buffer
 
-	if d.Get("attach").(bool) {
-		var b bytes.Buffer
+			ctx := context.Background()
 
-		ctx := context.Background()
-
-		if d.Get("logs").(bool) {
-			go func() {
-				reader, err := client.ContainerLogs(ctx, retContainer.ID, types.ContainerLogsOptions{
-					ShowStdout: true,
-					ShowStderr: true,
-					Follow:     true,
-					Timestamps: false,
-				})
-				if err != nil {
-					log.Panic(err)
-				}
-				defer reader.Close()
-
-				scanner := bufio.NewScanner(reader)
-				for scanner.Scan() {
-					line := scanner.Text()
-					b.WriteString(line)
-					b.WriteString("\n")
-
-					log.Printf("[DEBUG] container logs: %s", line)
-				}
-				if err := scanner.Err(); err != nil {
-					log.Fatal(err)
-				}
-			}()
-		}
-
-		attachCh, errAttachCh := client.ContainerWait(ctx, retContainer.ID, container.WaitConditionNotRunning)
-		select {
-		case err := <-errAttachCh:
-			if err != nil {
-				return fmt.Errorf("Unable to wait container end of execution: %s", err)
-			}
-		case <-attachCh:
 			if d.Get("logs").(bool) {
-				d.Set("container_logs", b.String())
+				go func() {
+					reader, err := client.ContainerLogs(ctx, retContainer.ID, types.ContainerLogsOptions{
+						ShowStdout: true,
+						ShowStderr: true,
+						Follow:     true,
+						Timestamps: false,
+					})
+					if err != nil {
+						log.Panic(err)
+					}
+					defer reader.Close()
+
+					scanner := bufio.NewScanner(reader)
+					for scanner.Scan() {
+						line := scanner.Text()
+						b.WriteString(line)
+						b.WriteString("\n")
+
+						log.Printf("[DEBUG] container logs: %s", line)
+					}
+					if err := scanner.Err(); err != nil {
+						log.Fatal(err)
+					}
+				}()
+			}
+
+			attachCh, errAttachCh := client.ContainerWait(ctx, retContainer.ID, container.WaitConditionNotRunning)
+
+			if err := client.ContainerStart(context.Background(), retContainer.ID, options); err != nil {
+				return fmt.Errorf("Unable to start container: %s", err)
+			}
+
+			select {
+			case err := <-errAttachCh:
+				if err != nil {
+					return fmt.Errorf("Unable to wait container end of execution: %s", err)
+				}
+			case res := <-attachCh:
+				if res.Error != nil {
+					return fmt.Errorf("container %v exited with error code %v: %v", retContainer.ID, res.StatusCode, res.Error.Message)
+				}
+				if res.StatusCode != 0 {
+					return fmt.Errorf("container %v exited with non-zero code %v", retContainer.ID, res.StatusCode)
+				}
+				if d.Get("logs").(bool) {
+					d.Set("container_logs", b.String())
+				}
+			}
+		} else {
+			if err := client.ContainerStart(context.Background(), retContainer.ID, options); err != nil {
+				return fmt.Errorf("Unable to start container: %s", err)
 			}
 		}
 	}
