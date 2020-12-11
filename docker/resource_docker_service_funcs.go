@@ -908,7 +908,7 @@ func createContainerSpec(v interface{}) (*swarm.ContainerSpec, error) {
 				}
 			}
 			if value, ok := rawContainerSpec["hosts"]; ok {
-				containerSpec.Hosts = extraHostsSetToDockerExtraHosts(value.(*schema.Set))
+				containerSpec.Hosts = extraHostsSetToDockerExtraHosts(value.(*schema.Set), " ")
 			}
 			if value, ok := rawContainerSpec["dns_config"]; ok {
 				containerSpec.DNSConfig = &swarm.DNSConfig{}

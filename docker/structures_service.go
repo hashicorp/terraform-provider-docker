@@ -283,9 +283,16 @@ func flattenServiceHosts(in []string) *schema.Set {
 	var out = make([]interface{}, len(in), len(in))
 	for i, v := range in {
 		m := make(map[string]interface{})
-		split := strings.Split(v, ":")
-		m["host"] = split[0]
-		m["ip"] = split[1]
+		if (strings.Contains(v, ":")) {
+		    split := strings.Split(v, ":")
+            m["host"] = split[0]
+            m["ip"] = split[1]
+		} else {
+		    split := strings.Split(v, " ")
+		    m["host"] = split[1]
+            m["ip"] = split[0]
+		}
+
 		out[i] = m
 	}
 	taskSpecResource := resourceDockerService().Schema["task_spec"].Elem.(*schema.Resource)
